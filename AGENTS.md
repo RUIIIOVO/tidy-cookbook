@@ -1,4 +1,4 @@
-# caipu-h5 · 家常菜谱 H5
+# tidy-cookbook · 家常菜谱 H5
 
 移动端优先的自用菜谱 / 点菜应用。76 道菜，静态数据 + localStorage，历史订单后续接 Cloudflare D1。
 
