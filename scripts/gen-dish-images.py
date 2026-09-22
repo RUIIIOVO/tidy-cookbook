@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """批量生成菜品配图（gpt-image-2）。
 
-  python3 scripts/gen-dish-images.py --sub pork          # 按小类跑
+  python3 scripts/gen-dish-images.py --sub pork          # 按小类跑（默认 1k）
   python3 scripts/gen-dish-images.py --ids a,b,c         # 指定菜 id
   python3 scripts/gen-dish-images.py --sub pork --force  # 覆盖已有
 
@@ -26,9 +26,9 @@ def dish_index():
     return {py[name]["id"]: (name, sub) for name, sub in rows if name in py}
 
 
-def generate(dish_id: str, desc: str) -> bool:
+def generate(dish_id: str, desc: str, resolution: str) -> bool:
     prompt = f"{desc}. {STYLE}"
-    cmd = [sys.executable, str(GEN), "--prompt", prompt, "--size", "4:3", "--resolution", "2k"]
+    cmd = [sys.executable, str(GEN), "--prompt", prompt, "--size", "4:3", "--resolution", resolution]
     r = subprocess.run(cmd, capture_output=True, text=True)
     m = re.search(r"\{.*\}", r.stdout, re.S)
     if not m:
@@ -51,6 +51,12 @@ def main():
     ap.add_argument("--sub", help="小类，如 pork / fish / greens")
     ap.add_argument("--ids", help="逗号分隔的菜品 id")
     ap.add_argument("--force", action="store_true", help="覆盖已有图片")
+    ap.add_argument(
+        "--resolution",
+        default="1k",
+        choices=["1k", "2k", "4k"],
+        help="默认 1k —— 最终只压到 800px 宽的 webp，再高纯属浪费钱和时间",
+    )
     a = ap.parse_args()
 
     index = dish_index()
@@ -75,7 +81,7 @@ def main():
     ok = 0
     for n, i in enumerate(todo, 1):
         print(f"[{n}/{len(todo)}] {index.get(i, ('?',))[0]}")
-        if generate(i, PROMPTS[i]):
+        if generate(i, PROMPTS[i], a.resolution):
             ok += 1
         if n < len(todo):
             time.sleep(2)

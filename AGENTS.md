@@ -30,7 +30,7 @@ node scripts/build-pinyin.mjs  # 改过 src/data/raw.ts 后必须重跑
 - 颜色只用 `src/app/globals.css` 的 token：paper / ink / line / chili / brine / leaf / caramel。
 - 标题用 `font-display`，正文 `font-sans`，不引入 webfont。
 - 图标只用 `@phosphor-icons/react`，映射集中在 `src/lib/icons.tsx`；不混第二套图标库，不用汉字代替图标。
-- 配图：`python3 scripts/gen-dish-images.py --sub pork` 生成 → `./scripts/optimize-images.sh` 压成 webp → `node scripts/build-image-manifest.mjs` 刷新清单。没图的菜自动回落到分类图标。
+- 配图：`python3 scripts/gen-dish-images.py --sub pork` 生成（默认 1k） → `./scripts/optimize-images.sh` 压成 webp → `node scripts/build-image-manifest.mjs` 刷新清单。没图的菜自动回落到分类图标。
 - 可点击卡片用 `div role="button"`，内部才能嵌 `AddButton`；`<button>` 套 `<button>` 会触发 hydration 错误。
 - 提交信息用 `feat:` / `fix:` / `chore:` 前缀，正文中文。
 
