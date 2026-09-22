@@ -123,7 +123,7 @@ export function DrawView() {
           </button>
         ) : (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 text-center">
-            <DiceFive size={30} weight="duotone" className="text-line-2" />
+            <DiceFive size={34} weight="light" className="text-line-2" />
             <p className="mt-3 font-display text-[15px] tracking-wider text-ink-3">
               抽一道，省得纠结
             </p>
@@ -141,7 +141,11 @@ export function DrawView() {
           disabled={rolling}
           className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-[14px] tracking-wide text-paper transition active:scale-[0.98] disabled:opacity-60"
         >
-          <ArrowsClockwise size={16} weight="bold" className={rolling ? "animate-spin" : ""} />
+          <ArrowsClockwise
+            size={16}
+            weight="regular"
+            className={rolling ? "animate-spin" : ""}
+          />
           {dish ? "换一道" : "开始抽菜"}
         </button>
         {dish && (

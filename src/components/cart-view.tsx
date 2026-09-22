@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Lock, LockOpen, Trash } from "@phosphor-icons/react";
 import { ShoppingList } from "./shopping-list";
+import { useConfirm } from "./confirm-dialog";
 import { toast } from "sonner";
 import Link from "next/link";
 import { categories, getDish } from "@/data/dishes";
@@ -23,6 +24,7 @@ export function CartView() {
   const removeMany = useCart((s) => s.removeMany);
   const clear = useCart((s) => s.clear);
   const openSheet = useDishSheet((s) => s.open);
+  const confirm = useConfirm((s) => s.confirm);
 
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -147,7 +149,7 @@ export function CartView() {
                         ×{item.qty}
                       </span>
                     ) : (
-                      <AddButton dish={dish} />
+                      <AddButton dish={dish} confirmRemove />
                     )}
                   </div>
                 );
@@ -179,11 +181,21 @@ export function CartView() {
               type="button"
               disabled={picked.length === 0}
               onClick={() => {
-                haptic(15);
-                removeMany(picked);
-                toast(`已删除 ${picked.length} 道`);
-                setPicked([]);
-                setSelecting(false);
+                const names = picked
+                  .map((id) => rows.find((r) => r.dish.id === id)?.dish.name)
+                  .filter(Boolean)
+                  .join("、");
+                confirm({
+                  title: `删除选中的 ${picked.length} 道菜？`,
+                  desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
+                  confirmText: "删除",
+                  onConfirm: () => {
+                    removeMany(picked);
+                    toast(`已删除 ${picked.length} 道`);
+                    setPicked([]);
+                    setSelecting(false);
+                  },
+                });
               }}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-chili py-2.5 text-[13px] text-white disabled:opacity-40"
             >
@@ -207,11 +219,17 @@ export function CartView() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                haptic(20);
-                clear();
-                toast("开始新的一餐");
-              }}
+              onClick={() =>
+                confirm({
+                  title: "开始新的一餐？",
+                  desc: "当前这一餐会被清空，历史记录不受影响。",
+                  confirmText: "清空开始",
+                  onConfirm: () => {
+                    clear();
+                    toast("开始新的一餐");
+                  },
+                })
+              }
               className="rounded-full bg-ink px-5 py-3 text-[14px] tracking-wide text-paper"
             >
               下一餐

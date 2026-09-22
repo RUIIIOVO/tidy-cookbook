@@ -40,28 +40,47 @@ export function DishThumb({
     );
   }
 
+  if (variant === "sm") {
+    return (
+      <div
+        className={cn(
+          "relative flex items-center justify-center overflow-hidden",
+          t.bg,
+          className,
+        )}
+      >
+        <Icon size={24} weight="light" color={t.hex} style={{ opacity: 0.55 }} />
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        "relative flex items-center justify-center overflow-hidden",
+        "relative flex flex-col items-center justify-center gap-3.5 overflow-hidden",
         t.bg,
         className,
       )}
     >
-      <Icon
-        size={variant === "lg" ? 56 : 26}
-        weight="duotone"
-        color={t.hex}
-        style={{ opacity: variant === "lg" ? 0.34 : 0.5 }}
+      <span
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(110% 80% at 50% 8%, rgba(255,255,255,0.7), rgba(255,255,255,0) 68%)",
+        }}
       />
-      {variant === "lg" && (
-        <span
-          className="absolute bottom-3 left-3 text-[10px] tracking-[0.3em]"
-          style={{ color: t.hex, opacity: 0.4 }}
-        >
-          配图生成中
-        </span>
-      )}
+      <div
+        className="relative grid size-[88px] place-items-center rounded-full"
+        style={{ border: `1px solid ${t.hex}22`, background: "rgba(255,255,255,0.42)" }}
+      >
+        <Icon size={36} weight="light" color={t.hex} style={{ opacity: 0.6 }} />
+      </div>
+      <span
+        className="relative text-[9.5px] tracking-[0.36em]"
+        style={{ color: t.hex, opacity: 0.45 }}
+      >
+        配图生成中
+      </span>
     </div>
   );
 }

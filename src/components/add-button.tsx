@@ -4,10 +4,21 @@ import { Minus, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { Dish } from "@/data/types";
 import { useCart } from "@/lib/store";
+import { useConfirm } from "./confirm-dialog";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/utils";
 
-export function AddButton({ dish, className }: { dish: Dish; className?: string }) {
+export function AddButton({
+  dish,
+  className,
+  confirmRemove,
+}: {
+  dish: Dish;
+  className?: string;
+  /** 点菜单里减到 0 时弹确认 */
+  confirmRemove?: boolean;
+}) {
+  const confirm = useConfirm((s) => s.confirm);
   const qty = useCart((s) => s.items.find((i) => i.dishId === dish.id)?.qty ?? 0);
   const locked = useCart((s) => s.locked);
   const add = useCart((s) => s.add);
@@ -29,6 +40,15 @@ export function AddButton({ dish, className }: { dish: Dish; className?: string 
     e.preventDefault();
     e.stopPropagation();
     if (locked) return;
+    if (confirmRemove && qty === 1) {
+      confirm({
+        title: `从点菜单移除「${dish.name}」？`,
+        desc: "只是从这一餐里去掉，菜谱本身还在。",
+        confirmText: "移除",
+        onConfirm: () => setQty(dish.id, 0),
+      });
+      return;
+    }
     haptic(8);
     setQty(dish.id, qty - 1);
   };
