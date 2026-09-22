@@ -124,8 +124,8 @@ export function DrawView() {
         ) : (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 text-center">
             <DiceFive size={34} weight="light" className="text-line-2" />
-            <p className="mt-3 font-display text-[15px] tracking-wider text-ink-3">
-              抽一道，省得纠结
+            <p className="mt-3 px-8 font-display text-[15px] leading-relaxed tracking-wider text-ink-3">
+              今个又不知道吃啥了？抽一发试试
             </p>
             <p className="mt-1 text-[11px] text-ink-3">
               共 <span className="tabular-nums">{pool.length}</span> 道可选
