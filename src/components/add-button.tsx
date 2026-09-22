@@ -4,7 +4,7 @@ import { Minus, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { Dish } from "@/data/types";
 import { useCart } from "@/lib/store";
-import { useConfirm } from "./confirm-dialog";
+import { useConfirm } from "@/lib/confirm-store";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export function AddButton({
     e.preventDefault();
     e.stopPropagation();
     if (locked) {
-      toast("点菜单已锁定，先解锁再加菜");
+      toast("这一餐已经定了，想改先点「重新编辑」");
       return;
     }
     haptic();

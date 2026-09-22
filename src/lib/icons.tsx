@@ -11,7 +11,6 @@ import {
   ClockCounterClockwise,
   CookingPot,
   Cow,
-  DiceFive,
   Egg,
   Fish,
   FishSimple,
@@ -20,6 +19,7 @@ import {
   Hamburger,
   Pepper,
   Plant,
+  Shuffle,
   Shrimp,
   type Icon,
 } from "@phosphor-icons/react";
@@ -51,7 +51,7 @@ export const subIcon: Record<SubId, Icon> = {
 };
 
 export const tabIcon = {
-  draw: DiceFive,
+  draw: Shuffle,
   menu: BookOpen,
   cart: ForkKnife,
   history: ClockCounterClockwise,

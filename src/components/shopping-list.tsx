@@ -25,9 +25,9 @@ export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) 
       .join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
-      toast("清单已复制");
+      toast("清单复制好了");
     } catch {
-      toast("复制失败，长按选中吧");
+      toast("复制没成功，手动长按选中吧");
     }
   };
 

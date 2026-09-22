@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Lock, LockOpen, Trash } from "@phosphor-icons/react";
+import { Check, PencilSimple, SealCheck, Trash } from "@phosphor-icons/react";
 import { ShoppingList } from "./shopping-list";
-import { useConfirm } from "./confirm-dialog";
+import { useConfirm } from "@/lib/confirm-store";
 import { toast } from "sonner";
 import Link from "next/link";
 import { categories, getDish } from "@/data/dishes";
@@ -68,7 +68,7 @@ export function CartView() {
           <p className="mt-1 text-[11px] text-ink-3">
             共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
             <span className="tabular-nums text-ink-2">{total}</span> 份
-            {locked && <span className="ml-2 text-chili">已锁定</span>}
+            {locked && <span className="ml-2 text-chili">已确认</span>}
           </p>
         </div>
         {!locked && (
@@ -186,7 +186,7 @@ export function CartView() {
                   .filter(Boolean)
                   .join("、");
                 confirm({
-                  title: `删除选中的 ${picked.length} 道菜？`,
+                  title: `从这一餐里删掉 ${picked.length} 道？`,
                   desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
                   confirmText: "删除",
                   onConfirm: () => {
@@ -210,23 +210,23 @@ export function CartView() {
               onClick={() => {
                 haptic(15);
                 unlock();
-                toast("已解锁，可以继续改");
+                toast("可以继续改了");
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line-2 bg-card py-3 text-[14px] tracking-wide text-ink"
             >
-              <LockOpen size={16} weight="regular" />
-              取消锁单
+              <PencilSimple size={16} weight="regular" />
+              重新编辑
             </button>
             <button
               type="button"
               onClick={() =>
                 confirm({
-                  title: "开始新的一餐？",
-                  desc: "当前这一餐会被清空，历史记录不受影响。",
-                  confirmText: "清空开始",
+                  title: "开始下一餐？",
+                  desc: "这一餐会被清空，已经确认过的记录不受影响。",
+                  confirmText: "清空",
                   onConfirm: () => {
                     clear();
-                    toast("开始新的一餐");
+                    toast("清空了，重新点吧");
                   },
                 })
               }
@@ -241,12 +241,12 @@ export function CartView() {
             onClick={() => {
               haptic(25);
               lock();
-              toast("已锁单 · 这一餐定了");
+              toast("这一餐定了");
             }}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-[14px] tracking-wide text-paper transition active:scale-[0.99]"
           >
-            <Lock size={16} weight="regular" />
-            锁单
+            <SealCheck size={16} weight="regular" />
+            就这么吃
           </button>
         )}
       </div>

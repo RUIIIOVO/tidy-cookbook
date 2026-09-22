@@ -159,7 +159,7 @@ export function DishSheet() {
                     type="button"
                     onClick={() => {
                       if (locked) {
-                        toast("点菜单已锁定，先解锁再加菜");
+                        toast("这一餐已经定了，想改先点「重新编辑」");
                         return;
                       }
                       haptic();

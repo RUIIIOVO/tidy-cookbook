@@ -2,12 +2,10 @@
 
 import Image from "next/image";
 import type { Dish } from "@/data/types";
+import { IMAGES_READY } from "@/lib/images";
 import { subIcon } from "@/lib/icons";
 import { catTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-
-/** 配图还没生成完；占位用分类图标，不是灰块 */
-export const IMAGES_READY = false;
 
 export function DishThumb({
   dish,

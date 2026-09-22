@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { ArrowsClockwise, DiceFive } from "@phosphor-icons/react";
+import { ArrowsClockwise, Shuffle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { categories, dishes } from "@/data/dishes";
 import type { CategoryId, Dish } from "@/data/types";
@@ -123,7 +123,7 @@ export function DrawView() {
           </button>
         ) : (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 text-center">
-            <DiceFive size={34} weight="light" className="text-line-2" />
+            <Shuffle size={32} weight="light" className="text-line-2" />
             <p className="mt-3 px-8 font-display text-[15px] leading-relaxed tracking-wider text-ink-3">
               今个又不知道吃啥了？抽一发试试
             </p>
