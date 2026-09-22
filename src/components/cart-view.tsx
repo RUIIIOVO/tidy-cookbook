@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, PencilSimple, SealCheck, Trash } from "@phosphor-icons/react";
+import {
+  BookOpen,
+  Check,
+  PencilSimple,
+  SealCheck,
+  Shuffle,
+  Trash,
+} from "@phosphor-icons/react";
 import { ShoppingList } from "./shopping-list";
 import { useConfirm } from "@/lib/confirm-store";
 import { toast } from "sonner";
@@ -48,14 +55,24 @@ export function CartView() {
       <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
         <p className="font-display text-[18px] tracking-wider text-ink">还没点菜</p>
         <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-          去菜单挑几道，或者回首页抽一道
+          自己挑几道，或者让它替你决定
         </p>
-        <Link
-          href="/menu"
-          className="mt-6 rounded-full bg-ink px-6 py-2.5 text-[13px] text-paper"
-        >
-          翻菜单
-        </Link>
+        <div className="mt-6 flex items-center gap-2.5">
+          <Link
+            href="/menu"
+            className="flex items-center gap-1.5 rounded-full bg-ink px-5 py-2.5 text-[13px] text-paper transition active:scale-[0.97]"
+          >
+            <BookOpen size={15} weight="regular" />
+            翻菜单
+          </Link>
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
+          >
+            <Shuffle size={15} weight="regular" />
+            抽一道
+          </Link>
+        </div>
       </div>
     );
   }
