@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { Dish } from "@/data/types";
 import { useCart } from "@/lib/store";
@@ -44,7 +44,7 @@ export function AddButton({ dish, className }: { dish: Dish; className?: string 
           className,
         )}
       >
-        <Plus size={14} strokeWidth={2.2} />
+        <Plus size={14} weight="bold" />
       </button>
     );
   }
@@ -62,7 +62,7 @@ export function AddButton({ dish, className }: { dish: Dish; className?: string 
         onClick={onSub}
         className="grid size-[20px] place-items-center rounded-full text-chili transition active:scale-90"
       >
-        <Minus size={12} strokeWidth={2.4} />
+        <Minus size={12} weight="bold" />
       </button>
       <span className="min-w-[10px] text-center text-[12px] font-medium text-chili tabular-nums">
         {qty}
@@ -73,7 +73,7 @@ export function AddButton({ dish, className }: { dish: Dish; className?: string 
         onClick={onAdd}
         className="grid size-[20px] place-items-center rounded-full text-chili transition active:scale-90"
       >
-        <Plus size={12} strokeWidth={2.4} />
+        <Plus size={12} weight="bold" />
       </button>
     </div>
   );

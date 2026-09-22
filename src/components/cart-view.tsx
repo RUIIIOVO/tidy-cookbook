@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Lock, LockOpen, Trash2 } from "lucide-react";
+import { Check, Lock, LockOpen, Trash } from "@phosphor-icons/react";
+import { ShoppingList } from "./shopping-list";
 import { toast } from "sonner";
 import Link from "next/link";
 import { categories, getDish } from "@/data/dishes";
@@ -125,7 +126,7 @@ export function CartView() {
                           on ? "border-chili bg-chili text-white" : "border-line-2",
                         )}
                       >
-                        {on && <Check size={11} strokeWidth={3} />}
+                        {on && <Check size={11} weight="bold" />}
                       </span>
                     )}
                     <DishThumb dish={dish} className="size-[46px] shrink-0 rounded-lg" />
@@ -154,6 +155,8 @@ export function CartView() {
             </div>
           </section>
         ))}
+
+        <ShoppingList rows={rows.map((r) => ({ dish: r.dish, qty: r.item.qty }))} />
       </div>
 
       {/* 底部操作条 */}
@@ -184,7 +187,7 @@ export function CartView() {
               }}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-chili py-2.5 text-[13px] text-white disabled:opacity-40"
             >
-              <Trash2 size={14} />
+              <Trash size={14} weight="regular" />
               删除 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
             </button>
           </div>
@@ -199,7 +202,7 @@ export function CartView() {
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line-2 bg-card py-3 text-[14px] tracking-wide text-ink"
             >
-              <LockOpen size={15} />
+              <LockOpen size={16} weight="regular" />
               取消锁单
             </button>
             <button
@@ -224,7 +227,7 @@ export function CartView() {
             }}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-[14px] tracking-wide text-paper transition active:scale-[0.99]"
           >
-            <Lock size={15} />
+            <Lock size={16} weight="regular" />
             锁单
           </button>
         )}

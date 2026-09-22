@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { motion } from "motion/react";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { catIcon } from "@/lib/icons";
 import { categories, dishes, sections } from "@/data/dishes";
 import type { SubId } from "@/data/types";
 import { searchDishes } from "@/lib/search";
@@ -51,51 +53,53 @@ export function MenuView() {
         {/* ── 左侧竖向分类导航 ───────────────── */}
         <aside
           className={cn(
-            "no-scrollbar sticky top-0 z-20 w-[52px] shrink-0 overflow-y-auto border-r border-line bg-paper-2/40",
+            "no-scrollbar sticky top-0 z-20 w-[64px] shrink-0 overflow-y-auto border-r border-line bg-paper-2/40",
             "h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))]",
           )}
         >
-          <div className="flex flex-col items-center gap-1 py-3">
-            {categories.map((c) => (
-              <div key={c.id} className="flex w-full flex-col items-center">
-                <div className="mt-2 mb-1 flex w-full items-center gap-1 px-2 first:mt-0">
-                  <span className="h-px flex-1 bg-line" />
-                  <span className="text-[9px] tracking-wider text-ink-3">{c.name}</span>
-                  <span className="h-px flex-1 bg-line" />
-                </div>
-                {c.subs.map((s) => {
-                  const on = active === s.id && !searching;
-                  const t = catTheme[c.id];
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => jump(s.id)}
-                      className={cn(
-                        "relative my-[2px] flex w-[42px] justify-center rounded-md py-2.5 transition",
-                        on ? "bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]" : "",
-                      )}
-                    >
-                      {on && (
-                        <span
-                          className="absolute top-1/2 -left-[5px] h-4 w-[2.5px] -translate-y-1/2 rounded-full"
-                          style={{ background: t.hex }}
-                        />
-                      )}
-                      <span
-                        className={cn(
-                          "vertical-zh font-display text-[13px] leading-none transition-colors",
-                          on ? "" : "text-ink-3",
-                        )}
-                        style={on ? { color: t.hex } : undefined}
+          <div className="flex flex-col py-2.5">
+            {categories.map((c) => {
+              const t = catTheme[c.id];
+              const Icon = catIcon[c.id];
+              return (
+                <div key={c.id} className="mb-1">
+                  <div className="flex items-center justify-center gap-1 px-2 pt-3 pb-1.5">
+                    <Icon size={11} weight="fill" color={t.hex} style={{ opacity: 0.6 }} />
+                    <span className="text-[9.5px] tracking-[0.15em] text-ink-3">
+                      {c.name}
+                    </span>
+                  </div>
+                  {c.subs.map((s) => {
+                    const on = active === s.id && !searching;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => jump(s.id)}
+                        className="relative flex h-9 w-full items-center justify-center"
                       >
-                        {s.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                        {on && (
+                          <motion.span
+                            layoutId="rail-pill"
+                            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                            className="absolute inset-x-1.5 inset-y-0.5 rounded-lg bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            "relative text-[12px] leading-none whitespace-nowrap transition-colors duration-200",
+                            on ? "font-medium" : "text-ink-3",
+                          )}
+                          style={on ? { color: t.hex } : undefined}
+                        >
+                          {s.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </aside>
 
@@ -103,7 +107,7 @@ export function MenuView() {
         <div className="min-w-0 flex-1">
           <div className="sticky top-0 z-10 bg-paper/90 px-3.5 pt-3 pb-2.5 backdrop-blur-lg hairline-b">
             <div className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2">
-              <Search size={14} className="shrink-0 text-ink-3" />
+              <MagnifyingGlass size={15} className="shrink-0 text-ink-3" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}

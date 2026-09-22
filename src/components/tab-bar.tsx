@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import { useCart } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { tabIcon } from "@/lib/icons";
+import { cn, haptic } from "@/lib/utils";
 
 const TABS = [
-  { href: "/", label: "抽菜", glyph: "签" },
-  { href: "/menu", label: "菜单", glyph: "菜" },
-  { href: "/cart", label: "点菜单", glyph: "单" },
-  { href: "/history", label: "历史", glyph: "史" },
+  { href: "/", label: "抽菜", Icon: tabIcon.draw },
+  { href: "/menu", label: "菜单", Icon: tabIcon.menu },
+  { href: "/cart", label: "点菜单", Icon: tabIcon.cart },
+  { href: "/history", label: "历史", Icon: tabIcon.history },
 ];
 
 export function TabBar() {
@@ -22,38 +24,45 @@ export function TabBar() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="flex">
-        {TABS.map((t) => {
-          const active = t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
+        {TABS.map(({ href, label, Icon }) => {
+          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
-            <li key={t.href} className="flex-1">
+            <li key={href} className="flex-1">
               <Link
-                href={t.href}
-                className="relative flex h-14 flex-col items-center justify-center gap-0.5"
+                href={href}
+                onClick={() => haptic(6)}
+                className="relative flex h-14 flex-col items-center justify-center gap-[3px]"
               >
-                <span
-                  className={cn(
-                    "relative font-display text-[17px] leading-none transition-colors",
-                    active ? "text-chili" : "text-ink-3",
-                  )}
-                >
-                  {t.glyph}
-                  {t.href === "/cart" && count > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[15px] rounded-full bg-chili px-1 text-center font-sans text-[10px] leading-[15px] text-white">
+                {active && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-x-3 inset-y-1.5 -z-10 rounded-xl bg-chili-soft"
+                  />
+                )}
+                <span className="relative">
+                  <Icon
+                    size={21}
+                    weight={active ? "fill" : "regular"}
+                    className={cn(
+                      "transition-colors duration-200",
+                      active ? "text-chili" : "text-ink-3",
+                    )}
+                  />
+                  {href === "/cart" && count > 0 && (
+                    <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-chili px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
                       {count}
                     </span>
                   )}
                 </span>
                 <span
                   className={cn(
-                    "text-[10px] tracking-wide transition-colors",
-                    active ? "text-ink" : "text-ink-3",
+                    "text-[10px] tracking-wide transition-colors duration-200",
+                    active ? "text-chili" : "text-ink-3",
                   )}
                 >
-                  {t.label}
+                  {label}
                 </span>
-                {active && (
-                  <span className="absolute top-0 h-[2px] w-6 rounded-full bg-chili" />
-                )}
               </Link>
             </li>
           );

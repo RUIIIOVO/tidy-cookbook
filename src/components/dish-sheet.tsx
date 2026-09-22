@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@phosphor-icons/react";
+import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { catTheme, spicyLabel, difficultyLabel } from "@/lib/theme";
@@ -67,19 +68,24 @@ export function DishSheet() {
                 </div>
 
                 <div className="mt-4 flex divide-x divide-line rounded-card border border-line bg-card">
-                  {[
-                    ["耗时", `${dish.minutes} 分钟`],
-                    ["难度", difficultyLabel[dish.difficulty]],
-                    ["辣度", spicyLabel[dish.spicy]],
-                  ].map(([k, v]) => (
+                  {(
+                    [
+                      [metaIcon.time, "耗时", `${dish.minutes} 分钟`],
+                      [metaIcon.difficulty, "难度", difficultyLabel[dish.difficulty]],
+                      [metaIcon.spicy, "辣度", spicyLabel[dish.spicy]],
+                    ] as const
+                  ).map(([Icon, k, v]) => (
                     <div key={k} className="flex-1 px-3 py-2.5 text-center">
-                      <div className="text-[10px] text-ink-3">{k}</div>
+                      <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                        <Icon size={12} weight="regular" />
+                        {k}
+                      </div>
                       <div className="mt-0.5 text-[13px] text-ink tabular-nums">{v}</div>
                     </div>
                   ))}
                 </div>
 
-                <SectionTitle>食材</SectionTitle>
+                <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>
                 <div className="space-y-3">
                   {dish.ingredients.map((g) => (
                     <div key={g.group}>
@@ -103,7 +109,7 @@ export function DishSheet() {
                   ))}
                 </div>
 
-                <SectionTitle>做法</SectionTitle>
+                <SectionTitle icon={metaIcon.steps}>做法</SectionTitle>
                 <ol className="space-y-3">
                   {dish.steps.map((s, i) => (
                     <li key={i} className="flex gap-3">
@@ -134,7 +140,7 @@ export function DishSheet() {
                       }}
                       className="text-ink-2 active:scale-90"
                     >
-                      <Minus size={15} />
+                      <Minus size={15} weight="bold" />
                     </button>
                     <span className="w-4 text-center text-[14px] tabular-nums">{n}</span>
                     <button
@@ -146,7 +152,7 @@ export function DishSheet() {
                       }}
                       className="text-ink-2 active:scale-90"
                     >
-                      <Plus size={15} />
+                      <Plus size={15} weight="bold" />
                     </button>
                   </div>
                   <button
@@ -175,9 +181,16 @@ export function DishSheet() {
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  icon: React.ComponentType<{ size?: number; weight?: "regular" | "fill" }>;
+}) {
   return (
-    <div className="mt-7 mb-3 flex items-center gap-3">
+    <div className="mt-7 mb-3 flex items-center gap-2.5">
+      <Icon size={16} weight="regular" />
       <h3 className="font-display text-[15px] tracking-[0.25em] text-ink">{children}</h3>
       <span className="h-px flex-1 bg-line" />
     </div>

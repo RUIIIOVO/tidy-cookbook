@@ -34,15 +34,15 @@
     "pinyin": "hongshaopaigu",
     "initials": "hspg"
   },
-  "糖醋脆排骨": {
-    "id": "tang-cu-cui-pai-gu",
-    "pinyin": "tangcucuipaigu",
-    "initials": "tccpg"
+  "糖醋排骨": {
+    "id": "tang-cu-pai-gu",
+    "pinyin": "tangcupaigu",
+    "initials": "tcpg"
   },
-  "蒜香酥排骨": {
-    "id": "suan-xiang-su-pai-gu",
-    "pinyin": "suanxiangsupaigu",
-    "initials": "sxspg"
+  "蒜香排骨": {
+    "id": "suan-xiang-pai-gu",
+    "pinyin": "suanxiangpaigu",
+    "initials": "sxpg"
   },
   "玉米排骨煲": {
     "id": "yu-mi-pai-gu-bao",
@@ -94,15 +94,15 @@
     "pinyin": "xiangjianniupai",
     "initials": "xjnp"
   },
-  "可乐焖鸡翅": {
-    "id": "ke-le-men-ji-chi",
-    "pinyin": "kelemenjichi",
-    "initials": "klmjc"
+  "可乐鸡翅": {
+    "id": "ke-le-ji-chi",
+    "pinyin": "kelejichi",
+    "initials": "kljc"
   },
-  "蒜香烤鸡翅": {
-    "id": "suan-xiang-kao-ji-chi",
-    "pinyin": "suanxiangkaojichi",
-    "initials": "sxkjc"
+  "蒜香鸡翅": {
+    "id": "suan-xiang-ji-chi",
+    "pinyin": "suanxiangjichi",
+    "initials": "sxjc"
   },
   "奥尔良烤翅": {
     "id": "ao-er-liang-kao-chi",
@@ -119,10 +119,10 @@
     "pinyin": "xinjiangdapanji",
     "initials": "xjdpj"
   },
-  "黄油炖鸡汤": {
-    "id": "huang-you-dun-ji-tang",
-    "pinyin": "huangyoudunjitang",
-    "initials": "hydjt"
+  "虫草花炖鸡汤": {
+    "id": "chong-cao-hua-dun-ji-tang",
+    "pinyin": "chongcaohuadunjitang",
+    "initials": "cchdjt"
   },
   "麻辣爆炒鸡爪": {
     "id": "ma-la-bao-chao-ji-zhua",
@@ -254,35 +254,35 @@
     "pinyin": "baochaoxingbaogu",
     "initials": "bcxbg"
   },
-  "蒜蓉空心菜": {
-    "id": "suan-rong-kong-xin-cai",
-    "pinyin": "suanrongkongxincai",
-    "initials": "srkxc"
+  "清炒空心菜": {
+    "id": "qing-chao-kong-xin-cai",
+    "pinyin": "qingchaokongxincai",
+    "initials": "qckxc"
   },
-  "蒜蓉鸡毛菜": {
-    "id": "suan-rong-ji-mao-cai",
-    "pinyin": "suanrongjimaocai",
-    "initials": "srjmc"
+  "清炒鸡毛菜": {
+    "id": "qing-chao-ji-mao-cai",
+    "pinyin": "qingchaojimaocai",
+    "initials": "qcjmc"
   },
-  "蒜蓉炒菜心": {
-    "id": "suan-rong-chao-cai-xin",
-    "pinyin": "suanrongchaocaixin",
-    "initials": "srccx"
+  "清炒菜心": {
+    "id": "qing-chao-cai-xin",
+    "pinyin": "qingchaocaixin",
+    "initials": "qccx"
   },
-  "蒜蓉炒白菜": {
-    "id": "suan-rong-chao-bai-cai",
-    "pinyin": "suanrongchaobaicai",
-    "initials": "srcbc"
+  "清炒白菜": {
+    "id": "qing-chao-bai-cai",
+    "pinyin": "qingchaobaicai",
+    "initials": "qcbc"
   },
-  "蒜蓉油麦菜": {
-    "id": "suan-rong-you-mai-cai",
-    "pinyin": "suanrongyoumaicai",
-    "initials": "srymc"
+  "清炒油麦菜": {
+    "id": "qing-chao-you-mai-cai",
+    "pinyin": "qingchaoyoumaicai",
+    "initials": "qcymc"
   },
-  "蒜蓉炒菠菜": {
-    "id": "suan-rong-chao-bo-cai",
-    "pinyin": "suanrongchaobocai",
-    "initials": "srcbc"
+  "清炒菠菜": {
+    "id": "qing-chao-bo-cai",
+    "pinyin": "qingchaobocai",
+    "initials": "qcbc"
   },
   "蚝油生菜": {
     "id": "hao-you-sheng-cai",

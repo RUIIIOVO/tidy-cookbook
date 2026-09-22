@@ -72,13 +72,6 @@
   }
 }
 
-/* 竖排的中文标签（左侧分类导航用） */
-@utility vertical-zh {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  letter-spacing: 0.18em;
-}
-
 @utility hairline-b {
   box-shadow: inset 0 -1px 0 var(--color-line);
 }

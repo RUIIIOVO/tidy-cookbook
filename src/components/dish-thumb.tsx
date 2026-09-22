@@ -1,9 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import type { Dish } from "@/data/types";
+import { subIcon } from "@/lib/icons";
 import { catTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-/** 配图还没生成完，先用「印章占位」——不是灰块，看起来是设计的一部分 */
+/** 配图还没生成完；占位用分类图标，不是灰块 */
 export const IMAGES_READY = false;
 
 export function DishThumb({
@@ -20,6 +23,7 @@ export function DishThumb({
   variant?: "sm" | "lg";
 }) {
   const t = catTheme[dish.category];
+  const Icon = subIcon[dish.sub];
 
   if (IMAGES_READY) {
     return (
@@ -44,22 +48,20 @@ export function DishThumb({
         className,
       )}
     >
-      <span
-        className={cn(
-          "pointer-events-none absolute rounded-[4px] border",
-          variant === "lg" ? "inset-3" : "inset-[6px]",
-        )}
-        style={{ borderColor: t.hex, opacity: 0.16 }}
+      <Icon
+        size={variant === "lg" ? 56 : 26}
+        weight="duotone"
+        color={t.hex}
+        style={{ opacity: variant === "lg" ? 0.34 : 0.5 }}
       />
-      <span
-        className={cn(
-          "vertical-zh font-display leading-none",
-          variant === "lg" ? "text-[40px]" : "text-[19px]",
-        )}
-        style={{ color: t.hex, opacity: variant === "lg" ? 0.4 : 0.55 }}
-      >
-        {dish.name.slice(0, 2)}
-      </span>
+      {variant === "lg" && (
+        <span
+          className="absolute bottom-3 left-3 text-[10px] tracking-[0.3em]"
+          style={{ color: t.hex, opacity: 0.4 }}
+        >
+          配图生成中
+        </span>
+      )}
     </div>
   );
 }
