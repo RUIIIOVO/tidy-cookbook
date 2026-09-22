@@ -1,7 +1,6 @@
 "use client";
 
 import type { Dish } from "@/data/types";
-import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
 import { AddButton } from "./add-button";
 import { DishThumb } from "./dish-thumb";
@@ -9,7 +8,6 @@ import { Meta } from "./meta";
 
 export function DishCard({ dish }: { dish: Dish }) {
   const open = useDishSheet((s) => s.open);
-  const t = catTheme[dish.category];
 
   return (
     <div
@@ -28,22 +26,9 @@ export function DishCard({ dish }: { dish: Dish }) {
 
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="min-w-0">
-          <div className="flex items-baseline gap-1.5">
-            <h3 className="truncate font-display text-[16px] leading-tight tracking-wide text-ink">
-              {dish.name}
-            </h3>
-            {dish.spicy > 0 && (
-              <span className="flex shrink-0 items-center gap-[2px]" title={`辣度 ${dish.spicy}`}>
-                {Array.from({ length: dish.spicy }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="size-[4px] rounded-full"
-                    style={{ background: t.hex, opacity: 0.75 }}
-                  />
-                ))}
-              </span>
-            )}
-          </div>
+          <h3 className="truncate font-display text-[16px] leading-tight tracking-wide text-ink">
+            {dish.name}
+          </h3>
           <p className="mt-1 line-clamp-2 text-[11.5px] leading-[1.55] text-ink-3">
             {dish.desc}
           </p>

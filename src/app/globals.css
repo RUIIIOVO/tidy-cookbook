@@ -11,11 +11,12 @@
   --color-line: #e2dbcd;
   --color-line-2: #d3cabb;
 
-  /* ── 强调色（深竹绿，全局交互唯一强调） ──
-     色相角 152°，与纸底 93° 温差 59°；与 leaf 分类色 ΔE 16.5
-     纸底对比 7.29 / 白字 8.15，均过 WCAG AA */
-  --color-accent: #1f5a37;
-  --color-accent-soft: #d9e6de;
+  /* ── 强调色（冷杉绿，全局交互唯一强调） ──
+     Lab 色相 159°、L* 38、彩度 26：比灰橄榄深 5 档、冷 29°
+     纸底对比 6.27 / 白字 7.01，均过 WCAG AA
+     与 leaf 分类色 ΔE 13.6，素菜分类的标识性保住 */
+  --color-accent: #2e6349;
+  --color-accent-soft: #dce8e0;
 
   /* ── 分类色（低饱和，手工颜料感）；只用于菜品分类，不做交互强调 ── */
   --color-chili: #a4381f;

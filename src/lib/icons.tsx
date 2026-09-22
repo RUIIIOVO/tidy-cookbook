@@ -14,10 +14,10 @@ import {
   Egg,
   Fish,
   FishSimple,
+  Flame,
   ForkKnife,
   Grains,
   Hamburger,
-  Pepper,
   Plant,
   Shuffle,
   Shrimp,
@@ -60,7 +60,7 @@ export const tabIcon = {
 export const metaIcon = {
   time: Clock,
   difficulty: ChefHat,
-  spicy: Pepper,
+  spicy: Flame,
   ingredients: Basket,
   steps: CookingPot,
 } satisfies Record<string, Icon>;

@@ -4,25 +4,25 @@
     "pinyin": "xiangweilajiaoxiaochaorou",
     "initials": "xwljxcr"
   },
-  "蒜苔爆炒肉丝": {
-    "id": "suan-tai-bao-chao-rou-si",
-    "pinyin": "suantaibaochaorousi",
-    "initials": "stbcrs"
+  "蒜苔爆炒肉片": {
+    "id": "suan-tai-bao-chao-rou-pian",
+    "pinyin": "suantaibaochaoroupian",
+    "initials": "stbcrp"
   },
-  "蒜苗爆炒肉丝": {
-    "id": "suan-miao-bao-chao-rou-si",
-    "pinyin": "suanmiaobaochaorousi",
-    "initials": "smbcrs"
+  "蒜苗爆炒肉片": {
+    "id": "suan-miao-bao-chao-rou-pian",
+    "pinyin": "suanmiaobaochaoroupian",
+    "initials": "smbcrp"
   },
-  "芹香炒肉丝": {
-    "id": "qin-xiang-chao-rou-si",
-    "pinyin": "qinxiangchaorousi",
-    "initials": "qxcrs"
+  "西芹炒肉片": {
+    "id": "xi-qin-chao-rou-pian",
+    "pinyin": "xiqinchaoroupian",
+    "initials": "xqcrp"
   },
-  "茭白炒肉丝": {
-    "id": "jiao-bai-chao-rou-si",
-    "pinyin": "jiaobaichaorousi",
-    "initials": "jbcrs"
+  "茭白炒肉片": {
+    "id": "jiao-bai-chao-rou-pian",
+    "pinyin": "jiaobaichaoroupian",
+    "initials": "jbcrp"
   },
   "爆炒鲜猪肝": {
     "id": "bao-chao-xian-zhu-gan",
@@ -79,6 +79,11 @@
     "pinyin": "kejianiangdoufu",
     "initials": "kjndf"
   },
+  "木须肉": {
+    "id": "mu-xu-rou",
+    "pinyin": "muxurou",
+    "initials": "mxr"
+  },
   "小炒黄牛肉": {
     "id": "xiao-chao-huang-niu-rou",
     "pinyin": "xiaochaohuangniurou",
@@ -119,10 +124,10 @@
     "pinyin": "xinjiangdapanji",
     "initials": "xjdpj"
   },
-  "虫草花炖鸡汤": {
-    "id": "chong-cao-hua-dun-ji-tang",
-    "pinyin": "chongcaohuadunjitang",
-    "initials": "cchdjt"
+  "虫草花炖鸡": {
+    "id": "chong-cao-hua-dun-ji",
+    "pinyin": "chongcaohuadunji",
+    "initials": "cchdj"
   },
   "麻辣爆炒鸡爪": {
     "id": "ma-la-bao-chao-ji-zhua",
@@ -134,10 +139,10 @@
     "pinyin": "shougongniurouhanbao",
     "initials": "sgnrhb"
   },
-  "碳烤香肠": {
-    "id": "tan-kao-xiang-chang",
-    "pinyin": "tankaoxiangchang",
-    "initials": "tkxc"
+  "脆皮煎香肠": {
+    "id": "cui-pi-jian-xiang-chang",
+    "pinyin": "cuipijianxiangchang",
+    "initials": "cpjxc"
   },
   "白灼基围虾": {
     "id": "bai-zhuo-ji-wei-xia",
@@ -214,10 +219,10 @@
     "pinyin": "sijidouchaojidan",
     "initials": "sjdcjd"
   },
-  "番茄炒蛋": {
-    "id": "fan-qie-chao-dan",
-    "pinyin": "fanqiechaodan",
-    "initials": "fqcd"
+  "番茄炒鸡蛋": {
+    "id": "fan-qie-chao-ji-dan",
+    "pinyin": "fanqiechaojidan",
+    "initials": "fqcjd"
   },
   "菠菜炒鸡蛋": {
     "id": "bo-cai-chao-ji-dan",
@@ -248,11 +253,6 @@
     "id": "xiang-jian-dou-fu",
     "pinyin": "xiangjiandoufu",
     "initials": "xjdf"
-  },
-  "爆炒杏鲍菇": {
-    "id": "bao-chao-xing-bao-gu",
-    "pinyin": "baochaoxingbaogu",
-    "initials": "bcxbg"
   },
   "清炒空心菜": {
     "id": "qing-chao-kong-xin-cai",
@@ -289,6 +289,11 @@
     "pinyin": "haoyoushengcai",
     "initials": "hysc"
   },
+  "爆炒杏鲍菇": {
+    "id": "bao-chao-xing-bao-gu",
+    "pinyin": "baochaoxingbaogu",
+    "initials": "bcxbg"
+  },
   "干锅菜花": {
     "id": "gan-guo-cai-hua",
     "pinyin": "ganguocaihua",
@@ -309,20 +314,15 @@
     "pinyin": "hongshaoqiezi",
     "initials": "hsqz"
   },
-  "蜜烤红薯": {
-    "id": "mi-kao-hong-shu",
-    "pinyin": "mikaohongshu",
-    "initials": "mkhs"
+  "流蜜烤红薯": {
+    "id": "liu-mi-kao-hong-shu",
+    "pinyin": "liumikaohongshu",
+    "initials": "lmkhs"
   },
   "蒜蓉拍黄瓜": {
     "id": "suan-rong-pai-huang-gua",
     "pinyin": "suanrongpaihuanggua",
     "initials": "srphg"
-  },
-  "木须肉": {
-    "id": "mu-xu-rou",
-    "pinyin": "muxurou",
-    "initials": "mxr"
   },
   "丝瓜蛋花汤": {
     "id": "si-gua-dan-hua-tang",
@@ -354,10 +354,10 @@
     "pinyin": "huangjindanchaofan",
     "initials": "hjdcf"
   },
-  "干锅炒方便面": {
-    "id": "gan-guo-chao-fang-bian-mian",
-    "pinyin": "ganguochaofangbianmian",
-    "initials": "ggcfbm"
+  "香辣炒方便面": {
+    "id": "xiang-la-chao-fang-bian-mian",
+    "pinyin": "xianglachaofangbianmian",
+    "initials": "xlcfbm"
   },
   "家常炒粉干": {
     "id": "jia-chang-chao-fen-gan",
