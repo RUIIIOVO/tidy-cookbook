@@ -42,8 +42,7 @@ export function AddButton({
     if (locked) return;
     if (confirmRemove && qty === 1) {
       confirm({
-        title: `从点菜单移除「${dish.name}」？`,
-        desc: "只是从这一餐里去掉，菜谱本身还在。",
+        title: `从点菜单移除\n「${dish.name}」？`,
         confirmText: "移除",
         onConfirm: () => setQty(dish.id, 0),
       });

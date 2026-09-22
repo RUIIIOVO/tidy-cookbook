@@ -118,7 +118,7 @@ export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) 
               className="flex w-full items-center justify-between px-3 py-2.5"
             >
               <span className="text-[11.5px] text-ink-2">
-                调料 · {seasoning.items.length} 样（家里一般有）
+                调料 · {seasoning.items.length} 样
               </span>
               <span className="text-[11px] text-ink-3">
                 {showSeasoning ? "收起" : "展开"}

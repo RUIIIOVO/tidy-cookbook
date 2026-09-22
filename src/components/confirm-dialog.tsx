@@ -50,7 +50,7 @@ export function ConfirmHost() {
             className="w-full max-w-[300px] overflow-hidden rounded-2xl border border-line bg-card"
           >
             <div className="px-5 pt-6 pb-5 text-center">
-              <h3 className="font-display text-[17px] tracking-wider text-ink">
+              <h3 className="font-display text-[17px] leading-relaxed tracking-wider whitespace-pre-line text-ink">
                 {opts.title}
               </h3>
               {opts.desc && (
