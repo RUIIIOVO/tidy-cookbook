@@ -1,0 +1,22 @@
+[
+ {
+  "id": "A_xiaochaorou",
+  "prompt": "Generate a photo of Chinese Hunan style stir-fried pork belly slices with green and red chili peppers, glossy red chili oil, garlic and fermented black beans, wok-fried. Style: overhead 45-degree angle, single dish served in a plain off-white ceramic plate, placed on a natural linen tablecloth over a warm walnut wood table, soft diffused natural window light from the left, gentle shadows, shallow depth of field, warm muted color grading, appetizing home-cooked feel, no text, no watermark, no hands, no chopsticks, no other dishes, professional food photography, editorial cookbook style, 4:3 aspect ratio"
+ },
+ {
+  "id": "A_qingzheng-luyu",
+  "prompt": "Generate a photo of Chinese steamed whole sea bass fish topped with shredded ginger and green scallion, drizzled with clear soy sauce, garnished with fresh coriander. Style: overhead 45-degree angle, single dish served in a plain off-white ceramic plate, placed on a natural linen tablecloth over a warm walnut wood table, soft diffused natural window light from the left, gentle shadows, shallow depth of field, warm muted color grading, appetizing home-cooked feel, no text, no watermark, no hands, no chopsticks, no other dishes, professional food photography, editorial cookbook style, 4:3 aspect ratio"
+ },
+ {
+  "id": "A_danchaofan",
+  "prompt": "Generate a photo of Chinese golden egg fried rice, separate fluffy rice grains coated in egg, with diced green scallion, steaming hot. Style: overhead 45-degree angle, single dish served in a plain off-white ceramic plate, placed on a natural linen tablecloth over a warm walnut wood table, soft diffused natural window light from the left, gentle shadows, shallow depth of field, warm muted color grading, appetizing home-cooked feel, no text, no watermark, no hands, no chopsticks, no other dishes, professional food photography, editorial cookbook style, 4:3 aspect ratio"
+ },
+ {
+  "id": "B_xiaochaorou",
+  "prompt": "Generate a photo of Chinese Hunan style stir-fried pork belly slices with green and red chili peppers, glossy red chili oil, garlic and fermented black beans, wok-fried. Style: top-down 45-degree angle, single dish in a matte dark grey stoneware plate on a dark slate surface, dramatic single hard light source, deep shadows, moody high-contrast, cool color grading, fine-dining restaurant style, no text, no hands, no chopsticks, no other dishes, professional food photography, 4:3 aspect ratio"
+ },
+ {
+  "id": "C_xiaochaorou",
+  "prompt": "Generate a photo of Chinese Hunan style stir-fried pork belly slices with green and red chili peppers, glossy red chili oil, garlic and fermented black beans, wok-fried. Style: 45-degree angle, single dish in a pure white round plate on a seamless pure white background, bright even softbox studio lighting, no shadows, clean commercial catalog look, high key, no text, no hands, no chopsticks, no other dishes, product food photography, 4:3 aspect ratio"
+ }
+]

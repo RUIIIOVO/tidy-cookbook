@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ── 纸与墨 ───────────────────────────── */
+  --color-paper: #f5f2eb;
+  --color-paper-2: #ebe6db;
+  --color-card: #fffdf8;
+  --color-ink: #1b1916;
+  --color-ink-2: #5a544b;
+  --color-ink-3: #8d857a;
+  --color-line: #e2dbcd;
+  --color-line-2: #d3cabb;
+
+  /* ── 分类色（低饱和，手工颜料感） ─────── */
+  --color-chili: #a4381f;
+  --color-chili-soft: #f0e0d9;
+  --color-brine: #2f5a61;
+  --color-brine-soft: #dbe6e6;
+  --color-leaf: #576b48;
+  --color-leaf-soft: #e2e7da;
+  --color-caramel: #a1702f;
+  --color-caramel-soft: #f0e6d4;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC",
+    "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display:
+    "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", "STSong",
+    "SimSun", ui-serif, serif;
+
+  --radius-card: 14px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html {
+    background: var(--color-paper-2);
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  /* 极淡的纸纹，避免纯色塑料感 */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: var(--color-chili);
+    color: #fff;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 竖排的中文标签（左侧分类导航用） */
+@utility vertical-zh {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.18em;
+}
+
+@utility hairline-b {
+  box-shadow: inset 0 -1px 0 var(--color-line);
 }
