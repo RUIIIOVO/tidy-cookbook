@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { Dish } from "@/data/types";
-import { IMAGES_READY } from "@/lib/images";
+import { hasImage } from "@/lib/images";
 import { subIcon } from "@/lib/icons";
 import { catTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ export function DishThumb({
   const t = catTheme[dish.category];
   const Icon = subIcon[dish.sub];
 
-  if (IMAGES_READY) {
+  if (hasImage(dish.id)) {
     return (
       <div className={cn("relative overflow-hidden bg-paper-2", className)}>
         <Image

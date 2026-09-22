@@ -167,7 +167,7 @@ export function DishSheet() {
                       toast(`已加入 ${n} 份 · ${dish.name}`);
                       close();
                     }}
-                    className="flex-1 rounded-full bg-ink py-3 text-[14px] tracking-wide text-paper transition active:scale-[0.98]"
+                    className="flex-1 rounded-full bg-accent py-3 text-[14px] tracking-wide text-white transition active:scale-[0.98]"
                   >
                     加入点菜单
                   </button>

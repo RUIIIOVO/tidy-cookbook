@@ -11,7 +11,13 @@
   --color-line: #e2dbcd;
   --color-line-2: #d3cabb;
 
-  /* ── 分类色（低饱和，手工颜料感） ─────── */
+  /* ── 强调色（深竹绿，全局交互唯一强调） ──
+     色相角 152°，与纸底 93° 温差 59°；与 leaf 分类色 ΔE 16.5
+     纸底对比 7.29 / 白字 8.15，均过 WCAG AA */
+  --color-accent: #1f5a37;
+  --color-accent-soft: #d9e6de;
+
+  /* ── 分类色（低饱和，手工颜料感）；只用于菜品分类，不做交互强调 ── */
   --color-chili: #a4381f;
   --color-chili-soft: #f0e0d9;
   --color-brine: #2f5a61;
@@ -38,6 +44,9 @@
 
   html {
     background: var(--color-paper-2);
+    /* 预留滚动条槽位：否则长页面(菜单/点菜单)出现滚动条时
+       视口变窄 15px，mx-auto 居中的外框和固定底栏会整体左移抖动 */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -60,7 +69,7 @@
   }
 
   ::selection {
-    background: var(--color-chili);
+    background: var(--color-accent);
     color: #fff;
   }
 }

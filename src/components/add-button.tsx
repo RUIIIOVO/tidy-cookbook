@@ -71,7 +71,7 @@ export function AddButton({
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 rounded-full border border-chili/30 bg-chili-soft px-1 py-0.5",
+        "flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-1 py-0.5",
         className,
       )}
     >
@@ -79,18 +79,18 @@ export function AddButton({
         type="button"
         aria-label="减少"
         onClick={onSub}
-        className="grid size-[20px] place-items-center rounded-full text-chili transition active:scale-90"
+        className="grid size-[20px] place-items-center rounded-full text-accent transition active:scale-90"
       >
         <Minus size={12} weight="bold" />
       </button>
-      <span className="min-w-[10px] text-center text-[12px] font-medium text-chili tabular-nums">
+      <span className="min-w-[10px] text-center text-[12px] font-medium text-accent tabular-nums">
         {qty}
       </span>
       <button
         type="button"
         aria-label="增加"
         onClick={onAdd}
-        className="grid size-[20px] place-items-center rounded-full text-chili transition active:scale-90"
+        className="grid size-[20px] place-items-center rounded-full text-accent transition active:scale-90"
       >
         <Plus size={12} weight="bold" />
       </button>

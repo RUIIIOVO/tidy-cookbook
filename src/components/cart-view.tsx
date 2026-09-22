@@ -60,7 +60,7 @@ export function CartView() {
         <div className="mt-6 flex items-center gap-2.5">
           <Link
             href="/menu"
-            className="flex items-center gap-1.5 rounded-full bg-ink px-5 py-2.5 text-[13px] text-paper transition active:scale-[0.97]"
+            className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
           >
             <BookOpen size={15} weight="regular" />
             翻菜单
@@ -85,7 +85,7 @@ export function CartView() {
           <p className="mt-1 text-[11px] text-ink-3">
             共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
             <span className="tabular-nums text-ink-2">{total}</span> 份
-            {locked && <span className="ml-2 text-chili">已确认</span>}
+            {locked && <span className="ml-2 text-accent">已确认</span>}
           </p>
         </div>
         {!locked && (
@@ -135,14 +135,14 @@ export function CartView() {
                     }}
                     className={cn(
                       "flex items-center gap-3 rounded-card border bg-card p-2.5 transition",
-                      on ? "border-chili/40 bg-chili-soft/40" : "border-line",
+                      on ? "border-accent/40 bg-accent-soft/40" : "border-line",
                     )}
                   >
                     {selecting && (
                       <span
                         className={cn(
                           "grid size-[18px] shrink-0 place-items-center rounded-full border",
-                          on ? "border-chili bg-chili text-white" : "border-line-2",
+                          on ? "border-accent bg-accent text-white" : "border-line-2",
                         )}
                       >
                         {on && <Check size={11} weight="bold" />}
@@ -227,7 +227,6 @@ export function CartView() {
               onClick={() => {
                 haptic(15);
                 unlock();
-                toast("可以继续改了");
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line-2 bg-card py-3 text-[14px] tracking-wide text-ink"
             >
@@ -247,7 +246,7 @@ export function CartView() {
                   },
                 })
               }
-              className="rounded-full bg-ink px-5 py-3 text-[14px] tracking-wide text-paper"
+              className="rounded-full bg-accent px-5 py-3 text-[14px] tracking-wide text-white"
             >
               下一餐
             </button>
@@ -258,12 +257,12 @@ export function CartView() {
             onClick={() => {
               haptic(25);
               lock();
-              toast("这一餐定了");
+              toast("厨神上线！");
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-[14px] tracking-wide text-paper transition active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.99]"
           >
             <SealCheck size={16} weight="regular" />
-            就这么吃
+            下单
           </button>
         )}
       </div>

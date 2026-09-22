@@ -37,7 +37,7 @@ export function TabBar() {
                   <motion.span
                     layoutId="tab-pill"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                    className="absolute inset-x-3 inset-y-1.5 -z-10 rounded-xl bg-chili-soft"
+                    className="absolute inset-x-3 inset-y-1.5 -z-10 rounded-xl bg-accent-soft"
                   />
                 )}
                 <span className="relative">
@@ -46,11 +46,11 @@ export function TabBar() {
                     weight={active ? "fill" : "regular"}
                     className={cn(
                       "transition-colors duration-200",
-                      active ? "text-chili" : "text-ink-3",
+                      active ? "text-accent" : "text-ink-3",
                     )}
                   />
                   {href === "/cart" && count > 0 && (
-                    <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-chili px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
+                    <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-accent px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
                       {count}
                     </span>
                   )}
@@ -58,7 +58,7 @@ export function TabBar() {
                 <span
                   className={cn(
                     "text-[10px] tracking-wide transition-colors duration-200",
-                    active ? "text-chili" : "text-ink-3",
+                    active ? "text-accent" : "text-ink-3",
                   )}
                 >
                   {label}

@@ -73,7 +73,7 @@ export function DrawView() {
             className={cn(
               "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
               filter === f.id
-                ? "border-ink bg-ink text-paper"
+                ? "border-accent bg-accent text-white"
                 : "border-line bg-card text-ink-2",
             )}
           >
@@ -139,7 +139,7 @@ export function DrawView() {
           type="button"
           onClick={roll}
           disabled={rolling}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-[14px] tracking-wide text-paper transition active:scale-[0.98] disabled:opacity-60"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.98] disabled:opacity-60"
         >
           <ArrowsClockwise
             size={16}
@@ -156,7 +156,7 @@ export function DrawView() {
               add(dish.id);
               toast(`已加入 · ${dish.name}`);
             }}
-            className="rounded-full border border-chili/30 bg-chili-soft px-6 py-3.5 text-[14px] tracking-wide text-chili transition active:scale-[0.98]"
+            className="rounded-full border border-accent/30 bg-accent-soft px-6 py-3.5 text-[14px] tracking-wide text-accent transition active:scale-[0.98]"
           >
             就它了
           </button>

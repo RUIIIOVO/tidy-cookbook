@@ -1,2 +1,8 @@
-/** 菜品配图是否就位。图片放 public/images/dishes/<id>.webp 后改为 true */
-export const IMAGES_READY = false;
+import READY from "@/data/images.generated.json";
+
+const withImage = new Set<string>(READY as string[]);
+
+/** 该菜是否已有配图；没有的用分类图标占位 */
+export function hasImage(dishId: string) {
+  return withImage.has(dishId);
+}
