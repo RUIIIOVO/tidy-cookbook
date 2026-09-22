@@ -13,7 +13,8 @@ export type SubId =
   | "tofu"
   | "greens"
   | "soup"
-  | "staple";
+  | "rice"
+  | "noodle";
 
 export type IngredientGroup = {
   group: "主料" | "辅料" | "调料";

@@ -45,8 +45,9 @@ export const subIcon: Record<SubId, Icon> = {
   egg: Egg,
   tofu: Grains,
   greens: Plant,
-  soup: BowlSteam,
-  staple: BowlFood,
+  soup: CookingPot,
+  rice: BowlFood,
+  noodle: BowlSteam,
 };
 
 export const tabIcon = {

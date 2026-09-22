@@ -53,7 +53,7 @@ export function DrawView() {
   const t = dish ? catTheme[dish.category] : catTheme.meat;
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-6">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-16">
       <header>
         <p className="text-[11px] tracking-[0.3em] text-ink-3">TODAY&apos;S PICK</p>
         <h1 className="mt-1.5 font-display text-[28px] leading-tight tracking-wider text-ink">
@@ -82,7 +82,7 @@ export function DrawView() {
         ))}
       </div>
 
-      <div className="flex flex-1 items-center py-5">
+      <div className="mt-6 flex-1">
         {dish ? (
           <button
             type="button"
@@ -122,7 +122,7 @@ export function DrawView() {
             </div>
           </button>
         ) : (
-          <div className="flex aspect-[4/5] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 text-center">
+          <div className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 text-center">
             <DiceFive size={30} weight="duotone" className="text-line-2" />
             <p className="mt-3 font-display text-[15px] tracking-wider text-ink-3">
               抽一道，省得纠结

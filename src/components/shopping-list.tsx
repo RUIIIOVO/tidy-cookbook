@@ -10,7 +10,7 @@ import { cn, haptic } from "@/lib/utils";
 export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) {
   const groups = useMemo(() => buildShoppingList(rows), [rows]);
   const [done, setDone] = useState<string[]>([]);
-  const [showSeasoning, setShowSeasoning] = useState(false);
+  const [showSeasoning, setShowSeasoning] = useState(true);
 
   const buyGroups = groups.filter((g) => g.group !== "调料");
   const seasoning = groups.find((g) => g.group === "调料");

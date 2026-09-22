@@ -25,6 +25,13 @@ export function MenuView() {
     if (searching) return;
     const onScroll = () => {
       if (Date.now() < lockRef.current) return;
+      // 滚到底了：最后一节永远到不了顶，直接认定为最后一个分类
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.body.scrollHeight - 4;
+      if (atBottom) {
+        setActive(sections[sections.length - 1].key as SubId);
+        return;
+      }
       let current = sections[0].key;
       for (const s of sections) {
         const el = document.getElementById(`sec-${s.key}`);
@@ -40,7 +47,7 @@ export function MenuView() {
   const jump = useCallback((key: string) => {
     haptic(8);
     setActive(key as SubId);
-    lockRef.current = Date.now() + 700;
+    lockRef.current = Date.now() + 900;
     const el = document.getElementById(`sec-${key}`);
     if (!el) return;
     const y = el.getBoundingClientRect().top + window.scrollY - 92;
@@ -139,7 +146,7 @@ export function MenuView() {
               )}
             </div>
           ) : (
-            <div className="px-3.5 pb-8">
+            <div className="px-3.5 pb-24">
               {sections.map((s) => (
                 <section key={s.key} id={`sec-${s.key}`} className="scroll-mt-24 pt-5">
                   <div className="mb-2.5 flex items-baseline gap-2">
