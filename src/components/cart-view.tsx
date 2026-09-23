@@ -6,7 +6,7 @@ import {
   Check,
   PencilSimple,
   SealCheck,
-  Shuffle,
+  Sparkle,
   Trash,
 } from "@phosphor-icons/react";
 import { ShoppingList } from "./shopping-list";
@@ -82,7 +82,7 @@ export function CartView() {
             href="/"
             className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
           >
-            <Shuffle size={15} weight="regular" />
+            <Sparkle size={15} weight="regular" />
             抽一道
           </Link>
         </div>

@@ -19,7 +19,7 @@ import {
   Grains,
   Hamburger,
   Plant,
-  Shuffle,
+  Sparkle,
   Shrimp,
   type Icon,
 } from "@phosphor-icons/react";
@@ -51,7 +51,7 @@ export const subIcon: Record<SubId, Icon> = {
 };
 
 export const tabIcon = {
-  draw: Shuffle,
+  draw: Sparkle,
   menu: BookOpen,
   cart: ForkKnife,
   history: ClockCounterClockwise,
