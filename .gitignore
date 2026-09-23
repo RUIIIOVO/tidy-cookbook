@@ -42,9 +42,9 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 
 # Cloudflare
+# wrangler.jsonc 入库：database_id 只是资源标识，没有 API token 用不了；
+# 域名本来就公开。CI 需要这个文件。真正的凭据在 ~/.wrangler，从不入库。
 /.wrangler/
-# 部署配置含账号专属的 database_id 和自有域名，按 wrangler.example.jsonc 自行生成
-/wrangler.jsonc
 
 # 配图生成的原始 PNG（每张约 2MB，共 160MB+）。
 # 不入库：公开仓库每次 clone 都会拉走全部 LFS 对象，

@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tidy-cookbook",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // \u81ea\u5b9a\u4e49\u57df\u540d\uff1a*.workers.dev \u5728\u56fd\u5185\u88ab SNI \u5c01\u9501\uff0c\u8d70\u81ea\u6709\u57df\u540d\u624d\u80fd\u76f4\u8fde\u3002
+  // DNS \u8bb0\u5f55\u548c\u8bc1\u4e66\u7531 Cloudflare \u81ea\u52a8\u521b\u5efa\u5e76\u6c38\u4e45\u7eed\u671f\u3002
+  "routes": [{ "pattern": "cook.ruiovo.com", "custom_domain": true }],
+
+  // next build（output: 'export'）产出 ./out，整站静态
+  // 静态资源请求免费且不计入 Workers 的 100k/天
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tidy-cookbook",
+      "database_id": "87586f4d-ea44-4328-89d4-1af9a17e207f"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "KITCHEN", "class_name": "KitchenDO" }]
+  },
+
+  // 免费版的 Durable Objects 必须用 SQLite 存储后端
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["KitchenDO"] }],
+
+  "observability": { "enabled": true }
+}

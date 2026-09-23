@@ -84,9 +84,22 @@ pnpm deploy
 
 密码用 PBKDF2-SHA256 / 10 万轮 / 每人独立 salt，明文不出本机。
 
+Fork 之后要改 `wrangler.jsonc` 里的三处：`name`、`d1_databases[0].database_id`、
+`routes[0].pattern`。里面没有凭据——`database_id` 只是资源标识，没有 API token
+用不了；真正的凭据在 `~/.wrangler`，从不入库。
+
 > **中国大陆访问**：`*.workers.dev` 被 SNI 定向封锁，实测 DNS 会被投毒到无关地址。
 > 绑一个自有域名走 `custom_domain` 即可直连，证书由 Cloudflare 自动签发并续期。
-> `wrangler.jsonc` 不入库，因为里面的 `database_id` 和域名是各账号专属的。
+
+### 自动部署
+
+`.github/workflows/deploy.yml` 在推到 `main` 时跑 lint → worker 类型检查 → 构建 →
+部署，任一步失败就不会发布。需要在仓库 Settings → Secrets 里配两个值：
+
+| Secret | 来源 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens)，用 **Edit Cloudflare Workers** 模板 |
+| `CLOUDFLARE_ACCOUNT_ID` | `pnpm exec wrangler whoami` 输出里的 Account ID |
 
 ## 加自己的菜
 

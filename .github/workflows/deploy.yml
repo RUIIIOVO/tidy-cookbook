@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许在 Actions 页面手动触发
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true # 连续推送时只部署最后一次
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 先过闸：类型和 lint 不过就不部署
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck worker
+        run: pnpm cf:typecheck
+
+      # pnpm build = 压图 + 重建配图清单 + next build（产出 ./out）
+      # 原始 PNG 不入库，所以压图那步在 CI 里是空转，不需要 cwebp
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
