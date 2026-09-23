@@ -236,7 +236,9 @@ export class KitchenDO implements DurableObject {
     const r = await this.env.DB.prepare(`SELECT display_name AS n FROM user WHERE id = ?`)
       .bind(userId)
       .first<{ n: string }>();
-    return r?.n ?? null;
+    if (!r?.n) return "食客";
+    if (r.n === "小客" || r.n.toLowerCase() === "guest") return "食客";
+    return r.n;
   }
 
   private broadcast() {

@@ -13,3 +13,12 @@ export function haptic(ms = 12) {
     navigator.vibrate(ms);
   } catch {}
 }
+
+/** 规范化用户展示名：客人统一称为「食客」 */
+export function formatPersonName(name?: string | null): string {
+  if (!name) return "";
+  const t = name.trim();
+  if (t.toLowerCase() === "guest" || t === "小客") return "食客";
+  return t;
+}
+

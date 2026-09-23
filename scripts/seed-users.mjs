@@ -34,7 +34,8 @@ for (const arg of args) {
   const hash = pbkdf2Sync(password, Buffer.from(salt, "hex"), 100_000, 32, "sha256")
     .toString("hex");
   const id = randomBytes(8).toString("hex");
-  const name = displayName || username;
+  const name =
+    displayName || (username.toLowerCase() === "guest" || role === "guest" ? "食客" : username);
   console.log(
     `INSERT OR REPLACE INTO user (id,username,display_name,pw_hash,pw_salt,role,kitchen_id,created_at) ` +
       `VALUES ('${id}','${username}','${name}','${hash}','${salt}','${role}','${KITCHEN}',${now});`,

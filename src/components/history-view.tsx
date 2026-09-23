@@ -10,7 +10,7 @@ import { useConfirm } from "@/lib/confirm-store";
 import { useHistory, type Meal } from "@/lib/history-store";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
-import { cn, haptic } from "@/lib/utils";
+import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
 import { DishSheet } from "./dish-sheet";
@@ -110,7 +110,13 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
     toast(`已把这 ${rows.length} 道菜加回点菜单`);
   }, 1500);
 
-  const people = [...new Set(meal.items.map((i) => i.addedBy).filter((n): n is string => !!n))];
+  const people = [
+    ...new Set(
+      meal.items
+        .map((i) => (i.addedBy ? formatPersonName(i.addedBy) : null))
+        .filter((n): n is string => !!n),
+    ),
+  ];
   const [open, setOpen] = useState(false);
   const shown = open ? rows : rows.slice(0, FOLD_AT);
   const hidden = rows.length - FOLD_AT;
@@ -127,7 +133,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
           </p>
           <p className="mt-1 truncate text-[10.5px] text-ink-3">
             {meal.orderedBy
-              ? `${meal.orderedBy} 下单`
+              ? `${formatPersonName(meal.orderedBy)} 下单`
               : people.length > 0
                 ? `${people.join("、")} 下单`
                 : "已归档"}
@@ -173,8 +179,11 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
                 </p>
                 {i.addedBy && (
                   <p className="mt-0.5 flex items-center gap-1 text-[10px] text-ink-3">
-                    <Avatar name={i.addedBy} className="size-[12px] text-[7.5px]" />
-                    <span className="truncate">{i.addedBy}</span>
+                    <Avatar
+                      name={formatPersonName(i.addedBy)}
+                      className="size-[12px] text-[7.5px]"
+                    />
+                    <span className="truncate">{formatPersonName(i.addedBy)}</span>
                   </p>
                 )}
               </div>

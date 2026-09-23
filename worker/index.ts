@@ -133,12 +133,21 @@ async function listHistory(db: D1Database, kitchenId: string) {
     .bind(...rows.map((m) => m.id))
     .all<{ mealId: string; dishId: string; qty: number; addedBy: string | null }>();
 
+  const normalize = (n?: string | null) => {
+    if (!n) return null;
+    return n === "小客" || n.toLowerCase() === "guest" ? "食客" : n;
+  };
+
   type Item = { dishId: string; qty: number; addedBy: string | null };
   const byMeal = new Map<string, Item[]>();
   for (const it of items.results ?? []) {
     const arr = byMeal.get(it.mealId) ?? [];
-    arr.push({ dishId: it.dishId, qty: it.qty, addedBy: it.addedBy });
+    arr.push({ dishId: it.dishId, qty: it.qty, addedBy: normalize(it.addedBy) });
     byMeal.set(it.mealId, arr);
   }
-  return rows.map((m) => ({ ...m, items: byMeal.get(m.id) ?? [] }));
+  return rows.map((m) => ({
+    ...m,
+    orderedBy: normalize(m.orderedBy),
+    items: byMeal.get(m.id) ?? [],
+  }));
 }

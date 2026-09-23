@@ -118,12 +118,15 @@ export async function register(
   const now = Date.now();
   const id = randomHex(8);
 
+  const resolvedName =
+    displayName.trim() || (username.toLowerCase() === "guest" ? "食客" : username);
+
   await db
     .prepare(
       `INSERT INTO user (id, username, display_name, pw_hash, pw_salt, role, kitchen_id, created_at)
        VALUES (?,?,?,?,?,'guest',?,?)`,
     )
-    .bind(id, username, displayName.trim() || username, pwHash, salt, kitchenId, now)
+    .bind(id, username, resolvedName, pwHash, salt, kitchenId, now)
     .run();
 
   const token = randomHex(32);
@@ -139,7 +142,7 @@ export async function register(
     user: {
       id,
       username,
-      displayName: displayName.trim() || username,
+      displayName: resolvedName,
       role: "guest",
       kitchenId,
     },
@@ -174,7 +177,10 @@ export async function resolveSession(
   return {
     id: row.id,
     username: row.username,
-    displayName: row.display_name,
+    displayName:
+      row.display_name === "小客" || row.display_name.toLowerCase() === "guest"
+        ? "食客"
+        : row.display_name,
     role: row.role,
     kitchenId: row.kitchen_id,
   };

@@ -18,7 +18,7 @@ import type { CategoryId } from "@/data/types";
 import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
-import { cn, haptic } from "@/lib/utils";
+import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { AddButton } from "./add-button";
 import { Avatar } from "./avatar";
@@ -187,8 +187,8 @@ export function CartView() {
                         {item.addedBy && (
                           <>
                             <span>·</span>
-                            <Avatar name={item.addedBy} />
-                            <span className="truncate">{item.addedBy}</span>
+                            <Avatar name={formatPersonName(item.addedBy)} />
+                            <span className="truncate">{formatPersonName(item.addedBy)}</span>
                           </>
                         )}
                       </p>
