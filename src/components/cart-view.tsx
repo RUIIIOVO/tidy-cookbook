@@ -19,7 +19,9 @@ import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, haptic } from "@/lib/utils";
+import { useGuard } from "@/lib/use-guard";
 import { AddButton } from "./add-button";
+import { Avatar } from "./avatar";
 import { DishSheet } from "./dish-sheet";
 import { DishThumb } from "./dish-thumb";
 
@@ -49,6 +51,17 @@ export function CartView() {
     .filter((g) => g.rows.length > 0);
 
   const total = rows.reduce((n, r) => n + r.item.qty, 0);
+
+  // 下单 / 重新编辑会切换底栏按钮，连点时第二下会落到新出现的按钮上，统一挡 800ms
+  const onLock = useGuard(() => {
+    haptic(25);
+    lock();
+    toast("厨神上线！");
+  }, 800);
+  const onUnlock = useGuard(() => {
+    haptic(15);
+    unlock();
+  }, 800);
 
   if (rows.length === 0) {
     return (
@@ -153,8 +166,15 @@ export function CartView() {
                       <h3 className="truncate font-display text-[15px] tracking-wide text-ink">
                         {dish.name}
                       </h3>
-                      <p className="mt-0.5 text-[10.5px] text-ink-3 tabular-nums">
+                      <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3 tabular-nums">
                         {dish.minutes} 分钟
+                        {item.addedBy && (
+                          <>
+                            <span>·</span>
+                            <Avatar name={item.addedBy} />
+                            <span className="truncate">{item.addedBy}</span>
+                          </>
+                        )}
                       </p>
                     </div>
                     {selecting ? (
@@ -224,10 +244,7 @@ export function CartView() {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => {
-                haptic(15);
-                unlock();
-              }}
+              onClick={onUnlock}
               className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line-2 bg-card py-3 text-[14px] tracking-wide text-ink"
             >
               <PencilSimple size={16} weight="regular" />
@@ -254,11 +271,7 @@ export function CartView() {
         ) : (
           <button
             type="button"
-            onClick={() => {
-              haptic(25);
-              lock();
-              toast("厨神上线！");
-            }}
+            onClick={onLock}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.99]"
           >
             <SealCheck size={16} weight="regular" />

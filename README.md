@@ -74,6 +74,7 @@ cp wrangler.example.jsonc wrangler.jsonc
 pnpm exec wrangler login
 pnpm exec wrangler d1 create tidy-cookbook        # 把 database_id 填进 wrangler.jsonc
 pnpm exec wrangler d1 execute tidy-cookbook --remote --file=./schema.sql
+# 已经建过库的：按顺序补跑 migrations/ 下的增量 SQL
 
 # 生成账号（密码自己定）。owner 能清空点菜单和删历史，guest 只能点菜
 node scripts/seed-users.mjs 你的用户名:你的密码:owner > /tmp/seed.sql

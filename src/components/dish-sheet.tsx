@@ -10,6 +10,7 @@ import { catTheme, spicyLabel, difficultyLabel } from "@/lib/theme";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
 import { haptic } from "@/lib/utils";
+import { useGuard } from "@/lib/use-guard";
 import { DishThumb } from "./dish-thumb";
 
 export function DishSheet() {
@@ -20,6 +21,19 @@ export function DishSheet() {
   const [n, setN] = useState(1);
 
   const dish = dishId ? getDish(dishId) : undefined;
+
+  // 抽屉收起动画期间按钮仍可点，挡住二次加入
+  const addToCart = useGuard(() => {
+    if (!dish) return;
+    if (locked) {
+      toast("这一餐已经定了，想改先点「重新编辑」");
+      return;
+    }
+    haptic();
+    add(dish.id, n);
+    toast(`已加入 ${n} 份 · ${dish.name}`);
+    close();
+  }, 800);
   const t = dish ? catTheme[dish.category] : null;
 
   return (
@@ -157,16 +171,7 @@ export function DishSheet() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (locked) {
-                        toast("这一餐已经定了，想改先点「重新编辑」");
-                        return;
-                      }
-                      haptic();
-                      add(dish.id, n);
-                      toast(`已加入 ${n} 份 · ${dish.name}`);
-                      close();
-                    }}
+                    onClick={addToCart}
                     className="flex-1 rounded-full bg-accent py-3 text-[14px] tracking-wide text-white transition active:scale-[0.98]"
                   >
                     加入点菜单

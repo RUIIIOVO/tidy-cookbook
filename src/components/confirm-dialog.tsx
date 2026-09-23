@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useConfirm } from "@/lib/confirm-store";
 import { haptic } from "@/lib/utils";
@@ -7,6 +8,8 @@ import { haptic } from "@/lib/utils";
 export function ConfirmHost() {
   const opts = useConfirm((s) => s.opts);
   const close = useConfirm((s) => s.close);
+  // 退场动画期间按钮还能点，记住已确认过的那一份 opts，防止 onConfirm 触发两次
+  const firedRef = useRef<object | null>(null);
 
   return (
     <AnimatePresence>
@@ -47,6 +50,8 @@ export function ConfirmHost() {
               <button
                 type="button"
                 onClick={() => {
+                  if (firedRef.current === opts) return;
+                  firedRef.current = opts;
                   haptic(15);
                   opts.onConfirm();
                   close();

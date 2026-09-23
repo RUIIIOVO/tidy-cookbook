@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Dish } from "@/data/types";
 import { buildShoppingList } from "@/lib/shopping";
 import { cn, haptic } from "@/lib/utils";
+import { useGuard } from "@/lib/use-guard";
 
 export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) {
   const groups = useMemo(() => buildShoppingList(rows), [rows]);
@@ -16,7 +17,7 @@ export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) 
   const seasoning = groups.find((g) => g.group === "调料");
   const totalBuy = buyGroups.reduce((n, g) => n + g.items.length, 0);
 
-  const copy = async () => {
+  const copy = useGuard(async () => {
     const text = groups
       .map(
         (g) =>
@@ -29,7 +30,7 @@ export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) 
     } catch {
       toast("复制没成功，手动长按选中吧");
     }
-  };
+  }, 1000);
 
   const toggle = (name: string) => {
     haptic(6);

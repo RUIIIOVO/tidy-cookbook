@@ -8,7 +8,15 @@
  *     空闲时对象休眠，不产生 duration 费用。
  */
 
-export type CartItem = { dishId: string; qty: number; addedAt: number };
+export type CartItem = {
+  dishId: string;
+  qty: number;
+  addedAt: number;
+  /** 第一个点这道菜的人（user.id），归档到 meal_item 用 */
+  addedById: string | null;
+  /** 同上的显示名，给前端展示 */
+  addedBy: string | null;
+};
 export type Snapshot = { items: CartItem[]; locked: boolean; rev: number };
 
 type ClientOp =
@@ -19,7 +27,7 @@ type ClientOp =
   | { type: "unlock"; ts: number }
   | { type: "pull" };
 
-type Attachment = { userId: string; role: "owner" | "guest" };
+type Attachment = { userId: string; role: "owner" | "guest"; name?: string };
 
 export class KitchenDO implements DurableObject {
   private kitchenId = "main";
@@ -41,8 +49,10 @@ export class KitchenDO implements DurableObject {
     if (this.snap) return this.snap;
     const [items, st] = await Promise.all([
       this.env.DB.prepare(
-        `SELECT dish_id AS dishId, qty, added_at AS addedAt
-           FROM cart_item WHERE kitchen_id = ? ORDER BY added_at`,
+        `SELECT c.dish_id AS dishId, c.qty, c.added_at AS addedAt,
+                c.added_by AS addedById, u.display_name AS addedBy
+           FROM cart_item c LEFT JOIN user u ON u.id = c.added_by
+          WHERE c.kitchen_id = ? ORDER BY c.added_at`,
       )
         .bind(this.kitchenId)
         .all<CartItem>(),
@@ -71,6 +81,7 @@ export class KitchenDO implements DurableObject {
     const attachment: Attachment = {
       userId: url.searchParams.get("uid") ?? "?",
       role: (url.searchParams.get("role") as Attachment["role"]) ?? "guest",
+      name: url.searchParams.get("name") ?? undefined,
     };
     // 附着在 socket 上，休眠唤醒后仍可读回，不用重查数据库
     server.serializeAttachment(attachment);
@@ -122,11 +133,12 @@ export class KitchenDO implements DurableObject {
     // 已锁的状态再 lock 会归档出重复的历史记录
     if (snap.locked && op.type === "lock") return;
 
-    await this.apply(op, who.userId, snap);
+    await this.apply(op, who, snap);
     this.broadcast();
   }
 
-  private async apply(op: ClientOp, userId: string, snap: Snapshot) {
+  private async apply(op: ClientOp, who: Attachment, snap: Snapshot) {
+    const userId = who.userId;
     const now = Date.now();
     const K = this.kitchenId;
 
@@ -142,7 +154,14 @@ export class KitchenDO implements DurableObject {
         } else {
           const found = snap.items.find((i) => i.dishId === op.dishId);
           if (found) found.qty = op.qty;
-          else snap.items.push({ dishId: op.dishId, qty: op.qty, addedAt: now });
+          else
+            snap.items.push({
+              dishId: op.dishId,
+              qty: op.qty,
+              addedAt: now,
+              addedById: userId,
+              addedBy: who.name ?? (await this.nameOf(userId)),
+            });
           await this.env.DB.prepare(
             `INSERT INTO cart_item (kitchen_id, dish_id, qty, added_by, added_at, updated_at)
              VALUES (?,?,?,?,?,?)
@@ -186,8 +205,8 @@ export class KitchenDO implements DurableObject {
             ).bind(mealId, K, userId, now),
             ...snap.items.map((i) =>
               this.env.DB.prepare(
-                `INSERT INTO meal_item (meal_id, dish_id, qty) VALUES (?,?,?)`,
-              ).bind(mealId, i.dishId, i.qty),
+                `INSERT INTO meal_item (meal_id, dish_id, qty, added_by) VALUES (?,?,?,?)`,
+              ).bind(mealId, i.dishId, i.qty, i.addedById),
             ),
             this.env.DB.prepare(
               `INSERT INTO cart_state (kitchen_id, locked, updated_at) VALUES (?,1,?)
@@ -210,6 +229,14 @@ export class KitchenDO implements DurableObject {
       }
     }
     snap.rev = ++this.rev;
+  }
+
+  /** 休眠前建立的旧连接没带 name，回表查一次 */
+  private async nameOf(userId: string): Promise<string | null> {
+    const r = await this.env.DB.prepare(`SELECT display_name AS n FROM user WHERE id = ?`)
+      .bind(userId)
+      .first<{ n: string }>();
+    return r?.n ?? null;
   }
 
   private broadcast() {

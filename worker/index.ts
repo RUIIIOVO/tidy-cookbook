@@ -106,6 +106,7 @@ function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Resp
   u.searchParams.set("kitchen", user.kitchenId);
   u.searchParams.set("uid", user.id);
   u.searchParams.set("role", user.role);
+  u.searchParams.set("name", user.displayName);
   return stub.fetch(new Request(u.toString(), req));
 }
 
@@ -125,16 +126,18 @@ async function listHistory(db: D1Database, kitchenId: string) {
   const marks = rows.map(() => "?").join(",");
   const items = await db
     .prepare(
-      `SELECT meal_id AS mealId, dish_id AS dishId, qty
-         FROM meal_item WHERE meal_id IN (${marks})`,
+      `SELECT i.meal_id AS mealId, i.dish_id AS dishId, i.qty, u.display_name AS addedBy
+         FROM meal_item i LEFT JOIN user u ON u.id = i.added_by
+        WHERE i.meal_id IN (${marks})`,
     )
     .bind(...rows.map((m) => m.id))
-    .all<{ mealId: string; dishId: string; qty: number }>();
+    .all<{ mealId: string; dishId: string; qty: number; addedBy: string | null }>();
 
-  const byMeal = new Map<string, { dishId: string; qty: number }[]>();
+  type Item = { dishId: string; qty: number; addedBy: string | null };
+  const byMeal = new Map<string, Item[]>();
   for (const it of items.results ?? []) {
     const arr = byMeal.get(it.mealId) ?? [];
-    arr.push({ dishId: it.dishId, qty: it.qty });
+    arr.push({ dishId: it.dishId, qty: it.qty, addedBy: it.addedBy });
     byMeal.set(it.mealId, arr);
   }
   return rows.map((m) => ({ ...m, items: byMeal.get(m.id) ?? [] }));

@@ -7,6 +7,7 @@ import { useCart } from "@/lib/store";
 import { useConfirm } from "@/lib/confirm-store";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/utils";
+import { useGuard } from "@/lib/use-guard";
 
 export function AddButton({
   dish,
@@ -24,7 +25,8 @@ export function AddButton({
   const add = useCart((s) => s.add);
   const setQty = useCart((s) => s.setQty);
 
-  const onAdd = (e: React.MouseEvent) => {
+  // 连点加减是正常操作，只挡住 150ms 内的重复触发（幽灵点击 / 手抖）
+  const onAdd = useGuard((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (locked) {
@@ -34,9 +36,9 @@ export function AddButton({
     haptic();
     add(dish.id);
     if (qty === 0) toast(`已加入 · ${dish.name}`);
-  };
+  }, 150);
 
-  const onSub = (e: React.MouseEvent) => {
+  const onSub = useGuard((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (locked) return;
@@ -50,7 +52,7 @@ export function AddButton({
     }
     haptic(8);
     setQty(dish.id, qty - 1);
-  };
+  }, 150);
 
   if (qty === 0) {
     return (

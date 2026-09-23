@@ -2,8 +2,15 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useAuth } from "./auth-store";
 
-export type CartItem = { dishId: string; qty: number; addedAt: number };
+export type CartItem = {
+  dishId: string;
+  qty: number;
+  addedAt: number;
+  /** 第一个点这道菜的人，服务端快照为准；老数据可能没有 */
+  addedBy?: string | null;
+};
 
 export type Op =
   | { type: "set"; dishId: string; qty: number; ts: number }
@@ -68,7 +75,15 @@ export const useCart = create<CartState>()(
           set({
             items: cur
               ? s.items.map((i) => (i.dishId === dishId ? { ...i, qty: next } : i))
-              : [...s.items, { dishId, qty: next, addedAt: Date.now() }],
+              : [
+                  ...s.items,
+                  {
+                    dishId,
+                    qty: next,
+                    addedAt: Date.now(),
+                    addedBy: useAuth.getState().me?.displayName ?? null,
+                  },
+                ],
           });
           // 发绝对值而不是增量：重放时幂等，不会翻倍
           emit({ type: "set", dishId, qty: next, ts: Date.now() });

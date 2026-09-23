@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS meal_item (
   meal_id  TEXT NOT NULL,
   dish_id  TEXT NOT NULL,
   qty      INTEGER NOT NULL,
+  added_by TEXT,                 -- 第一个点这道菜的 user.id；老记录为空
   PRIMARY KEY (meal_id, dish_id)
 );
 CREATE INDEX IF NOT EXISTS idx_meal_kitchen ON meal(kitchen_id, ordered_at DESC);

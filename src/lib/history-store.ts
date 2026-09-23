@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type MealItem = { dishId: string; qty: number };
+export type MealItem = { dishId: string; qty: number; addedBy?: string | null };
 export type Meal = {
   id: string;
   orderedAt: number;
