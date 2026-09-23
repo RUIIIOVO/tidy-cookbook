@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-store";
 import { useCart } from "@/lib/store";
@@ -46,16 +46,32 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 只在掉线时出现，联上就自己消失 —— 正常状态不该占视觉 */
+/** 环境式离线指示器：极简微胶囊，轻量不遮挡内容 */
 function SyncBadge() {
   const [status, setStatus] = useState<SyncStatus>("online");
-  useEffect(() => onSyncStatus(setStatus), []);
+  const prevStatusRef = useRef<SyncStatus>("online");
+
+  useEffect(() => {
+    return onSyncStatus((s) => {
+      // 掉线或重连时，通过轻量 Toast 提示一次
+      if (prevStatusRef.current === "online" && s === "offline") {
+        toast("已进入离线模式，改动稍后同步");
+      } else if (prevStatusRef.current !== "online" && s === "online") {
+        toast("网络已恢复，改动已同步");
+      }
+      prevStatusRef.current = s;
+      setStatus(s);
+    });
+  }, []);
+
   if (status === "online") return null;
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-[env(safe-area-inset-top)]">
-      <span className="mt-2 rounded-full bg-ink/80 px-3 py-1 text-[10.5px] tracking-wider text-paper backdrop-blur">
-        {status === "connecting" ? "连接中…" : "离线，改动会在恢复后同步"}
-      </span>
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center pt-[env(safe-area-inset-top,0px)]">
+      <div className="mt-1.5 flex items-center gap-1.5 rounded-full border border-caramel/30 bg-card/90 px-2.5 py-0.5 text-[10.5px] tracking-wide text-caramel shadow-xs backdrop-blur-md">
+        <span className="size-1.5 rounded-full bg-caramel animate-pulse" />
+        <span>{status === "connecting" ? "重新连接中…" : "离线模式"}</span>
+      </div>
     </div>
   );
 }

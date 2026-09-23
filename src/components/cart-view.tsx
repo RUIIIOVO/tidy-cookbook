@@ -105,12 +105,28 @@ export function CartView() {
           <button
             type="button"
             onClick={() => {
+              haptic(6);
               setSelecting((v) => !v);
               setPicked([]);
             }}
-            className="text-[12px] text-ink-2 underline decoration-line-2 underline-offset-4"
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
+              selecting
+                ? "border-accent bg-accent-soft text-accent font-medium"
+                : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
+            )}
           >
-            {selecting ? "取消" : "管理"}
+            {selecting ? (
+              <>
+                <Check size={12} weight="bold" />
+                <span>完成</span>
+              </>
+            ) : (
+              <>
+                <PencilSimple size={12} weight="regular" />
+                <span>管理</span>
+              </>
+            )}
           </button>
         )}
       </header>

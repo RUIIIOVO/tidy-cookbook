@@ -25,16 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConfirmHost />
         <Toaster
           position="top-center"
-          offset={12}
-          toastOptions={{
-            style: {
-              background: "#1b1916",
-              color: "#f5f2eb",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "13px",
-            },
-          }}
+          offset={14}
         />
       </body>
     </html>
