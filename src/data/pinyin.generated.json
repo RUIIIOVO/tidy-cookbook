@@ -44,11 +44,6 @@
     "pinyin": "suanxiangpaigu",
     "initials": "sxpg"
   },
-  "玉米排骨煲": {
-    "id": "yu-mi-pai-gu-bao",
-    "pinyin": "yumipaigubao",
-    "initials": "ympgb"
-  },
   "东北大丰收": {
     "id": "dong-bei-da-feng-shou",
     "pinyin": "dongbeidafengshou",
@@ -73,11 +68,6 @@
     "id": "xi-lan-hua-chao-rou-pian",
     "pinyin": "xilanhuachaoroupian",
     "initials": "xlhcrp"
-  },
-  "客家酿豆腐": {
-    "id": "ke-jia-niang-dou-fu",
-    "pinyin": "kejianiangdoufu",
-    "initials": "kjndf"
   },
   "木须肉": {
     "id": "mu-xu-rou",
@@ -189,6 +179,11 @@
     "pinyin": "lachaohuajiarou",
     "initials": "lchjr"
   },
+  "爆炒螺蛳": {
+    "id": "bao-chao-luo-si",
+    "pinyin": "baochaoluosi",
+    "initials": "bcls"
+  },
   "爆炒鱿鱼须": {
     "id": "bao-chao-you-yu-xu",
     "pinyin": "baochaoyouyuxu",
@@ -253,6 +248,11 @@
     "id": "xiang-jian-dou-fu",
     "pinyin": "xiangjiandoufu",
     "initials": "xjdf"
+  },
+  "客家酿豆腐": {
+    "id": "ke-jia-niang-dou-fu",
+    "pinyin": "kejianiangdoufu",
+    "initials": "kjndf"
   },
   "清炒空心菜": {
     "id": "qing-chao-kong-xin-cai",
@@ -348,6 +348,11 @@
     "id": "niu-rou-wan-zi-tang",
     "pinyin": "niurouwanzitang",
     "initials": "nrwzt"
+  },
+  "玉米排骨煲": {
+    "id": "yu-mi-pai-gu-bao",
+    "pinyin": "yumipaigubao",
+    "initials": "ympgb"
   },
   "黄金蛋炒饭": {
     "id": "huang-jin-dan-chao-fan",
