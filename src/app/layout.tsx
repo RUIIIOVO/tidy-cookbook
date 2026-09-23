@@ -25,7 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConfirmHost />
         <Toaster
           position="top-center"
-          offset={14}
+          offset={16}
+          duration={1800}
+          visibleToasts={1}
         />
       </body>
     </html>
