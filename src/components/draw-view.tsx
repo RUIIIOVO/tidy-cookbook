@@ -27,8 +27,9 @@ type CardItem =
   | { type: "dish"; id: string; dish: Dish };
 
 function pickRandomDishes(pool: Dish[], count: number): Dish[] {
+  if (pool.length === 0) return [];
   const shuffled = [...pool].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, Math.min(count, pool.length));
 }
 
 function StackedCard({
@@ -234,17 +235,19 @@ export function DrawView() {
     [pool],
   );
 
-  // 初始化卡片堆栈：封面卡 + 3道候选菜
+  // 初始化卡片堆栈：封面卡 + 候选菜
   const [cards, setCards] = useState<CardItem[]>(() => {
-    const [d1, d2, d3] = pickRandomDishes(dishes, 3);
-    if (d1 && hasImage(d1.id)) void preloadImage(d1.image);
-    if (d2 && hasImage(d2.id)) void preloadImage(d2.image);
-    if (d3 && hasImage(d3.id)) void preloadImage(d3.image);
+    const picked = pickRandomDishes(dishes, 3);
+    for (const d of picked) {
+      if (hasImage(d.id)) void preloadImage(d.image);
+    }
     return [
       { type: "cover", id: "cover" },
-      { type: "dish", id: `init-${d1.id}-1`, dish: d1 },
-      { type: "dish", id: `init-${d2.id}-2`, dish: d2 },
-      { type: "dish", id: `init-${d3.id}-3`, dish: d3 },
+      ...picked.map((d, i) => ({
+        type: "dish" as const,
+        id: `init-${d.id}-${i + 1}`,
+        dish: d,
+      })),
     ];
   });
 
@@ -257,26 +260,23 @@ export function DrawView() {
     const newPool = fId === "all" ? dishes : dishes.filter((d) => d.category === fId);
     historyRef.current = [];
 
-    const [d1, d2, d3] = pickRandomDishes(newPool, 3);
-    if (d1 && hasImage(d1.id)) void preloadImage(d1.image);
-    if (d2 && hasImage(d2.id)) void preloadImage(d2.image);
-    if (d3 && hasImage(d3.id)) void preloadImage(d3.image);
+    const picked = pickRandomDishes(newPool, 3);
+    for (const d of picked) {
+      if (hasImage(d.id)) void preloadImage(d.image);
+    }
 
     setCards((prev) => {
       const top = prev[0];
+      const newDishCards: CardItem[] = picked.map((d) => ({
+        type: "dish" as const,
+        id: `f-${d.id}-${idSeqRef.current++}`,
+        dish: d,
+      }));
+
       if (top?.type === "cover") {
-        return [
-          top,
-          { type: "dish", id: `f-${d1.id}-${idSeqRef.current++}`, dish: d1 },
-          { type: "dish", id: `f-${d2.id}-${idSeqRef.current++}`, dish: d2 },
-          { type: "dish", id: `f-${d3.id}-${idSeqRef.current++}`, dish: d3 },
-        ];
+        return [top, ...newDishCards];
       }
-      return [
-        { type: "dish", id: `f-${d1.id}-${idSeqRef.current++}`, dish: d1 },
-        { type: "dish", id: `f-${d2.id}-${idSeqRef.current++}`, dish: d2 },
-        { type: "dish", id: `f-${d3.id}-${idSeqRef.current++}`, dish: d3 },
-      ];
+      return newDishCards;
     });
   };
 
