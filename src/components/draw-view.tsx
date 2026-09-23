@@ -330,7 +330,7 @@ export function DrawView() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-16">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-4">
       <header>
         <p className="text-[11px] tracking-[0.3em] text-ink-3">TODAY&apos;S PICK</p>
         <h1 className="mt-1.5 font-display text-[28px] leading-tight tracking-wider text-ink">
