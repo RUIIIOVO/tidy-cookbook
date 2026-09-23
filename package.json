@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "bash scripts/optimize-images.sh && next build",
+    "build": "bash scripts/optimize-images.sh && node scripts/build-image-manifest.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "cf:typecheck": "tsc -p worker/tsconfig.json",
