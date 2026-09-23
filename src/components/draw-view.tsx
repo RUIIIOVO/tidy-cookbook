@@ -48,55 +48,48 @@ function StackedCard({
 }) {
   const isTop = index === 0;
   const isDraggingRef = useRef(false);
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-240, 240], [-16, 16]);
-
-  const style = isTop
-    ? {
-        x,
-        rotate,
-        zIndex: 30 - index * 10,
-        touchAction: "pan-y" as const,
-      }
-    : {
-        zIndex: 30 - index * 10,
-        touchAction: "pan-y" as const,
-      };
+  const dragX = useMotionValue(0);
+  const rotate = useTransform(dragX, [-240, 240], [-14, 14]);
 
   return (
     <motion.div
-      layout
       initial={{
         scale: 0.88,
-        y: 24,
+        y: 22,
         opacity: 0,
       }}
       animate={{
         scale: index === 0 ? 1 : index === 1 ? 0.94 : 0.88,
-        y: index === 0 ? 0 : index === 1 ? 12 : 24,
-        opacity: index === 0 ? 1 : index === 1 ? 0.85 : 0.45,
+        y: index === 0 ? 0 : index === 1 ? 11 : 22,
+        opacity: index === 0 ? 1 : index === 1 ? 0.88 : 0.45,
       }}
       exit={{
-        x: exitDir * 380,
-        rotate: exitDir * 18,
+        x: exitDir * 360,
+        rotate: exitDir * 16,
         opacity: 0,
-        transition: { duration: 0.28, ease: [0.32, 0.72, 0, 1] },
+        transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] },
       }}
       transition={{
-        duration: 0.28,
-        ease: [0.22, 1, 0.36, 1],
+        type: "spring",
+        stiffness: 380,
+        damping: 32,
+        mass: 0.8,
       }}
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.8}
+      dragElastic={0.75}
       onDragStart={() => {
         isDraggingRef.current = true;
       }}
+      onDrag={(_, info) => {
+        dragX.set(info.offset.x);
+      }}
       onDragEnd={(_, info) => {
+        dragX.set(0);
         setTimeout(() => {
           isDraggingRef.current = false;
         }, 50);
-        const swipeThreshold = 70;
+        const swipeThreshold = 75;
         const velocityThreshold = 350;
         if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
           onSwipe("right");
@@ -109,12 +102,16 @@ function StackedCard({
         onOpen();
       }}
       className={cn(
-        "absolute inset-x-0 top-0 cursor-pointer overflow-hidden rounded-2xl border bg-card text-left select-none transition-shadow",
+        "absolute inset-x-0 top-0 cursor-pointer overflow-hidden rounded-2xl border bg-card text-left select-none will-change-transform",
         isTop
           ? "border-line shadow-[0_8px_24px_-8px_rgba(0,0,0,0.12)] active:cursor-grabbing"
           : "border-line-2 shadow-sm pointer-events-none",
       )}
-      style={style}
+      style={{
+        rotate: isTop ? rotate : 0,
+        zIndex: 30 - index * 10,
+        touchAction: "pan-y",
+      }}
     >
       {card.type === "cover" ? (
         <>
@@ -289,7 +286,7 @@ export function DrawView() {
       isAnimatingRef.current = true;
       setTimeout(() => {
         isAnimatingRef.current = false;
-      }, 260);
+      }, 240);
 
       haptic(15);
       setExitDir(dir === "left" ? -1 : 1);
@@ -320,7 +317,7 @@ export function DrawView() {
     add(topCard.dish.id);
     toast(`已加入 · ${topCard.dish.name}`);
     handleSwipe("right");
-  }, 400);
+  }, 350);
 
   const onOpenTop = () => {
     if (!topCard) return;
