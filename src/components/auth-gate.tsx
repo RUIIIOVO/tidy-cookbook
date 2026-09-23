@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-store";
 import { useCart } from "@/lib/store";
@@ -15,7 +15,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const me = useAuth((s) => s.me);
   const ready = useAuth((s) => s.ready);
   const fetchMe = useAuth((s) => s.fetchMe);
-  const wasOfflineRef = useRef(false);
 
   useEffect(() => {
     void fetchMe();
@@ -27,14 +26,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return startSync();
   }, [me]);
 
-  // 网络状态监听：日常完全静默，不展示任何常驻胶囊；仅在断线重连恢复后轻提示一次
+  // 网络状态监听：日常完全静默；首屏加载或刷新不提示；仅在使用过程中真正断线重连后轻提示一次
   useEffect(() => {
+    let hasConnectedOnce = false;
+    let hadDisconnected = false;
+
     return onSyncStatus((s) => {
-      if (s === "offline") {
-        wasOfflineRef.current = true;
-      } else if (s === "online" && wasOfflineRef.current) {
-        wasOfflineRef.current = false;
-        toast("网络已恢复");
+      if (s === "online") {
+        if (hasConnectedOnce && hadDisconnected) {
+          hadDisconnected = false;
+          toast("网络已恢复");
+        }
+        hasConnectedOnce = true;
+      } else if (s === "offline" || s === "connecting") {
+        if (hasConnectedOnce) {
+          hadDisconnected = true;
+        }
       }
     });
   }, []);
