@@ -40,4 +40,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 tsconfig.tsbuildinfo
-public/images/dishes/.raw/
+
+# Cloudflare
+/.wrangler/
+# 部署配置含账号专属的 database_id 和自有域名，按 wrangler.example.jsonc 自行生成
+/wrangler.jsonc
+
+# 配图生成的原始 PNG（每张约 2MB，共 160MB+）。
+# 不入库：公开仓库每次 clone 都会拉走全部 LFS 对象，
+# GitHub 免费额度只有 1GB/月流量，几次 clone 就会耗尽并连累自己。
+/.raw-images/
+

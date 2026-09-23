@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { catIcon } from "@/lib/icons";
-import { categories, dishes, sections } from "@/data/dishes";
+import { categories, dishById, dishes, sections } from "@/data/dishes";
 import type { SubId } from "@/data/types";
 import { searchDishes } from "@/lib/search";
+import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { cn, haptic } from "@/lib/utils";
 import { DishCard } from "./dish-card";
@@ -17,6 +18,18 @@ export function MenuView() {
   const [active, setActive] = useState<SubId>(sections[0].key as SubId);
   const lockRef = useRef(0);
   const searching = q.trim().length > 0;
+
+  /** 每个小类点了几「样」菜（去重后的品种数，不是份数）。
+   *  份数已由底部购物车角标承担，这里显示品种数才不重复。 */
+  const cartItems = useCart((s) => s.items);
+  const pickedBySub = useMemo(() => {
+    const m = new Map<SubId, number>();
+    for (const it of cartItems) {
+      const d = dishById.get(it.dishId);
+      if (d) m.set(d.sub, (m.get(d.sub) ?? 0) + 1);
+    }
+    return m;
+  }, [cartItems]);
 
   const results = useMemo(() => (searching ? searchDishes(dishes, q) : []), [q, searching]);
 
@@ -78,6 +91,7 @@ export function MenuView() {
                   </div>
                   {c.subs.map((s) => {
                     const on = active === s.id && !searching;
+                    const picked = pickedBySub.get(s.id) ?? 0;
                     return (
                       <button
                         key={s.id}
@@ -101,6 +115,14 @@ export function MenuView() {
                         >
                           {s.name}
                         </span>
+                        {picked > 0 && (
+                          <span
+                            aria-label={`已点 ${picked} 样`}
+                            className="absolute top-0.5 right-1 grid size-[14px] place-items-center rounded-full bg-accent text-[9px] leading-none font-medium text-white tabular-nums"
+                          >
+                            {picked}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

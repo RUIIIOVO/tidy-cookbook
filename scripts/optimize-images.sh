@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# 把 public/images/dishes/*.png 压成 800px 宽的 webp，原 png 移到 .raw/ 备份（不入库）
+# 把 public/images/dishes/*.png 压成 800px 宽的 webp，原 png 移到仓库根 .raw-images/ 备份（Git LFS 入库，不进构建产物）
 # 依赖：cwebp（brew install webp）
 set -euo pipefail
 
-DIR="$(cd "$(dirname "$0")/.." && pwd)/public/images/dishes"
-RAW="$DIR/.raw"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DIR="$ROOT/public/images/dishes"
+RAW="$ROOT/.raw-images"
 mkdir -p "$RAW"
 
 shopt -s nullglob
@@ -16,4 +17,4 @@ for f in "$DIR"/*.png "$DIR"/*.jpg; do
 done
 
 echo
-echo "总计: $(ls "$DIR"/*.webp 2>/dev/null | wc -l | tr -d ' ') 张, $(du -sh "$DIR" --exclude=.raw 2>/dev/null | cut -f1 || du -sh "$DIR" | cut -f1)"
+echo "总计: $(ls "$DIR"/*.webp 2>/dev/null | wc -l | tr -d ' ') 张, $(du -sh "$DIR" | cut -f1)"

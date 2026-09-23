@@ -49,10 +49,10 @@
     "pinyin": "yumipaigubao",
     "initials": "ympgb"
   },
-  "土豆玉米炖排骨": {
-    "id": "tu-dou-yu-mi-dun-pai-gu",
-    "pinyin": "tudouyumidunpaigu",
-    "initials": "tdymdpg"
+  "东北大丰收": {
+    "id": "dong-bei-da-feng-shou",
+    "pinyin": "dongbeidafengshou",
+    "initials": "dbdfs"
   },
   "荷兰豆炒腊肠": {
     "id": "he-lan-dou-chao-la-chang",
@@ -114,10 +114,10 @@
     "pinyin": "aoerliangkaochi",
     "initials": "aelkc"
   },
-  "香菇滑鸡煲": {
-    "id": "xiang-gu-hua-ji-bao",
-    "pinyin": "xiangguhuajibao",
-    "initials": "xghjb"
+  "香菇滑鸡": {
+    "id": "xiang-gu-hua-ji",
+    "pinyin": "xiangguhuaji",
+    "initials": "xghj"
   },
   "新疆大盘鸡": {
     "id": "xin-jiang-da-pan-ji",
@@ -139,10 +139,10 @@
     "pinyin": "shougongniurouhanbao",
     "initials": "sgnrhb"
   },
-  "脆皮煎香肠": {
-    "id": "cui-pi-jian-xiang-chang",
-    "pinyin": "cuipijianxiangchang",
-    "initials": "cpjxc"
+  "台式烤肠": {
+    "id": "tai-shi-kao-chang",
+    "pinyin": "taishikaochang",
+    "initials": "tskc"
   },
   "白灼基围虾": {
     "id": "bai-zhuo-ji-wei-xia",
@@ -184,10 +184,10 @@
     "pinyin": "congyouchengzi",
     "initials": "cycz"
   },
-  "辣炒扇贝肉": {
-    "id": "la-chao-shan-bei-rou",
-    "pinyin": "lachaoshanbeirou",
-    "initials": "lcsbr"
+  "辣炒花甲肉": {
+    "id": "la-chao-hua-jia-rou",
+    "pinyin": "lachaohuajiarou",
+    "initials": "lchjr"
   },
   "爆炒鱿鱼须": {
     "id": "bao-chao-you-yu-xu",
@@ -314,10 +314,10 @@
     "pinyin": "hongshaoqiezi",
     "initials": "hsqz"
   },
-  "流蜜烤红薯": {
-    "id": "liu-mi-kao-hong-shu",
-    "pinyin": "liumikaohongshu",
-    "initials": "lmkhs"
+  "蜜烤红薯": {
+    "id": "mi-kao-hong-shu",
+    "pinyin": "mikaohongshu",
+    "initials": "mkhs"
   },
   "蒜蓉拍黄瓜": {
     "id": "suan-rong-pai-huang-gua",
@@ -354,10 +354,10 @@
     "pinyin": "huangjindanchaofan",
     "initials": "hjdcf"
   },
-  "香辣炒方便面": {
-    "id": "xiang-la-chao-fang-bian-mian",
-    "pinyin": "xianglachaofangbianmian",
-    "initials": "xlcfbm"
+  "风味炒方便面": {
+    "id": "feng-wei-chao-fang-bian-mian",
+    "pinyin": "fengweichaofangbianmian",
+    "initials": "fwcfbm"
   },
   "家常炒粉干": {
     "id": "jia-chang-chao-fen-gan",
@@ -368,11 +368,6 @@
     "id": "guang-shi-la-wei-bao-zai-fan",
     "pinyin": "guangshilaweibaozaifan",
     "initials": "gslwbzf"
-  },
-  "江西米粉": {
-    "id": "jiang-xi-mi-fen",
-    "pinyin": "jiangximifen",
-    "initials": "jxmf"
   },
   "家常面": {
     "id": "jia-chang-mian",
