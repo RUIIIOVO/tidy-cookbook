@@ -48,6 +48,8 @@
     /* 预留滚动条槽位：否则长页面(菜单/点菜单)出现滚动条时
        视口变窄 15px，mx-auto 居中的外框和固定底栏会整体左移抖动 */
     scrollbar-gutter: stable;
+    /* 禁止水平滑动触发浏览器前进/后退历史手势导航 */
+    overscroll-behavior-x: none;
   }
 
   body {
@@ -56,6 +58,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
   }
 
   /* 极淡的纸纹，避免纯色塑料感 */

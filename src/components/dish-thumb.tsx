@@ -23,12 +23,17 @@ export function DishThumb({
 }) {
   const t = catTheme[dish.category];
   const Icon = subIcon[dish.sub];
-  // 记录已加载完的 src 而不是布尔值：同一个实例换菜（详情抽屉）时自动回到加载态
-  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
-  // 已经预解码过的图（抽菜预取、别处看过）直接显示，不闪 shimmer
-  const loaded = loadedSrc === dish.image || isDecoded(dish.image);
+  const alreadyCached = isDecoded(dish.image);
+  // 记录已加载失败的 src，失败时直接回落到分类图标占位，禁止显示破损图片
+  const [errorSrc, setErrorSrc] = useState<string | null>(null);
+  const isError = errorSrc === dish.image;
+  // 记录已加载完的 src；如果全局已解码过且未失败，认定已加载
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(
+    alreadyCached && !isError ? dish.image : null,
+  );
+  const loaded = (loadedSrc === dish.image || alreadyCached) && !isError;
 
-  if (hasImage(dish.id)) {
+  if (hasImage(dish.id) && !isError) {
     return (
       <div className={cn("relative overflow-hidden bg-paper-2", className)}>
         {!loaded && <span aria-hidden className="shimmer absolute inset-0" />}
@@ -42,7 +47,7 @@ export function DishThumb({
             markDecoded(dish.image);
             setLoadedSrc(dish.image);
           }}
-          onError={() => setLoadedSrc(dish.image)}
+          onError={() => setErrorSrc(dish.image)}
           className={cn(
             "object-cover transition-opacity duration-300",
             loaded ? "opacity-100" : "opacity-0",

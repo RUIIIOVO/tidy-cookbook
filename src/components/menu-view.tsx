@@ -10,8 +10,10 @@ import { searchDishes } from "@/lib/search";
 import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { cn, haptic } from "@/lib/utils";
+import { scheduleIdlePreload } from "@/lib/images";
 import { DishCard } from "./dish-card";
 import { DishSheet } from "./dish-sheet";
+import { CustomOptionDrawer } from "./custom-option-drawer";
 
 export function MenuView() {
   const [q, setQ] = useState("");
@@ -65,6 +67,12 @@ export function MenuView() {
     if (!el) return;
     const y = el.getBoundingClientRect().top + window.scrollY - 92;
     window.scrollTo({ top: y, behavior: "smooth" });
+  }, []);
+
+  // 页面空闲时，静默预热所有菜品配图，切换分类或滚动时直接读取内存解码纹理，消除白屏
+  useEffect(() => {
+    const allImages = dishes.map((d) => d.image);
+    scheduleIdlePreload(allImages, 4);
   }, []);
 
   return (
@@ -196,6 +204,7 @@ export function MenuView() {
       </div>
 
       <DishSheet />
+      <CustomOptionDrawer />
     </div>
   );
 }

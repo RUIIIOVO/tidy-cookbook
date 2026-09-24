@@ -38,6 +38,10 @@ export function preloadImage(src: string): Promise<void> {
         pending.delete(src);
         resolve();
       };
+      if (img.complete && img.naturalWidth > 0) {
+        done();
+        return;
+      }
       img
         .decode()
         .then(done)
@@ -49,4 +53,29 @@ export function preloadImage(src: string): Promise<void> {
     pending.set(src, p);
   }
   return p;
+}
+
+/** 空闲时分批预热图片资源池，加速后续分类切换与点击响应 */
+export function scheduleIdlePreload(srcs: string[], batchSize = 4) {
+  if (typeof window === "undefined") return;
+  const queue = [...srcs];
+  const processNextBatch = () => {
+    if (queue.length === 0) return;
+    const batch = queue.splice(0, batchSize);
+    void Promise.allSettled(batch.map((s) => preloadImage(s))).then(() => {
+      if (queue.length > 0) {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(() => processNextBatch(), { timeout: 1500 });
+        } else {
+          setTimeout(processNextBatch, 200);
+        }
+      }
+    });
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(() => processNextBatch(), { timeout: 1500 });
+  } else {
+    setTimeout(processNextBatch, 300);
+  }
 }

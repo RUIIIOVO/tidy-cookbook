@@ -1,10 +1,9 @@
-export type CategoryId = "meat" | "seafood" | "veggie" | "staple";
+export type CategoryId = "meat" | "seafood" | "veggie" | "staple" | "dessert" | "diet";
 
 export type SubId =
   | "pork"
   | "beef"
   | "chicken"
-  | "western"
   | "shrimp"
   | "fish"
   | "shellfish"
@@ -14,7 +13,10 @@ export type SubId =
   | "greens"
   | "soup"
   | "rice"
-  | "noodle";
+  | "noodle"
+  | "sweet"
+  | "snack"
+  | "light";
 
 export type IngredientGroup = {
   group: "主料" | "辅料" | "调料";

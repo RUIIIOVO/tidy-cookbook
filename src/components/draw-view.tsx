@@ -79,6 +79,10 @@ function StackedCard({
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.75}
+      onTouchStart={(e) => {
+        // 当触摸发生在卡片上时，阻止边缘手势穿透到浏览器的前进/后退
+        e.stopPropagation();
+      }}
       onDragStart={() => {
         isDraggingRef.current = true;
       }}
@@ -112,6 +116,7 @@ function StackedCard({
         rotate: isTop ? rotate : 0,
         zIndex: 30 - index * 10,
         touchAction: "pan-y",
+        overscrollBehaviorX: "none",
       }}
     >
       {card.type === "cover" ? (
@@ -357,7 +362,10 @@ export function DrawView() {
       </div>
 
       {/* 堆叠卡片区 */}
-      <div className="relative mt-6 flex-1 min-h-[380px]">
+      <div
+        className="relative mt-6 flex-1 min-h-[380px]"
+        style={{ overscrollBehaviorX: "none" }}
+      >
         <AnimatePresence initial={false}>
           {cards.slice(0, 3).map((c, idx) => (
             <StackedCard

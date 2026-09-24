@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { Minus, Plus } from "@phosphor-icons/react";
+import { Minus, Plus, SlidersHorizontal } from "@phosphor-icons/react";
 import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
+import { CUSTOM_CONFIGS } from "@/data/custom-options";
 import { getDish } from "@/data/dishes";
 import { catTheme, spicyLabel, difficultyLabel } from "@/lib/theme";
+import { useCustomModal } from "@/lib/custom-modal-store";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
 import { haptic } from "@/lib/utils";
@@ -16,11 +18,13 @@ import { DishThumb } from "./dish-thumb";
 export function DishSheet() {
   const dishId = useDishSheet((s) => s.dishId);
   const close = useDishSheet((s) => s.close);
+  const openCustom = useCustomModal((s) => s.open);
   const add = useCart((s) => s.add);
   const locked = useCart((s) => s.locked);
   const [n, setN] = useState(1);
 
   const dish = dishId ? getDish(dishId) : undefined;
+  const isCustomizable = dishId ? !!CUSTOM_CONFIGS[dishId] : false;
 
   // 抽屉收起动画期间按钮仍可点，挡住二次加入
   const addToCart = useGuard(() => {
@@ -169,13 +173,27 @@ export function DishSheet() {
                       <Plus size={15} weight="bold" />
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={addToCart}
-                    className="flex-1 rounded-full bg-accent py-3 text-[14px] tracking-wide text-white transition active:scale-[0.98]"
-                  >
-                    加入点菜单
-                  </button>
+                  {isCustomizable ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        close();
+                        if (dish) openCustom(dish.id);
+                      }}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent py-3 text-[14px] font-medium tracking-wide text-white transition active:scale-[0.98]"
+                    >
+                      <SlidersHorizontal size={16} weight="bold" />
+                      <span>选规格并定制</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={addToCart}
+                      className="flex-1 rounded-full bg-accent py-3 text-[14px] tracking-wide text-white transition active:scale-[0.98]"
+                    >
+                      加入点菜单
+                    </button>
+                  )}
                 </div>
               </div>
             </>

@@ -1,6 +1,8 @@
 "use client";
 
 import type { Dish } from "@/data/types";
+import { CUSTOM_CONFIGS } from "@/data/custom-options";
+import { useCustomModal } from "@/lib/custom-modal-store";
 import { useDishSheet } from "@/lib/ui-store";
 import { AddButton } from "./add-button";
 import { DishThumb } from "./dish-thumb";
@@ -8,6 +10,8 @@ import { Meta } from "./meta";
 
 export function DishCard({ dish }: { dish: Dish }) {
   const open = useDishSheet((s) => s.open);
+  const openCustom = useCustomModal((s) => s.open);
+  const isCustomizable = !!CUSTOM_CONFIGS[dish.id];
 
   return (
     <div
@@ -36,7 +40,20 @@ export function DishCard({ dish }: { dish: Dish }) {
 
         <div className="mt-1.5 flex items-center justify-between">
           <Meta dish={dish} />
-          <AddButton dish={dish} />
+          {isCustomizable ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openCustom(dish.id);
+              }}
+              className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs transition active:scale-95"
+            >
+              选规格
+            </button>
+          ) : (
+            <AddButton dish={dish} />
+          )}
         </div>
       </div>
     </div>

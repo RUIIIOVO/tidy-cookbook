@@ -24,6 +24,10 @@ import { AddButton } from "./add-button";
 import { Avatar } from "./avatar";
 import { DishSheet } from "./dish-sheet";
 import { DishThumb } from "./dish-thumb";
+import { CustomOptionDrawer } from "./custom-option-drawer";
+import { CUSTOM_CONFIGS, formatCustomSummary } from "@/data/custom-options";
+import { useCustomStore } from "@/lib/custom-store";
+import { useCustomModal } from "@/lib/custom-modal-store";
 
 export function CartView() {
   const items = useCart((s) => s.items);
@@ -33,6 +37,8 @@ export function CartView() {
   const removeMany = useCart((s) => s.removeMany);
   const clear = useCart((s) => s.clear);
   const openSheet = useDishSheet((s) => s.open);
+  const openCustom = useCustomModal((s) => s.open);
+  const getChoice = useCustomStore((s) => s.getChoice);
   const confirm = useConfirm((s) => s.confirm);
 
   const [selecting, setSelecting] = useState(false);
@@ -147,6 +153,11 @@ export function CartView() {
             <div className="space-y-2">
               {g.rows.map(({ item, dish }) => {
                 const on = picked.includes(dish.id);
+                const isCustom = !!CUSTOM_CONFIGS[dish.id];
+                const customSummary = isCustom
+                  ? formatCustomSummary(dish.id, getChoice(dish.id))
+                  : [];
+
                 return (
                   <div
                     key={dish.id}
@@ -158,6 +169,8 @@ export function CartView() {
                             ? p.filter((x) => x !== dish.id)
                             : [...p, dish.id],
                         );
+                      } else if (isCustom && !locked) {
+                        openCustom(dish.id);
                       } else {
                         openSheet(dish.id);
                       }
@@ -179,9 +192,21 @@ export function CartView() {
                     )}
                     <DishThumb dish={dish} className="size-[46px] shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-display text-[15px] tracking-wide text-ink">
-                        {dish.name}
-                      </h3>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="truncate font-display text-[15px] tracking-wide text-ink">
+                          {dish.name}
+                        </h3>
+                        {isCustom && !locked && (
+                          <span className="shrink-0 rounded bg-paper-2 px-1.5 py-0.5 text-[9.5px] text-ink-3">
+                            改规格
+                          </span>
+                        )}
+                      </div>
+                      {customSummary.length > 0 && (
+                        <p className="mt-0.5 line-clamp-1 text-[10.5px] leading-tight text-accent">
+                          {customSummary.join(" · ")}
+                        </p>
+                      )}
                       <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3 tabular-nums">
                         {dish.minutes} 分钟
                         {item.addedBy && (
@@ -297,6 +322,7 @@ export function CartView() {
       </div>
 
       <DishSheet />
+      <CustomOptionDrawer />
     </div>
   );
 }

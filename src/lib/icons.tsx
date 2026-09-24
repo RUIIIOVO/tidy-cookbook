@@ -6,9 +6,11 @@ import {
   BookOpen,
   BowlFood,
   BowlSteam,
+  Cake,
   ChefHat,
   Clock,
   ClockCounterClockwise,
+  Cookie,
   CookingPot,
   Cow,
   Egg,
@@ -17,7 +19,7 @@ import {
   Flame,
   ForkKnife,
   Grains,
-  Hamburger,
+  Heartbeat,
   Plant,
   Sparkle,
   Shrimp,
@@ -31,13 +33,14 @@ export const catIcon: Record<CategoryId, Icon> = {
   seafood: Fish,
   veggie: Plant,
   staple: BowlFood,
+  dessert: Cake,
+  diet: Heartbeat,
 };
 
 export const subIcon: Record<SubId, Icon> = {
   pork: Cow,
   beef: Cow,
   chicken: Bird,
-  western: Hamburger,
   shrimp: Shrimp,
   fish: Fish,
   shellfish: FishSimple,
@@ -48,6 +51,9 @@ export const subIcon: Record<SubId, Icon> = {
   soup: CookingPot,
   rice: BowlFood,
   noodle: BowlSteam,
+  sweet: Cake,
+  snack: Cookie,
+  light: Heartbeat,
 };
 
 export const tabIcon = {

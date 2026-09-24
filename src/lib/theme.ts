@@ -32,6 +32,20 @@ export const catTheme: Record<
     dot: "bg-caramel",
     hex: "#a1702f",
   },
+  dessert: {
+    text: "text-caramel",
+    bg: "bg-caramel-soft",
+    border: "border-caramel/25",
+    dot: "bg-caramel",
+    hex: "#a1702f",
+  },
+  diet: {
+    text: "text-leaf",
+    bg: "bg-leaf-soft",
+    border: "border-leaf/25",
+    dot: "bg-leaf",
+    hex: "#576b48",
+  },
 };
 
 export const spicyLabel = ["不辣", "微辣", "中辣", "很辣"];

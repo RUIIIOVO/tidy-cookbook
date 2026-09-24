@@ -30,7 +30,22 @@ const json = (data: unknown, init: ResponseInit = {}) =>
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    if (!url.pathname.startsWith("/api/")) {
+      const res = await env.ASSETS.fetch(req);
+      if (
+        url.pathname.startsWith("/images/") ||
+        url.pathname.startsWith("/_next/static/")
+      ) {
+        const headers = new Headers(res.headers);
+        headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        return new Response(res.body, {
+          status: res.status,
+          statusText: res.statusText,
+          headers,
+        });
+      }
+      return res;
+    }
 
     const token = readCookie(req, "sid");
 

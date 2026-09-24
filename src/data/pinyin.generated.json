@@ -89,6 +89,11 @@
     "pinyin": "xiangjianniupai",
     "initials": "xjnp"
   },
+  "手工牛肉汉堡": {
+    "id": "shou-gong-niu-rou-han-bao",
+    "pinyin": "shougongniurouhanbao",
+    "initials": "sgnrhb"
+  },
   "可乐鸡翅": {
     "id": "ke-le-ji-chi",
     "pinyin": "kelejichi",
@@ -114,25 +119,10 @@
     "pinyin": "xinjiangdapanji",
     "initials": "xjdpj"
   },
-  "虫草花炖鸡": {
-    "id": "chong-cao-hua-dun-ji",
-    "pinyin": "chongcaohuadunji",
-    "initials": "cchdj"
-  },
   "麻辣爆炒鸡爪": {
     "id": "ma-la-bao-chao-ji-zhua",
     "pinyin": "malabaochaojizhua",
     "initials": "mlbcjz"
-  },
-  "手工牛肉汉堡": {
-    "id": "shou-gong-niu-rou-han-bao",
-    "pinyin": "shougongniurouhanbao",
-    "initials": "sgnrhb"
-  },
-  "台式烤肠": {
-    "id": "tai-shi-kao-chang",
-    "pinyin": "taishikaochang",
-    "initials": "tskc"
   },
   "白灼基围虾": {
     "id": "bai-zhuo-ji-wei-xia",
@@ -188,6 +178,11 @@
     "id": "bao-chao-you-yu-xu",
     "pinyin": "baochaoyouyuxu",
     "initials": "bcyyx"
+  },
+  "葱油帝王蟹": {
+    "id": "cong-you-di-wang-xie",
+    "pinyin": "congyoudiwangxie",
+    "initials": "cydwx"
   },
   "清蒸梭子蟹": {
     "id": "qing-zheng-suo-zi-xie",
@@ -324,6 +319,26 @@
     "pinyin": "suanrongpaihuanggua",
     "initials": "srphg"
   },
+  "玉米排骨煲": {
+    "id": "yu-mi-pai-gu-bao",
+    "pinyin": "yumipaigubao",
+    "initials": "ympgb"
+  },
+  "海带排骨汤": {
+    "id": "hai-dai-pai-gu-tang",
+    "pinyin": "haidaipaigutang",
+    "initials": "hdpgt"
+  },
+  "虫草花炖鸡": {
+    "id": "chong-cao-hua-dun-ji",
+    "pinyin": "chongcaohuadunji",
+    "initials": "cchdj"
+  },
+  "牛肉丸子汤": {
+    "id": "niu-rou-wan-zi-tang",
+    "pinyin": "niurouwanzitang",
+    "initials": "nrwzt"
+  },
   "丝瓜蛋花汤": {
     "id": "si-gua-dan-hua-tang",
     "pinyin": "siguadanhuatang",
@@ -343,16 +358,6 @@
     "id": "dong-gua-tang",
     "pinyin": "dongguatang",
     "initials": "dgt"
-  },
-  "牛肉丸子汤": {
-    "id": "niu-rou-wan-zi-tang",
-    "pinyin": "niurouwanzitang",
-    "initials": "nrwzt"
-  },
-  "玉米排骨煲": {
-    "id": "yu-mi-pai-gu-bao",
-    "pinyin": "yumipaigubao",
-    "initials": "ympgb"
   },
   "黄金蛋炒饭": {
     "id": "huang-jin-dan-chao-fan",
@@ -374,9 +379,69 @@
     "pinyin": "guangshilaweibaozaifan",
     "initials": "gslwbzf"
   },
+  "手工玉米猪肉蒸饺": {
+    "id": "shou-gong-yu-mi-zhu-rou-zheng-jiao",
+    "pinyin": "shougongyumizhurouzhengjiao",
+    "initials": "sgymzrzj"
+  },
   "家常面": {
     "id": "jia-chang-mian",
     "pinyin": "jiachangmian",
     "initials": "jcm"
+  },
+  "粤式手作糖水": {
+    "id": "yue-shi-shou-zuo-tang-shui",
+    "pinyin": "yueshishouzuotangshui",
+    "initials": "ysszts"
+  },
+  "顺德双皮奶": {
+    "id": "shun-de-shuang-pi-nai",
+    "pinyin": "shundeshuangpinai",
+    "initials": "sdspn"
+  },
+  "葡式经典蛋挞": {
+    "id": "pu-shi-jing-dian-dan-ta",
+    "pinyin": "pushijingdiandanta",
+    "initials": "psjddt"
+  },
+  "原味香脆薯条": {
+    "id": "yuan-wei-xiang-cui-shu-tiao",
+    "pinyin": "yuanweixiangcuishutiao",
+    "initials": "ywxcst"
+  },
+  "黄金美式薯饼": {
+    "id": "huang-jin-mei-shi-shu-bing",
+    "pinyin": "huangjinmeishishubing",
+    "initials": "hjmssb"
+  },
+  "川香现炸小酥肉": {
+    "id": "chuan-xiang-xian-zha-xiao-su-rou",
+    "pinyin": "chuanxiangxianzhaxiaosurou",
+    "initials": "cxxzxsr"
+  },
+  "台式烤肠": {
+    "id": "tai-shi-kao-chang",
+    "pinyin": "taishikaochang",
+    "initials": "tskc"
+  },
+  "主厨定制水煮轻食拼": {
+    "id": "zhu-chu-ding-zhi-shui-zhu-qing-shi-pin",
+    "pinyin": "zhuchudingzhishuizhuqingshipin",
+    "initials": "zcdzszqsp"
+  },
+  "原汁水煮谷饲肥牛膳": {
+    "id": "yuan-zhi-shui-zhu-gu-si-fei-niu-shan",
+    "pinyin": "yuanzhishuizhugusifeiniushan",
+    "initials": "yzszgsfns"
+  },
+  "黑椒低卡水煮鲜嫩鸡腿肉": {
+    "id": "hei-jiao-di-ka-shui-zhu-xian-nen-ji-tui-rou",
+    "pinyin": "heijiaodikashuizhuxiannenjituirou",
+    "initials": "hjdkszxnjtr"
+  },
+  "鲜虾时蔬高蛋白轻食膳": {
+    "id": "xian-xia-shi-shu-gao-dan-bai-qing-shi-shan",
+    "pinyin": "xianxiashishugaodanbaiqingshishan",
+    "initials": "xxssgdbqss"
   }
 }
