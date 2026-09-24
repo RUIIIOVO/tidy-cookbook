@@ -408,7 +408,7 @@ export function DrawView() {
               className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-[14px] font-medium tracking-wide text-white shadow-sm transition active:scale-[0.98]"
             >
               <Plus size={16} weight="bold" />
-              加入点菜单继续
+              加入点菜单
             </button>
           </>
         )}

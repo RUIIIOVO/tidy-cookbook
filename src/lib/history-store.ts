@@ -31,7 +31,7 @@ export const useHistory = create<HistoryState>()((set, get) => ({
       const { meals } = (await r.json()) as { meals: Meal[] };
       set({ meals, loading: false });
     } catch {
-      set({ loading: false, error: "没取到历史记录" });
+      set({ loading: false, error: "暂无历史记录" });
     }
   },
 
