@@ -42,6 +42,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          postCommands: |
+            wrangler d1 execute tidy-cookbook --remote --command "SELECT name FROM pragma_table_info('meal_item')"
           secrets: |
             BARK_URL
         env:
