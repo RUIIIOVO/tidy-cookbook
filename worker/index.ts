@@ -8,6 +8,7 @@ import {
   logout,
   readCookie,
   register,
+  renewSession,
   resolveSession,
   sessionCookie,
   type SessionUser,
@@ -19,6 +20,8 @@ export interface Env {
   DB: D1Database;
   KITCHEN: DurableObjectNamespace;
   ASSETS: Fetcher;
+  /** Bark 推送地址（wrangler secret），没配就不推 */
+  BARK_URL?: string;
 }
 
 const json = (data: unknown, init: ResponseInit = {}) =>
@@ -83,7 +86,14 @@ export default {
       const user = await resolveSession(env.DB, token);
       if (!user) return json({ error: "未登录" }, { status: 401 });
 
-      if (url.pathname === "/api/me") return json({ user });
+      if (url.pathname === "/api/me") {
+        // 每次打开都顺手续期并刷新 cookie，常用的人永远不用重新登录
+        const renewed = await renewSession(env.DB, token);
+        return json(
+          { user },
+          renewed && token ? { headers: { "Set-Cookie": sessionCookie(token) } } : {},
+        );
+      }
 
       if (url.pathname === "/api/sync") return connectKitchen(req, env, user);
 

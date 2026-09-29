@@ -8,6 +8,13 @@
  *     空闲时对象休眠，不产生 duration 费用。
  */
 
+import PINYIN from "../src/data/pinyin.generated.json";
+
+/** dishId → 菜名，只用来拼通知文案 */
+const DISH_NAME = new Map<string, string>(
+  Object.entries(PINYIN as Record<string, { id: string }>).map(([name, v]) => [v.id, name]),
+);
+
 export type CartItem = {
   dishId: string;
   qty: number;
@@ -36,7 +43,7 @@ export class KitchenDO implements DurableObject {
 
   constructor(
     private state: DurableObjectState,
-    private env: { DB: D1Database },
+    private env: { DB: D1Database; BARK_URL?: string },
   ) {
     // 平台层自动应答心跳：客户端发 "ping" 直接回 "pong"，DO 不被唤醒也不计费
     this.state.setWebSocketAutoResponse(
@@ -137,6 +144,31 @@ export class KitchenDO implements DurableObject {
     this.broadcast();
   }
 
+  /** 下单后给主人手机推 Bark；失败只吞掉，不影响锁单 */
+  private async notifyOrder(name: string | null, items: CartItem[]) {
+    const url = this.env.BARK_URL;
+    if (!url) return;
+    const dishes = items
+      .map((i) => `${DISH_NAME.get(i.dishId) ?? i.dishId}${i.qty > 1 ? `×${i.qty}` : ""}`)
+      .join("、");
+    const total = items.reduce((n, i) => n + i.qty, 0);
+    try {
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          title: "今天吃什么",
+          body: `🍽️ ${name ?? "有人"}下单了（共 ${total} 道）：${dishes}`,
+          group: "tidy-cookbook",
+          level: "timeSensitive",
+          isArchive: "1",
+        }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
   private async apply(op: ClientOp, who: Attachment, snap: Snapshot) {
     const userId = who.userId;
     const now = Date.now();
@@ -214,6 +246,7 @@ export class KitchenDO implements DurableObject {
             ).bind(K, now),
           ];
           await this.env.DB.batch(stmts);
+          this.state.waitUntil(this.notifyOrder(who.name ?? null, snap.items));
         }
         snap.locked = true;
         break;

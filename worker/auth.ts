@@ -186,6 +186,17 @@ export async function resolveSession(
   };
 }
 
+/** 滑动续期：剩余不足 89 天才写库（约每天最多一次），返回是否续了 */
+export async function renewSession(db: D1Database, token: string | null): Promise<boolean> {
+  if (!token) return false;
+  const now = Date.now();
+  const r = await db
+    .prepare(`UPDATE session SET expires_at = ? WHERE token = ? AND expires_at < ?`)
+    .bind(now + SESSION_DAYS * 86400_000, token, now + (SESSION_DAYS - 1) * 86400_000)
+    .run();
+  return (r.meta?.changes ?? 0) > 0;
+}
+
 export async function logout(db: D1Database, token: string | null) {
   if (token) await db.prepare(`DELETE FROM session WHERE token = ?`).bind(token).run();
 }
