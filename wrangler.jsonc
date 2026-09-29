@@ -21,7 +21,8 @@
     {
       "binding": "DB",
       "database_name": "tidy-cookbook",
-      "database_id": "87586f4d-ea44-4328-89d4-1af9a17e207f"
+      "database_id": "87586f4d-ea44-4328-89d4-1af9a17e207f",
+      "migrations_dir": "migrations"
     }
   ],
 

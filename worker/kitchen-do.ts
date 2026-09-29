@@ -228,27 +228,33 @@ export class KitchenDO implements DurableObject {
         break;
       }
       case "lock": {
+        // 先落 locked，保证「已下单」状态一定存住；归档失败也不能让状态丢掉
+        await this.env.DB.prepare(
+          `INSERT INTO cart_state (kitchen_id, locked, updated_at) VALUES (?,1,?)
+           ON CONFLICT(kitchen_id) DO UPDATE SET locked = 1, updated_at = excluded.updated_at`,
+        )
+          .bind(K, now)
+          .run();
+        snap.locked = true;
         // 锁单即归档成一条历史订单
         if (snap.items.length) {
           const mealId = crypto.randomUUID();
-          const stmts = [
-            this.env.DB.prepare(
-              `INSERT INTO meal (id, kitchen_id, ordered_by, ordered_at) VALUES (?,?,?,?)`,
-            ).bind(mealId, K, userId, now),
-            ...snap.items.map((i) =>
+          try {
+            await this.env.DB.batch([
               this.env.DB.prepare(
-                `INSERT INTO meal_item (meal_id, dish_id, qty, added_by) VALUES (?,?,?,?)`,
-              ).bind(mealId, i.dishId, i.qty, i.addedById),
-            ),
-            this.env.DB.prepare(
-              `INSERT INTO cart_state (kitchen_id, locked, updated_at) VALUES (?,1,?)
-               ON CONFLICT(kitchen_id) DO UPDATE SET locked = 1, updated_at = excluded.updated_at`,
-            ).bind(K, now),
-          ];
-          await this.env.DB.batch(stmts);
+                `INSERT INTO meal (id, kitchen_id, ordered_by, ordered_at) VALUES (?,?,?,?)`,
+              ).bind(mealId, K, userId, now),
+              ...snap.items.map((i) =>
+                this.env.DB.prepare(
+                  `INSERT INTO meal_item (meal_id, dish_id, qty, added_by) VALUES (?,?,?,?)`,
+                ).bind(mealId, i.dishId, i.qty, i.addedById),
+              ),
+            ]);
+          } catch (e) {
+            console.error("archive meal failed", e);
+          }
           this.state.waitUntil(this.notifyOrder(who.name ?? null, snap.items));
         }
-        snap.locked = true;
         break;
       }
       case "unlock": {
