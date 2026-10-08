@@ -4,7 +4,9 @@ import { useEffect, useRef } from "react";
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import { Trash } from "@phosphor-icons/react";
 
-const ACTION_W = 76;
+/** 圆形按钮 48 + 左右留白，卡片左移这么多露出按钮 */
+const ACTION_W = 68;
+const BTN = 48;
 
 /**
  * 左滑露出右侧删除按钮。竖向滚动不受影响（motion 的 drag="x" 只占横向手势）。
@@ -24,7 +26,8 @@ export function SwipeRow({
   children: React.ReactNode;
 }) {
   const x = useMotionValue(0);
-  const btnOpacity = useTransform(x, [-6, 0], [1, 0]);
+  const btnOpacity = useTransform(x, [-ACTION_W * 0.35, 0], [1, 0]);
+  const btnScale = useTransform(x, [-ACTION_W, -ACTION_W * 0.3, 0], [1, 0.7, 0.5]);
   const dragged = useRef(false);
 
   useEffect(() => {
@@ -36,16 +39,15 @@ export function SwipeRow({
   if (disabled) return <>{children}</>;
 
   return (
-    <div className="relative overflow-hidden rounded-card">
+    <div className="relative">
       <motion.button
         type="button"
         aria-label="删除"
-        style={{ width: ACTION_W, opacity: btnOpacity }}
+        style={{ width: BTN, height: BTN, opacity: btnOpacity, scale: btnScale }}
         onClick={onDelete}
-        className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 bg-chili text-[11px] text-white"
+        className="absolute right-[10px] top-1/2 -mt-6 grid place-items-center rounded-full border border-line bg-card text-chili shadow-2xs active:brightness-95"
       >
-        <Trash size={16} weight="regular" />
-        删除
+        <Trash size={22} weight="fill" />
       </motion.button>
 
       <motion.div

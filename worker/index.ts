@@ -120,6 +120,19 @@ export default {
       return json({ error: String(e) }, { status: 500 });
     }
   },
+  /** 每天北京时间凌晨 4 点（UTC 20:00）：已下单的点菜单归档进历史并清空 */
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(
+      (async () => {
+        const kitchens = await env.DB.prepare(`SELECT id FROM kitchen`).all<{ id: string }>();
+        for (const k of kitchens.results ?? []) {
+          const stub = env.KITCHEN.get(env.KITCHEN.idFromName(k.id));
+          const r = await stub.fetch(`https://kitchen/rollover?kitchen=${encodeURIComponent(k.id)}`);
+          console.log("rollover", k.id, await r.text());
+        }
+      })(),
+    );
+  },
 } satisfies ExportedHandler<Env>;
 
 function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Response> {

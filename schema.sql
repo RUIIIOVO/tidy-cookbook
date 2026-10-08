@@ -42,10 +42,11 @@ CREATE TABLE IF NOT EXISTS cart_item (
 CREATE TABLE IF NOT EXISTS cart_state (
   kitchen_id  TEXT PRIMARY KEY,
   locked      INTEGER NOT NULL DEFAULT 0,
-  updated_at  INTEGER NOT NULL
+  updated_at  INTEGER NOT NULL,
+  locked_by   TEXT                 -- 下单人 user.id；定时任务归档时写进 meal.ordered_by
 );
 
--- 锁单即归档成一条历史订单
+-- 下单只锁定；每日定时任务（北京时间 04:00）把已锁定的点菜单归档成一条历史订单并清空
 CREATE TABLE IF NOT EXISTS meal (
   id          TEXT PRIMARY KEY,
   kitchen_id  TEXT NOT NULL,
