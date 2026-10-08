@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth, type Me } from "@/lib/auth-store";
+import { setToken, useAuth, type Me } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
 type Mode = "login" | "register";
@@ -31,11 +31,12 @@ export function LoginCard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await r.json()) as { user?: Me; error?: string };
+      const data = (await r.json()) as { user?: Me; token?: string; error?: string };
       if (!r.ok || !data.user) {
         setErr(data.error ?? "出错了，再试一次");
         return;
       }
+      setToken(data.token ?? null);
       setMe(data.user);
     } catch {
       setErr("连不上服务器");

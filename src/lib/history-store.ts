@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { authHeaders } from "./auth-store";
 
 export type MealItem = { dishId: string; qty: number; addedBy?: string | null };
 export type Meal = {
@@ -26,7 +27,7 @@ export const useHistory = create<HistoryState>()((set, get) => ({
   load: async () => {
     set({ loading: true, error: null });
     try {
-      const r = await fetch("/api/history", { credentials: "same-origin" });
+      const r = await fetch("/api/history", { credentials: "same-origin", headers: authHeaders() });
       if (!r.ok) throw new Error(String(r.status));
       const { meals } = (await r.json()) as { meals: Meal[] };
       set({ meals, loading: false });
@@ -43,6 +44,7 @@ export const useHistory = create<HistoryState>()((set, get) => ({
       const r = await fetch(`/api/history?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
         credentials: "same-origin",
+        headers: authHeaders(),
       });
       if (!r.ok) throw new Error(String(r.status));
       return true;

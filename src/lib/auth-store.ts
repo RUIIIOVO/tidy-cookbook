@@ -10,6 +10,34 @@ export type Me = {
   kitchenId: string;
 };
 
+/**
+ * 会话令牌的本地副本。cookie 是主通道；浏览器（尤其 iOS Safari / 微信内置浏览器）会无故清 cookie，
+ * localStorage 里这份让服务端仍能认出你。登录时写入，退出登录或服务端明确说未登录时清除。
+ */
+const TOKEN_KEY = "tc-token";
+export const getToken = (): string | null => {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+export const setToken = (t: string | null) => {
+  try {
+    if (t) localStorage.setItem(TOKEN_KEY, t);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* 隐私模式写不进去就只靠 cookie */
+  }
+};
+/** 所有走 /api 的请求都用它，统一带上令牌 */
+export function authHeaders(extra?: HeadersInit): Headers {
+  const h = new Headers(extra);
+  const t = getToken();
+  if (t) h.set("Authorization", `Bearer ${t}`);
+  return h;
+}
+
 type AuthState = {
   me: Me | null;
   /** null = 还没问过服务端 */
@@ -59,15 +87,17 @@ export const useAuth = create<AuthState>()((set) => ({
     const cached = readCache();
     if (cached) set({ me: cached, ready: true });
     try {
-      const r = await fetch("/api/me", { credentials: "same-origin" });
+      const r = await fetch("/api/me", { credentials: "same-origin", headers: authHeaders() });
       if (r.status === 401) {
         // 只有服务端明确说未登录才清掉
         writeCache(null);
+        setToken(null);
         set({ me: null, ready: true });
         return null;
       }
       if (!r.ok) throw new Error(String(r.status));
-      const { user } = (await r.json()) as { user: Me };
+      const { user, token } = (await r.json()) as { user: Me; token?: string };
+      if (token) setToken(token);
       writeCache(user);
       set({ me: user, ready: true });
       return user;
@@ -78,9 +108,11 @@ export const useAuth = create<AuthState>()((set) => ({
     }
   },
   logout: async () => {
+    const h = authHeaders();
     writeCache(null);
+    setToken(null);
     try {
-      await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
+      await fetch("/api/logout", { method: "POST", credentials: "same-origin", headers: h });
     } catch {
       /* 断网也要能退出本地状态 */
     }

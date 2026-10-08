@@ -211,6 +211,45 @@ export function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
+/**
+ * 取会话令牌：cookie 优先；cookie 被浏览器清掉时，退而用客户端 localStorage 里存的令牌。
+ *   - HTTP：Authorization: Bearer <token>
+ *   - WebSocket 不能自定义头，令牌放在 Sec-WebSocket-Protocol（形如 "auth.<token>"），避免出现在 URL / 日志里
+ * 令牌是 64 位十六进制，格式不对一律当没有。
+ */
+const TOKEN_RE = /^[0-9a-f]{64}$/;
+
+export function readToken(req: Request): string | null {
+  const c = readCookie(req, "sid");
+  if (c && TOKEN_RE.test(c)) return c;
+
+  const auth = req.headers.get("Authorization");
+  if (auth?.startsWith("Bearer ")) {
+    const t = auth.slice(7).trim();
+    if (TOKEN_RE.test(t)) return t;
+  }
+
+  const proto = req.headers.get("Sec-WebSocket-Protocol");
+  if (proto) {
+    for (const part of proto.split(",")) {
+      const v = part.trim();
+      if (v.startsWith("auth.") && TOKEN_RE.test(v.slice(5))) return v.slice(5);
+    }
+  }
+  return null;
+}
+
+/** WebSocket 握手要原样回显客户端提供的子协议，否则浏览器会断开 */
+export function wsProtocol(req: Request): string | null {
+  const proto = req.headers.get("Sec-WebSocket-Protocol");
+  if (!proto) return null;
+  for (const part of proto.split(",")) {
+    const v = part.trim();
+    if (v.startsWith("auth.")) return v;
+  }
+  return null;
+}
+
 export function sessionCookie(token: string): string {
   return `sid=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
 }

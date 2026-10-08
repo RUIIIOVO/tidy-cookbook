@@ -6,6 +6,7 @@
  * 断网照常加菜，重连后 outbox 自动回放；掉线时 inflight 退回 outbox 重发。
  */
 
+import { getToken } from "./auth-store";
 import { setOpSink, useCart, type CartItem } from "./store";
 
 export type SyncStatus = "offline" | "connecting" | "online";
@@ -47,7 +48,12 @@ export function connect() {
 
   setStatus("connecting");
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const sock = new WebSocket(`${proto}//${location.host}/api/sync`);
+  // 浏览器 WebSocket 不能自定义请求头：cookie 在就走 cookie，同时把令牌放进子协议兜底，
+  // 这样 cookie 被浏览器清掉时仍能连上，令牌也不会出现在 URL 里
+  const token = getToken();
+  const sock = token
+    ? new WebSocket(`${proto}//${location.host}/api/sync`, [`auth.${token}`])
+    : new WebSocket(`${proto}//${location.host}/api/sync`);
   ws = sock;
 
   sock.onopen = () => {

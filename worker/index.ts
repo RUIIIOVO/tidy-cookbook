@@ -7,6 +7,8 @@ import {
   login,
   logout,
   readCookie,
+  readToken,
+  wsProtocol,
   register,
   renewSession,
   resolveSession,
@@ -50,7 +52,7 @@ export default {
       return res;
     }
 
-    const token = readCookie(req, "sid");
+    const token = readToken(req);
 
     try {
       // ── 不需要登录 ────────────────────────────────
@@ -62,7 +64,10 @@ export default {
         if (!username || !password) return json({ error: "请填用户名和密码" }, { status: 400 });
         const r = await login(env.DB, username.trim(), password);
         if (!r) return json({ error: "用户名或密码不对" }, { status: 401 });
-        return json({ user: r.user }, { headers: { "Set-Cookie": sessionCookie(r.token) } });
+        return json(
+          { user: r.user, token: r.token },
+          { headers: { "Set-Cookie": sessionCookie(r.token) } },
+        );
       }
 
       if (url.pathname === "/api/register" && req.method === "POST") {
@@ -74,7 +79,10 @@ export default {
         if (!username || !password) return json({ error: "请填用户名和密码" }, { status: 400 });
         const r = await register(env.DB, username.trim(), password, displayName ?? username);
         if ("error" in r) return json(r, { status: 400 });
-        return json({ user: r.user }, { headers: { "Set-Cookie": sessionCookie(r.token) } });
+        return json(
+          { user: r.user, token: r.token },
+          { headers: { "Set-Cookie": sessionCookie(r.token) } },
+        );
       }
 
       if (url.pathname === "/api/logout" && req.method === "POST") {
@@ -87,11 +95,15 @@ export default {
       if (!user) return json({ error: "未登录" }, { status: 401 });
 
       if (url.pathname === "/api/me") {
-        // 每次打开都顺手续期并刷新 cookie，常用的人永远不用重新登录
+        // 每次打开都顺手续期；cookie 被浏览器清掉时（只靠 localStorage 令牌认出来的），也一并补发
         const renewed = await renewSession(env.DB, token);
+        const cookieLost = readCookie(req, "sid") !== token;
+        // 同时把令牌回给客户端：升级前登录的老用户本地没存过，借这次补上
         return json(
-          { user },
-          renewed && token ? { headers: { "Set-Cookie": sessionCookie(token) } } : {},
+          { user, token },
+          (renewed || cookieLost) && token
+            ? { headers: { "Set-Cookie": sessionCookie(token) } }
+            : {},
         );
       }
 
@@ -145,7 +157,14 @@ function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Resp
   u.searchParams.set("uid", user.id);
   u.searchParams.set("role", user.role);
   u.searchParams.set("name", user.displayName);
-  return stub.fetch(new Request(u.toString(), req));
+  return stub.fetch(new Request(u.toString(), req)).then((res) => {
+    // 客户端用子协议带令牌时，握手必须原样回显，否则浏览器会断开
+    const proto = wsProtocol(req);
+    if (res.status !== 101 || !proto) return res;
+    const headers = new Headers(res.headers);
+    headers.set("Sec-WebSocket-Protocol", proto);
+    return new Response(null, { status: 101, webSocket: res.webSocket, headers });
+  });
 }
 
 async function listHistory(db: D1Database, kitchenId: string) {
