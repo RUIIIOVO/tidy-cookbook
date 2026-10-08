@@ -21,6 +21,7 @@ import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { AddButton } from "./add-button";
+import { SwipeRow } from "./swipe-row";
 import { Avatar } from "./avatar";
 import { DishSheet } from "./dish-sheet";
 import { DishThumb } from "./dish-thumb";
@@ -43,6 +44,8 @@ export function CartView() {
 
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const removeOne = useCart((s) => s.remove);
 
   const rows = items
     .map((i) => ({ item: i, dish: getDish(i.dishId)! }))
@@ -159,8 +162,19 @@ export function CartView() {
                   : [];
 
                 return (
-                  <div
+                  <SwipeRow
                     key={dish.id}
+                    open={swipedId === dish.id}
+                    onOpenChange={(o) => setSwipedId(o ? dish.id : null)}
+                    disabled={locked || selecting}
+                    onDelete={() => {
+                      haptic(12);
+                      removeOne(dish.id);
+                      setSwipedId(null);
+                      toast(`已移除 · ${dish.name}`);
+                    }}
+                  >
+                  <div
                     onClick={() => {
                       if (selecting) {
                         haptic(6);
@@ -230,6 +244,7 @@ export function CartView() {
                       <AddButton dish={dish} confirmRemove />
                     )}
                   </div>
+                  </SwipeRow>
                 );
               })}
             </div>

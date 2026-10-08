@@ -15,6 +15,14 @@ const DISH_NAME = new Map<string, string>(
   Object.entries(PINYIN as Record<string, { id: string }>).map(([name, v]) => [v.id, name]),
 );
 
+/** 北京时间凌晨 4 点算新的一天（夜宵订单不会在零点被清掉） */
+const DAY_MS = 86400_000;
+const TZ_MS = 8 * 3600_000;
+const CUTOFF_MS = 4 * 3600_000;
+function dayStart(ts: number) {
+  return Math.floor((ts + TZ_MS - CUTOFF_MS) / DAY_MS) * DAY_MS - TZ_MS + CUTOFF_MS;
+}
+
 export type CartItem = {
   dishId: string;
   qty: number;
@@ -40,6 +48,8 @@ export class KitchenDO implements DurableObject {
   private kitchenId = "main";
   private snap: Snapshot | null = null;
   private rev = 0;
+  /** 最近一次 lock/unlock/clear 的时间 */
+  private lockedAt = 0;
 
   constructor(
     private state: DurableObjectState,
@@ -63,16 +73,35 @@ export class KitchenDO implements DurableObject {
       )
         .bind(this.kitchenId)
         .all<CartItem>(),
-      this.env.DB.prepare(`SELECT locked FROM cart_state WHERE kitchen_id = ?`)
+      this.env.DB.prepare(`SELECT locked, updated_at FROM cart_state WHERE kitchen_id = ?`)
         .bind(this.kitchenId)
-        .first<{ locked: number }>(),
+        .first<{ locked: number; updated_at: number }>(),
     ]);
     this.snap = {
       items: items.results ?? [],
       locked: !!st?.locked,
       rev: ++this.rev,
     };
+    this.lockedAt = st?.updated_at ?? 0;
     return this.snap;
+  }
+
+  /** 上一天已经下过单（锁定）的点菜单，新的一天首次访问时自动清空，订单早已进了历史 */
+  private async rolloverIfStale(snap: Snapshot): Promise<boolean> {
+    if (!snap.locked || this.lockedAt >= dayStart(Date.now())) return false;
+    const K = this.kitchenId;
+    const now = Date.now();
+    await this.env.DB.batch([
+      this.env.DB.prepare(`DELETE FROM cart_item WHERE kitchen_id = ?`).bind(K),
+      this.env.DB.prepare(
+        `UPDATE cart_state SET locked = 0, updated_at = ? WHERE kitchen_id = ?`,
+      ).bind(now, K),
+    ]);
+    snap.items = [];
+    snap.locked = false;
+    snap.rev = ++this.rev;
+    this.lockedAt = now;
+    return true;
   }
 
   async fetch(req: Request): Promise<Response> {
@@ -95,6 +124,7 @@ export class KitchenDO implements DurableObject {
     this.state.acceptWebSocket(server);
 
     const snap = await this.load();
+    if (await this.rolloverIfStale(snap)) this.broadcast();
     server.send(JSON.stringify({ type: "snapshot", ...snap }));
 
     return new Response(null, { status: 101, webSocket: client });
@@ -111,6 +141,7 @@ export class KitchenDO implements DurableObject {
 
     const who = (ws.deserializeAttachment() ?? {}) as Attachment;
     const snap = await this.load();
+    if (await this.rolloverIfStale(snap)) this.broadcast();
 
     if (op.type === "pull") {
       ws.send(JSON.stringify({ type: "snapshot", ...snap }));
@@ -236,6 +267,7 @@ export class KitchenDO implements DurableObject {
           .bind(K, now)
           .run();
         snap.locked = true;
+        this.lockedAt = now;
         // 锁单即归档成一条历史订单
         if (snap.items.length) {
           const mealId = crypto.randomUUID();
@@ -259,6 +291,7 @@ export class KitchenDO implements DurableObject {
       }
       case "unlock": {
         snap.locked = false;
+        this.lockedAt = now;
         await this.env.DB.prepare(
           `UPDATE cart_state SET locked = 0, updated_at = ? WHERE kitchen_id = ?`,
         )
