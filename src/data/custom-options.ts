@@ -15,8 +15,8 @@ export type CustomConfig = {
 
 export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   // 粤式手作糖水
-  "yue-shi-shou-zuo-tang-shui": {
-    dishId: "yue-shi-shou-zuo-tang-shui",
+  "79": {
+    dishId: "79",
     title: "粤式手作糖水 · 随心定制",
     subtitle: "冷热双选，牛乳生椰双底，现熬小料温润滋养",
     groups: [
@@ -57,8 +57,8 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   },
 
   // 主厨定制水煮轻食拼
-  "zhu-chu-ding-zhi-shui-zhu-qing-shi-pin": {
-    dishId: "zhu-chu-ding-zhi-shui-zhu-qing-shi-pin",
+  "86": {
+    dishId: "86",
     title: "主厨定制水煮轻食拼 · 私享自选",
     subtitle: "高蛋白与鲜蔬菌菇随心搭配，特调低卡捞汁",
     groups: [
@@ -124,8 +124,8 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   },
 
   // 原汁水煮谷饲肥牛膳
-  "yuan-zhi-shui-zhu-gu-si-fei-niu-shan": {
-    dishId: "yuan-zhi-shui-zhu-gu-si-fei-niu-shan",
+  "87": {
+    dishId: "87",
     title: "原汁水煮谷饲肥牛膳 · 经典定制",
     subtitle: "肥牛焯烫去油奶香四溢，搭配清甜玉米与脆蔬",
     groups: [
@@ -191,8 +191,8 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   },
 
   // 黑椒低卡水煮鲜嫩鸡腿肉
-  "hei-jiao-di-ka-shui-zhu-xian-nen-ji-tui-rou": {
-    dishId: "hei-jiao-di-ka-shui-zhu-xian-nen-ji-tui-rou",
+  "88": {
+    dishId: "88",
     title: "黑椒低卡水煮嫩鸡腿 · 经典定制",
     subtitle: "去皮鸡腿多汁不柴，黑胡椒提鲜，粗粮主食饱腹",
     groups: [
@@ -258,8 +258,8 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   },
 
   // 鲜虾时蔬高蛋白轻食膳
-  "xian-xia-shi-shu-gao-dan-bai-qing-shi-shan": {
-    dishId: "xian-xia-shi-shu-gao-dan-bai-qing-shi-shan",
+  "89": {
+    dishId: "89",
     title: "鲜虾时蔬高蛋白轻食膳 · 经典定制",
     subtitle: "鲜甜大虾仁搭配溏心蛋与黑木耳，芝麻汁提香",
     groups: [

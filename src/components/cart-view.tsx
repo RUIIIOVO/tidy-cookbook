@@ -221,16 +221,12 @@ export function CartView() {
                           {customSummary.join(" · ")}
                         </p>
                       )}
-                      <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3 tabular-nums">
-                        {dish.minutes} 分钟
-                        {item.addedBy && (
-                          <>
-                            <span>·</span>
-                            <Avatar name={formatPersonName(item.addedBy)} />
-                            <span className="truncate">{formatPersonName(item.addedBy)}</span>
-                          </>
-                        )}
-                      </p>
+                      {item.addedBy && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
+                          <Avatar name={formatPersonName(item.addedBy)} />
+                          <span className="truncate">{formatPersonName(item.addedBy)}</span>
+                        </p>
+                      )}
                     </div>
                     {selecting ? (
                       <span className="text-[12px] text-ink-3 tabular-nums">

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { normalizeDishId } from "@/data/dishes";
 import { useAuth } from "./auth-store";
 
 export type CartItem = {
@@ -50,6 +51,15 @@ type CartState = {
   requeueInflight: () => void;
   applySnapshot: (items: CartItem[], locked: boolean) => void;
   setOnDenied: (fn: (reason: string) => void) => void;
+};
+
+const fixItem = (i: CartItem): CartItem => ({ ...i, dishId: normalizeDishId(i.dishId) });
+
+/** 旧版本把菜品 id 存成拼音 slug，本地缓存里的点菜单和待发操作要转成数字 id */
+const fixOp = (op: Op): Op => {
+  if (op.type === "set") return { ...op, dishId: normalizeDishId(op.dishId) };
+  if (op.type === "removeMany") return { ...op, dishIds: op.dishIds.map(normalizeDishId) };
+  return op;
 };
 
 export const useCart = create<CartState>()(
@@ -144,7 +154,7 @@ export const useCart = create<CartState>()(
 
         /** 服务端为准。inflight 到此确认完成。 */
         applySnapshot: (items, locked) =>
-          set({ items, locked, inflight: [] }),
+          set({ items: items.map(fixItem), locked, inflight: [] }),
 
         setOnDenied: (fn) => set({ onDenied: fn }),
       };
@@ -162,6 +172,17 @@ export const useCart = create<CartState>()(
       migrate: (old) => {
         const o = (old ?? {}) as Partial<CartState>;
         return { ...o, outbox: [], inflight: [] } as CartState;
+      },
+      // 每次从 localStorage 读出来都规整一遍，不依赖版本号
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<CartState>;
+        return {
+          ...current,
+          ...p,
+          items: (p.items ?? current.items).map(fixItem),
+          outbox: (p.outbox ?? []).map(fixOp),
+          inflight: (p.inflight ?? []).map(fixOp),
+        };
       },
     },
   ),

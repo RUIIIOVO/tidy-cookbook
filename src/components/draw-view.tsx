@@ -6,7 +6,7 @@ import { ArrowsClockwise, CookingPot, Plus, Sparkle } from "@phosphor-icons/reac
 import { toast } from "sonner";
 import { categories, dishes } from "@/data/dishes";
 import type { CategoryId, Dish } from "@/data/types";
-import { catTheme, difficultyLabel, spicyLabel } from "@/lib/theme";
+import { catTheme, spicyLabel } from "@/lib/theme";
 import { hasImage, preloadImage } from "@/lib/images";
 import { useCart } from "@/lib/store";
 import { useGuard } from "@/lib/use-guard";
@@ -194,10 +194,6 @@ function StackedCard({
                   {dish.desc}
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-3">
-                  <span className="tabular-nums">{dish.minutes} 分钟</span>
-                  <span className="text-line-2">/</span>
-                  <span>{difficultyLabel[dish.difficulty]}</span>
-                  <span className="text-line-2">/</span>
                   <span>{spicyLabel[dish.spicy]}</span>
                   <span className="ml-auto text-ink-3">点开看做法 →</span>
                 </div>

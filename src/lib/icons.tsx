@@ -7,8 +7,6 @@ import {
   BowlFood,
   BowlSteam,
   Cake,
-  ChefHat,
-  Clock,
   ClockCounterClockwise,
   Cookie,
   CookingPot,
@@ -17,6 +15,7 @@ import {
   Fish,
   FishSimple,
   Flame,
+  Tag,
   ForkKnife,
   Grains,
   Heartbeat,
@@ -64,9 +63,8 @@ export const tabIcon = {
 } satisfies Record<string, Icon>;
 
 export const metaIcon = {
-  time: Clock,
-  difficulty: ChefHat,
   spicy: Flame,
+  tags: Tag,
   ingredients: Basket,
   steps: CookingPot,
 } satisfies Record<string, Icon>;

@@ -49,4 +49,3 @@ export const catTheme: Record<
 };
 
 export const spicyLabel = ["不辣", "微辣", "中辣", "很辣"];
-export const difficultyLabel = ["", "简单", "中等", "有点难"];

@@ -2,7 +2,7 @@
 """批量生成菜品配图（gpt-image-2）。
 
   python3 scripts/gen-dish-images.py --sub pork          # 按小类跑（默认 1k）
-  python3 scripts/gen-dish-images.py --ids a,b,c         # 指定菜 id
+  python3 scripts/gen-dish-images.py --ids 90,91         # 指定菜 id（raw.ts 里的数字）
   python3 scripts/gen-dish-images.py --sub pork --force  # 覆盖已有
 
 风格锁在 scripts/style_lock.txt，菜品描述在 scripts/dish_prompts.json。
@@ -18,12 +18,11 @@ PROMPTS = json.loads((ROOT / "scripts/dish_prompts.json").read_text(encoding="ut
 
 
 def dish_index():
-    """从 raw.ts + pinyin.generated.json 还原 id -> (name, sub)"""
+    """从 raw.ts 还原 id -> (name, sub)；id 是 raw.ts 里手写的数字"""
     raw = (ROOT / "src/data/raw.ts").read_text(encoding="utf-8")
     body = raw[raw.index("export const RAW"):]
-    rows = re.findall(r'^\s{2}\["([^"]+)", "[^"]*", "(\w+)"', body, re.M)
-    py = json.loads((ROOT / "src/data/pinyin.generated.json").read_text(encoding="utf-8"))
-    return {py[name]["id"]: (name, sub) for name, sub in rows if name in py}
+    rows = re.findall(r'^\s{2}\[(\d+), "([^"]+)", "[^"]*", "(\w+)"', body, re.M)
+    return {i: (name, sub) for i, name, sub in rows}
 
 
 def generate(dish_id: str, desc: str, resolution: str) -> bool:

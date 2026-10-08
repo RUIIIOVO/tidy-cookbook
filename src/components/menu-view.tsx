@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { catIcon } from "@/lib/icons";
-import { categories, dishById, dishes, sections } from "@/data/dishes";
+import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { SubId } from "@/data/types";
 import { searchDishes } from "@/lib/search";
 import { useCart } from "@/lib/store";
@@ -27,7 +27,7 @@ export function MenuView() {
   const pickedBySub = useMemo(() => {
     const m = new Map<SubId, number>();
     for (const it of cartItems) {
-      const d = dishById.get(it.dishId);
+      const d = getDish(it.dishId);
       if (d) m.set(d.sub, (m.get(d.sub) ?? 0) + 1);
     }
     return m;

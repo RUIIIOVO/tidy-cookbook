@@ -7,7 +7,7 @@ import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
 import { getDish } from "@/data/dishes";
-import { catTheme, spicyLabel, difficultyLabel } from "@/lib/theme";
+import { catTheme, spicyLabel } from "@/lib/theme";
 import { useCustomModal } from "@/lib/custom-modal-store";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
@@ -78,29 +78,25 @@ export function DishSheet() {
                       {dish.desc}
                     </p>
                   </div>
-                  <span
-                    className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[10.5px] ${t.bg} ${t.text}`}
-                  >
-                    {dish.tags[0] ?? "家常"}
-                  </span>
                 </div>
 
                 <div className="mt-4 flex divide-x divide-line rounded-card border border-line bg-card">
-                  {(
-                    [
-                      [metaIcon.time, "耗时", `${dish.minutes} 分钟`],
-                      [metaIcon.difficulty, "难度", difficultyLabel[dish.difficulty]],
-                      [metaIcon.spicy, "辣度", spicyLabel[dish.spicy]],
-                    ] as const
-                  ).map(([Icon, k, v]) => (
-                    <div key={k} className="flex-1 px-3 py-2.5 text-center">
-                      <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
-                        <Icon size={12} weight="regular" />
-                        {k}
-                      </div>
-                      <div className="mt-0.5 text-[13px] text-ink tabular-nums">{v}</div>
+                  <div className="flex-1 px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                      <metaIcon.spicy size={12} weight="regular" />
+                      辣度
                     </div>
-                  ))}
+                    <div className="mt-0.5 text-[13px] text-ink">{spicyLabel[dish.spicy]}</div>
+                  </div>
+                  <div className="flex-[2] px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                      <metaIcon.tags size={12} weight="regular" />
+                      标签
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-ink">
+                      {dish.tags.length ? dish.tags.map((tg) => <span key={tg}>{tg}</span>) : "家常"}
+                    </div>
+                  </div>
                 </div>
 
                 <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>

@@ -30,8 +30,6 @@ export type Dish = {
   category: CategoryId;
   sub: SubId;
   spicy: 0 | 1 | 2 | 3;
-  minutes: number;
-  difficulty: 1 | 2 | 3;
   tags: string[];
   ingredients: IngredientGroup[];
   steps: string[];

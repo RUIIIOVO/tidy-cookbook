@@ -8,12 +8,10 @@
  *     空闲时对象休眠，不产生 duration 费用。
  */
 
-import PINYIN from "../src/data/pinyin.generated.json";
+import { RAW } from "../src/data/raw";
 
 /** dishId → 菜名，只用来拼通知文案 */
-const DISH_NAME = new Map<string, string>(
-  Object.entries(PINYIN as Record<string, { id: string }>).map(([name, v]) => [v.id, name]),
-);
+const DISH_NAME = new Map<string, string>(RAW.map((r) => [String(r[0]), r[1]]));
 
 export type CartItem = {
   dishId: string;
