@@ -59,15 +59,26 @@ export function MenuView() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [searching]);
 
-  const jump = useCallback((key: string) => {
-    haptic(8);
-    setActive(key as SubId);
-    lockRef.current = Date.now() + 900;
+  const scrollToSection = useCallback((key: string, smooth: boolean) => {
     const el = document.getElementById(`sec-${key}`);
-    if (!el) return;
+    if (!el) return false;
     const y = el.getBoundingClientRect().top + window.scrollY - 92;
-    window.scrollTo({ top: y, behavior: "smooth" });
+    window.scrollTo({ top: y, behavior: smooth ? "smooth" : "auto" });
+    return true;
   }, []);
+
+  const jump = useCallback(
+    (key: string) => {
+      haptic(8);
+      setActive(key as SubId);
+      lockRef.current = Date.now() + 900;
+      // 搜索中右侧是结果列表，分区还没渲染：先退出搜索，等下一帧分区出来再跳
+      if (scrollToSection(key, true)) return;
+      setQ("");
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToSection(key, false)));
+    },
+    [scrollToSection],
+  );
 
   // 页面空闲时，静默预热所有菜品配图，切换分类或滚动时直接读取内存解码纹理，消除白屏
   useEffect(() => {
@@ -91,12 +102,17 @@ export function MenuView() {
               const Icon = catIcon[c.id];
               return (
                 <div key={c.id} className="mb-1">
-                  <div className="flex items-center justify-center gap-1 px-2 pt-3 pb-1.5">
+                  {/* 一级分类：点击跳到它的第一个小类 */}
+                  <button
+                    type="button"
+                    onClick={() => c.subs[0] && jump(c.subs[0].id)}
+                    className="flex w-full items-center justify-center gap-1 px-2 pt-3 pb-1.5 active:opacity-60"
+                  >
                     <Icon size={11} weight="fill" color={t.hex} style={{ opacity: 0.6 }} />
                     <span className="text-[9.5px] tracking-[0.15em] text-ink-3">
                       {c.name}
                     </span>
-                  </div>
+                  </button>
                   {c.subs.map((s) => {
                     const on = active === s.id && !searching;
                     const picked = pickedBySub.get(s.id) ?? 0;
