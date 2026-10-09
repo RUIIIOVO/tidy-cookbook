@@ -56,9 +56,14 @@ export function preloadImage(src: string): Promise<void> {
 }
 
 /** 空闲时分批预热图片资源池，加速后续分类切换与点击响应 */
+const queued = new Set<string>();
+
 export function scheduleIdlePreload(srcs: string[], batchSize = 4) {
   if (typeof window === "undefined") return;
-  const queue = [...srcs];
+  // 同一张图只排一次队：菜单页会随滚动反复调用，避免重复下载
+  const queue = srcs.filter((s) => !queued.has(s) && !decoded.has(s));
+  for (const s of queue) queued.add(s);
+  if (queue.length === 0) return;
   const processNextBatch = () => {
     if (queue.length === 0) return;
     const batch = queue.splice(0, batchSize);

@@ -10,10 +10,9 @@ import { searchDishes } from "@/lib/search";
 import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { cn, haptic } from "@/lib/utils";
-import { scheduleIdlePreload } from "@/lib/images";
+import { hasImage, scheduleIdlePreload } from "@/lib/images";
 import { DishCard } from "./dish-card";
-import { DishSheet } from "./dish-sheet";
-import { CustomOptionDrawer } from "./custom-option-drawer";
+import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
 
 export function MenuView() {
   const [q, setQ] = useState("");
@@ -80,11 +79,19 @@ export function MenuView() {
     [scrollToSection],
   );
 
-  // 页面空闲时，静默预热所有菜品配图，切换分类或滚动时直接读取内存解码纹理，消除白屏
+  // 只预热「当前小类 + 后面两个小类」的配图：慢网络下不和眼前的图抢带宽。
+  // 随滚动 / 点击切换小类逐步往后推，已经预热过的不会重复下载。
   useEffect(() => {
-    const allImages = dishes.map((d) => d.image);
-    scheduleIdlePreload(allImages, 4);
-  }, []);
+    if (searching) return;
+    const i = sections.findIndex((s) => s.key === active);
+    if (i < 0) return;
+    const srcs = sections
+      .slice(i, i + 3)
+      .flatMap((s) => s.dishes)
+      .filter((d) => hasImage(d.id))
+      .map((d) => d.image);
+    scheduleIdlePreload(srcs, 4);
+  }, [active, searching]);
 
   return (
     <div className="relative">

@@ -13,7 +13,7 @@ import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
-import { DishSheet } from "./dish-sheet";
+import { DishSheet } from "./lazy-sheets";
 import { DishThumb } from "./dish-thumb";
 
 export function HistoryView() {

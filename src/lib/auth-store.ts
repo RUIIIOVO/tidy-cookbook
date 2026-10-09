@@ -38,6 +38,19 @@ export function authHeaders(extra?: HeadersInit): Headers {
   return h;
 }
 
+/**
+ * HTML 头部的内联脚本（scripts/inject-preload.mjs）在 React 启动前就发出了 /api/me，
+ * 这里只用一次：首次 fetchMe 复用它，之后（登录、重试）都走正常请求。
+ */
+function takeEarlyMe(): Promise<Response> {
+  const w = window as Window & { __tcMe?: Promise<Response> };
+  const early = w.__tcMe;
+  w.__tcMe = undefined;
+  const fresh = () => fetch("/api/me", { credentials: "same-origin", headers: authHeaders() });
+  // 提前请求失败（断网等）就再正常请求一次
+  return early ? early.catch(fresh) : fresh();
+}
+
 type AuthState = {
   me: Me | null;
   /** null = 还没问过服务端 */
@@ -87,7 +100,7 @@ export const useAuth = create<AuthState>()((set) => ({
     const cached = readCache();
     if (cached) set({ me: cached, ready: true });
     try {
-      const r = await fetch("/api/me", { credentials: "same-origin", headers: authHeaders() });
+      const r = await takeEarlyMe();
       if (r.status === 401) {
         // 只有服务端明确说未登录才清掉
         writeCache(null);
