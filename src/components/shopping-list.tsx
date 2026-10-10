@@ -1,17 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Basket, Check, CopySimple } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { Dish } from "@/data/types";
 import { buildShoppingList } from "@/lib/shopping";
+import { useShopping } from "@/lib/shopping-store";
 import { cn, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 
 export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) {
   const groups = useMemo(() => buildShoppingList(rows), [rows]);
-  const [done, setDone] = useState<string[]>([]);
+  const done = useShopping((s) => s.done);
+  const toggleDone = useShopping((s) => s.toggle);
+  const keepOnly = useShopping((s) => s.keepOnly);
   const [showSeasoning, setShowSeasoning] = useState(true);
+
+  // 清单变了（删了菜）就把已不在清单里的勾选清掉
+  useEffect(() => {
+    keepOnly(groups.flatMap((g) => g.items.map((i) => i.name)));
+  }, [groups, keepOnly]);
 
   const buyGroups = groups.filter((g) => g.group !== "调料");
   const seasoning = groups.find((g) => g.group === "调料");
@@ -34,7 +42,7 @@ export function ShoppingList({ rows }: { rows: { dish: Dish; qty: number }[] }) 
 
   const toggle = (name: string) => {
     haptic(6);
-    setDone((d) => (d.includes(name) ? d.filter((x) => x !== name) : [...d, name]));
+    toggleDone(name);
   };
 
   return (
