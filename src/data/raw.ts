@@ -63,9 +63,9 @@ export const CATEGORIES = [
     id: "veggie" as CategoryId,
     name: "素菜",
     subs: [
+      { id: "greens" as SubId, name: "时蔬" },
       { id: "egg" as SubId, name: "蛋类" },
       { id: "tofu" as SubId, name: "豆制品" },
-      { id: "greens" as SubId, name: "时蔬" },
       { id: "soup" as SubId, name: "汤" },
     ],
   },
