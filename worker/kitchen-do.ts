@@ -13,6 +13,26 @@ import { RAW } from "../src/data/raw";
 /** dishId → 菜名，只用来拼通知文案 */
 const DISH_NAME = new Map<string, string>(RAW.map((r) => [String(r[0]), r[1]]));
 
+/**
+ * dishId → 这道菜用到的食材名。买菜清单按食材名合并，勾选也以食材名为键。
+ * 服务端自己算，菜被删时才能可靠地清掉对应勾选（不依赖客户端，多设备不会互相覆盖）。
+ * 解析规则与 src/data/dishes.ts 的 parseIngredients 保持一致。
+ */
+const DISH_INGREDIENTS = new Map<string, string[]>(
+  RAW.map((r) => {
+    const names: string[] = [];
+    for (const block of r[6].split("@")) {
+      const rest = block.split("|")[1] ?? "";
+      for (const x of rest.split(";").map((t) => t.trim())) {
+        if (!x || x === "无") continue;
+        const i = x.lastIndexOf(" ");
+        names.push(i === -1 ? x : x.slice(0, i));
+      }
+    }
+    return [String(r[0]), names];
+  }),
+);
+
 export type CartItem = {
   dishId: string;
   qty: number;
@@ -22,7 +42,13 @@ export type CartItem = {
   /** 同上的显示名，给前端展示 */
   addedBy: string | null;
 };
-export type Snapshot = { items: CartItem[]; locked: boolean; rev: number };
+export type Snapshot = {
+  items: CartItem[];
+  locked: boolean;
+  rev: number;
+  /** 买菜清单里已勾选（已买）的食材名，全员共享 */
+  bought: string[];
+};
 
 type ClientOp =
   | { type: "set"; dishId: string; qty: number; ts: number }
@@ -30,6 +56,7 @@ type ClientOp =
   | { type: "clear"; ts: number }
   | { type: "lock"; ts: number }
   | { type: "unlock"; ts: number }
+  | { type: "buy"; name: string; done: boolean; ts: number }
   | { type: "pull" };
 
 type Attachment = { userId: string; role: "owner" | "guest"; name?: string };
@@ -55,7 +82,7 @@ export class KitchenDO implements DurableObject {
   /** 首次用到时从 D1 装载，之后常驻内存直到休眠 */
   private async load(): Promise<Snapshot> {
     if (this.snap) return this.snap;
-    const [items, st] = await Promise.all([
+    const [items, st, bought] = await Promise.all([
       this.env.DB.prepare(
         `SELECT c.dish_id AS dishId, c.qty, c.added_at AS addedAt,
                 c.added_by AS addedById, u.display_name AS addedBy
@@ -67,11 +94,15 @@ export class KitchenDO implements DurableObject {
       this.env.DB.prepare(`SELECT locked, updated_at, locked_by FROM cart_state WHERE kitchen_id = ?`)
         .bind(this.kitchenId)
         .first<{ locked: number; updated_at: number; locked_by: string | null }>(),
+      this.env.DB.prepare(`SELECT name FROM shopping_done WHERE kitchen_id = ? ORDER BY updated_at`)
+        .bind(this.kitchenId)
+        .all<{ name: string }>(),
     ]);
     this.snap = {
       items: items.results ?? [],
       locked: !!st?.locked,
       rev: ++this.rev,
+      bought: (bought.results ?? []).map((r) => r.name),
     };
     this.lockedAt = st?.updated_at ?? 0;
     this.lockedBy = st?.locked_by ?? null;
@@ -118,12 +149,14 @@ export class KitchenDO implements DurableObject {
     }
     stmts.push(
       this.env.DB.prepare(`DELETE FROM cart_item WHERE kitchen_id = ?`).bind(K),
+      this.env.DB.prepare(`DELETE FROM shopping_done WHERE kitchen_id = ?`).bind(K),
       this.env.DB.prepare(
         `UPDATE cart_state SET locked = 0, locked_by = NULL, updated_at = ? WHERE kitchen_id = ?`,
       ).bind(now, K),
     );
     await this.env.DB.batch(stmts);
     snap.items = [];
+    snap.bought = [];
     snap.locked = false;
     snap.rev = ++this.rev;
     this.lockedBy = null;
@@ -208,6 +241,28 @@ export class KitchenDO implements DurableObject {
     this.broadcast();
   }
 
+  /** 当前点菜单里所有菜用到的食材名 */
+  private validIngredients(snap: Snapshot): Set<string> {
+    const names = new Set<string>();
+    for (const it of snap.items) for (const n of DISH_INGREDIENTS.get(it.dishId) ?? []) names.add(n);
+    return names;
+  }
+
+  /** 菜被删后，已经不在清单里的食材的勾选一并清掉 */
+  private async pruneBought(snap: Snapshot) {
+    if (snap.bought.length === 0) return;
+    const valid = this.validIngredients(snap);
+    const stale = snap.bought.filter((n) => !valid.has(n));
+    if (stale.length === 0) return;
+    const marks = stale.map(() => "?").join(",");
+    await this.env.DB.prepare(
+      `DELETE FROM shopping_done WHERE kitchen_id = ? AND name IN (${marks})`,
+    )
+      .bind(this.kitchenId, ...stale)
+      .run();
+    snap.bought = snap.bought.filter((n) => valid.has(n));
+  }
+
   /** 下单后给主人手机推 Bark；失败只吞掉，不影响锁单 */
   private async notifyOrder(name: string | null, items: CartItem[]) {
     const url = this.env.BARK_URL;
@@ -266,6 +321,7 @@ export class KitchenDO implements DurableObject {
             .bind(K, op.dishId, op.qty, userId, found?.addedAt ?? now, now)
             .run();
         }
+        await this.pruneBought(snap);
         break;
       }
       case "removeMany": {
@@ -278,15 +334,38 @@ export class KitchenDO implements DurableObject {
           )
             .bind(K, ...op.dishIds)
             .run();
+        await this.pruneBought(snap);
+        break;
+      }
+      case "buy": {
+        // 勾选不受锁定限制（下单之后才是买菜的时候），访客也能勾；
+        // 只认当前清单里真实存在的食材，乱发的名字直接忽略
+        if (!this.validIngredients(snap).has(op.name)) break;
+        const has = snap.bought.includes(op.name);
+        if (op.done && !has) {
+          await this.env.DB.prepare(
+            `INSERT OR REPLACE INTO shopping_done (kitchen_id, name, updated_at) VALUES (?,?,?)`,
+          )
+            .bind(K, op.name, now)
+            .run();
+          snap.bought = [...snap.bought, op.name];
+        } else if (!op.done && has) {
+          await this.env.DB.prepare(`DELETE FROM shopping_done WHERE kitchen_id = ? AND name = ?`)
+            .bind(K, op.name)
+            .run();
+          snap.bought = snap.bought.filter((n) => n !== op.name);
+        }
         break;
       }
       case "clear": {
         // 已下单的先归档再清，防止「开始下一餐」把订单弄丢
         if (await this.archiveAndClear()) return;
         snap.items = [];
+        snap.bought = [];
         snap.locked = false;
         await this.env.DB.batch([
           this.env.DB.prepare(`DELETE FROM cart_item WHERE kitchen_id = ?`).bind(K),
+          this.env.DB.prepare(`DELETE FROM shopping_done WHERE kitchen_id = ?`).bind(K),
           this.env.DB.prepare(
             `UPDATE cart_state SET locked = 0, locked_by = NULL, updated_at = ? WHERE kitchen_id = ?`,
           ).bind(now, K),

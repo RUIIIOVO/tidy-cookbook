@@ -69,7 +69,13 @@ export function connect() {
 
   sock.onmessage = (ev) => {
     if (ev.data === "pong") return;
-    let msg: { type: string; items?: CartItem[]; locked?: boolean; reason?: string };
+    let msg: {
+      type: string;
+      items?: CartItem[];
+      locked?: boolean;
+      bought?: string[];
+      reason?: string;
+    };
     try {
       msg = JSON.parse(ev.data);
     } catch {
@@ -77,7 +83,7 @@ export function connect() {
     }
     const st = useCart.getState();
     if (msg.type === "snapshot") {
-      st.applySnapshot(msg.items ?? [], !!msg.locked);
+      st.applySnapshot(msg.items ?? [], !!msg.locked, msg.bought ?? []);
     } else if (msg.type === "denied") {
       st.onDenied?.(msg.reason ?? "没有权限");
       // 服务端拒绝了，拉一次权威状态把乐观更新回滚掉

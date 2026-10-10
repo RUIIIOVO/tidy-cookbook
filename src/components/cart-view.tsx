@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BookOpen,
   Check,
@@ -16,7 +16,6 @@ import Link from "next/link";
 import { categories, getDish } from "@/data/dishes";
 import type { CategoryId } from "@/data/types";
 import { useCart } from "@/lib/store";
-import { useShopping } from "@/lib/shopping-store";
 import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
@@ -50,13 +49,6 @@ export function CartView() {
   const rows = items
     .map((i) => ({ item: i, dish: getDish(i.dishId)! }))
     .filter((r) => r.dish);
-
-  // 点菜单清空了（开始下一餐 / 每日归档）：买菜清单的勾选一起重置，不带到下一餐
-  const resetShopping = useShopping((s) => s.reset);
-  const empty = rows.length === 0;
-  useEffect(() => {
-    if (empty) resetShopping();
-  }, [empty, resetShopping]);
 
   const byCat = categories
     .map((c) => ({

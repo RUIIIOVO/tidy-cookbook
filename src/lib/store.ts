@@ -18,7 +18,8 @@ export type Op =
   | { type: "removeMany"; dishIds: string[]; ts: number }
   | { type: "clear"; ts: number }
   | { type: "lock"; ts: number }
-  | { type: "unlock"; ts: number };
+  | { type: "unlock"; ts: number }
+  | { type: "buy"; name: string; done: boolean; ts: number };
 
 /** sync.ts 注册进来的发送钩子。store 不反向 import sync，避免循环依赖。 */
 let sink: (() => void) | null = null;
@@ -29,6 +30,8 @@ export function setOpSink(fn: (() => void) | null) {
 type CartState = {
   items: CartItem[];
   locked: boolean;
+  /** 买菜清单里已勾选（已买）的食材名；和点菜单一样走服务端同步，全员共享 */
+  bought: string[];
   /** 还没送到服务端的操作 */
   outbox: Op[];
   /** 已发出、等服务端快照确认的操作 */
@@ -42,6 +45,8 @@ type CartState = {
   clear: () => void;
   lock: () => void;
   unlock: () => void;
+  /** 勾选 / 取消勾选一项食材。不受锁定限制：下单之后才是买菜的时候 */
+  buy: (name: string, done: boolean) => void;
   qtyOf: (dishId: string) => number;
   count: () => number;
 
@@ -49,7 +54,7 @@ type CartState = {
   enqueue: (op: Op) => void;
   takeOutbox: () => Op[];
   requeueInflight: () => void;
-  applySnapshot: (items: CartItem[], locked: boolean) => void;
+  applySnapshot: (items: CartItem[], locked: boolean, bought: string[]) => void;
   setOnDenied: (fn: (reason: string) => void) => void;
 };
 
@@ -74,6 +79,7 @@ export const useCart = create<CartState>()(
       return {
         items: [],
         locked: false,
+        bought: [],
         outbox: [],
         inflight: [],
 
@@ -120,7 +126,7 @@ export const useCart = create<CartState>()(
         },
 
         clear: () => {
-          set({ items: [], locked: false });
+          set({ items: [], locked: false, bought: [] });
           emit({ type: "clear", ts: Date.now() });
         },
 
@@ -132,6 +138,17 @@ export const useCart = create<CartState>()(
         unlock: () => {
           set({ locked: false });
           emit({ type: "unlock", ts: Date.now() });
+        },
+
+        buy: (name, done) => {
+          set((s) => ({
+            bought: done
+              ? s.bought.includes(name)
+                ? s.bought
+                : [...s.bought, name]
+              : s.bought.filter((n) => n !== name),
+          }));
+          emit({ type: "buy", name, done, ts: Date.now() });
         },
 
         qtyOf: (dishId) => get().items.find((i) => i.dishId === dishId)?.qty ?? 0,
@@ -153,8 +170,8 @@ export const useCart = create<CartState>()(
           set((s) => ({ outbox: [...s.inflight, ...s.outbox], inflight: [] })),
 
         /** 服务端为准。inflight 到此确认完成。 */
-        applySnapshot: (items, locked) =>
-          set({ items: items.map(fixItem), locked, inflight: [] }),
+        applySnapshot: (items, locked, bought) =>
+          set({ items: items.map(fixItem), locked, bought, inflight: [] }),
 
         setOnDenied: (fn) => set({ onDenied: fn }),
       };
@@ -166,6 +183,7 @@ export const useCart = create<CartState>()(
       partialize: (s) => ({
         items: s.items,
         locked: s.locked,
+        bought: s.bought,
         outbox: s.outbox,
         inflight: s.inflight,
       }),
@@ -180,6 +198,7 @@ export const useCart = create<CartState>()(
           ...current,
           ...p,
           items: (p.items ?? current.items).map(fixItem),
+          bought: p.bought ?? [],
           outbox: (p.outbox ?? []).map(fixOp),
           inflight: (p.inflight ?? []).map(fixOp),
         };

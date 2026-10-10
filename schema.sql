@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS cart_state (
   locked_by   TEXT                 -- 下单人 user.id；定时任务归档时写进 meal.ordered_by
 );
 
+-- 买菜清单的勾选，一个厨房一份，所有人共享；随点菜单清空一起清掉
+CREATE TABLE IF NOT EXISTS shopping_done (
+  kitchen_id  TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (kitchen_id, name)
+);
+
 -- 下单只锁定；每日定时任务（北京时间 04:00）把点菜单归档成一条历史订单并清空，没确认下单但有菜的也算
 CREATE TABLE IF NOT EXISTS meal (
   id          TEXT PRIMARY KEY,

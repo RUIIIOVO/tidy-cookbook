@@ -42,7 +42,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          postCommands: |
+          # 迁移放在部署前：新增的表/列只增不删，老代码照常能跑，新代码上线时结构已就绪
+          preCommands: |
             wrangler d1 migrations apply tidy-cookbook --remote
           secrets: |
             BARK_URL
