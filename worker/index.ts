@@ -132,7 +132,7 @@ export default {
       return json({ error: String(e) }, { status: 500 });
     }
   },
-  /** 每天北京时间凌晨 4 点（UTC 20:00）：已下单的点菜单归档进历史并清空 */
+  /** 每天北京时间凌晨 4 点（UTC 20:00）：点菜单归档进历史并清空（没确认下单但有菜的也算） */
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
       (async () => {

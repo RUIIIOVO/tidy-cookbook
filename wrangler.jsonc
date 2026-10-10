@@ -33,7 +33,7 @@
   // 免费版的 Durable Objects 必须用 SQLite 存储后端
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["KitchenDO"] }],
 
-  // 每天 UTC 20:00 = 北京时间 04:00，把已下单的点菜单归档进历史并清空
+  // 每天 UTC 20:00 = 北京时间 04:00，把点菜单归档进历史并清空（没确认下单但有菜的也算）
   "triggers": { "crons": ["0 20 * * *"] },
 
   "observability": { "enabled": true }

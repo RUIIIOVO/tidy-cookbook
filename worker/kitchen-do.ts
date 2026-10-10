@@ -79,22 +79,36 @@ export class KitchenDO implements DurableObject {
   }
 
   /**
-   * 归档并清空：把已下单的点菜单写进历史，再清空。每日定时任务和手动「开始下一餐」共用。
+   * 归档并清空：把点菜单写进历史，再清空。每日定时任务和手动「开始下一餐」共用。
    * 归档和清空放进同一个 batch，要么都成功，要么都不动，订单不会丢也不会重复。
-   * 没下过单的点菜单不动；旧版本遗留的锁单（lockedBy 为空）已归档过，只清空。
+   *
+   * - 已下单（locked）：归档后清空。旧版本遗留的锁单（lockedBy 为空）已归档过，只清空。
+   * - 没下单但有菜：只有定时任务（includeUnconfirmed=true）才会收进历史并清空；
+   *   手动清空不归档，免得随手清掉的菜被记成订单。
+   * - 没下单也没菜：什么都不做。
    */
-  private async archiveAndClear(): Promise<boolean> {
+  private async archiveAndClear(includeUnconfirmed = false): Promise<boolean> {
     const snap = await this.load();
-    if (!snap.locked) return false;
+    const unconfirmed = !snap.locked && snap.items.length > 0 && includeUnconfirmed;
+    if (!snap.locked && !unconfirmed) return false;
+
+    // 没确认下单时没有下单人和下单时间：下单人取最早点菜的人，时间取最后一次加菜的时间，
+    // 这样历史里显示的是那天晚上，而不是定时任务跑的凌晨 4 点
+    const orderedBy = unconfirmed
+      ? ([...snap.items].sort((x, y) => x.addedAt - y.addedAt)[0]?.addedById ?? null)
+      : this.lockedBy;
+    const orderedAt = unconfirmed
+      ? Math.max(...snap.items.map((i) => i.addedAt))
+      : this.lockedAt;
     const K = this.kitchenId;
     const now = Date.now();
     const stmts = [];
-    if (snap.items.length && this.lockedBy) {
+    if (snap.items.length && orderedBy) {
       const mealId = crypto.randomUUID();
       stmts.push(
         this.env.DB.prepare(
           `INSERT INTO meal (id, kitchen_id, ordered_by, ordered_at) VALUES (?,?,?,?)`,
-        ).bind(mealId, K, this.lockedBy, this.lockedAt),
+        ).bind(mealId, K, orderedBy, orderedAt),
         ...snap.items.map((i) =>
           this.env.DB.prepare(
             `INSERT INTO meal_item (meal_id, dish_id, qty, added_by) VALUES (?,?,?,?)`,
@@ -124,7 +138,8 @@ export class KitchenDO implements DurableObject {
 
     // 定时任务入口（只有 Worker 内部能调到，外部请求进不来这里）
     if (url.pathname === "/rollover") {
-      const archived = await this.archiveAndClear();
+      // 定时任务：没确认下单的点菜单也一并收进历史
+      const archived = await this.archiveAndClear(true);
       return Response.json({ ok: true, archived });
     }
 
