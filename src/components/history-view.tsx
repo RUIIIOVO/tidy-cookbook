@@ -9,6 +9,7 @@ import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
 import { useHistory, type Meal } from "@/lib/history-store";
 import { useCart } from "@/lib/store";
+import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
@@ -235,6 +236,7 @@ function Placeholder({
   hint?: string;
   retry?: () => void;
 }) {
+  const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
     <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 py-20 text-center">
       <p className="font-display text-[15px] tracking-wider text-ink-3">{text}</p>
@@ -251,7 +253,11 @@ function Placeholder({
       {!retry && !hint && null}
       {!retry && hint && (
         <Link
-          href="/menu"
+          href="/menu/"
+          onClick={(e) => {
+            e.preventDefault();
+            setActiveTab("menu");
+          }}
           className="mt-5 rounded-full bg-accent px-5 py-2 text-[12px] text-white"
         >
           去翻菜单

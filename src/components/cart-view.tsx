@@ -16,6 +16,7 @@ import Link from "next/link";
 import { categories, getDish } from "@/data/dishes";
 import type { CategoryId } from "@/data/types";
 import { useCart } from "@/lib/store";
+import { useTabs } from "@/lib/tab-store";
 import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
@@ -45,6 +46,7 @@ export function CartView() {
   const [picked, setPicked] = useState<string[]>([]);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const removeOne = useCart((s) => s.remove);
+  const setActiveTab = useTabs((s) => s.setActiveTab);
 
   const rows = items
     .map((i) => ({ item: i, dish: getDish(i.dishId)! }))
@@ -80,7 +82,11 @@ export function CartView() {
         </p>
         <div className="mt-6 flex items-center gap-2.5">
           <Link
-            href="/menu"
+            href="/menu/"
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab("menu");
+            }}
             className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
           >
             <BookOpen size={15} weight="regular" />
@@ -88,6 +94,10 @@ export function CartView() {
           </Link>
           <Link
             href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab("draw");
+            }}
             className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
           >
             <Sparkle size={15} weight="regular" />
