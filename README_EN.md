@@ -1,0 +1,194 @@
+<div align="center">
+
+# 🍳 Tidy Cookbook
+
+**A mobile-first, minimalist home cooking assistant featuring smart dish picking, auto-merged grocery lists, and real-time multi-device synchronization.**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers_%26_D1_%26_DO-F38020?style=flat-square&logo=cloudflare)](https://workers.cloudflare.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
+
+**English** | [简体中文](./README.md)
+
+</div>
+
+---
+
+## 📱 Visual Showcase
+
+| 1. Pick Inspiration | 2. Menu Exploration | 3. Recipe Details | 4. Grocery List | 5. Order History |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
+| Indecisive? Swipe cards | 93 curated dishes with pinyin search | High-res image, ingredients & steps | Auto-merged across all dishes | Time range filters & infinite scroll |
+
+---
+
+## 💡 Why Tidy Cookbook?
+
+Most commercial recipe apps are cluttered with paid courses, e-commerce ads, algorithmic feeds, and endless short videos. Cooking should be an intuitive, therapeutic part of daily life—not an algorithm-driven attention trap.
+
+**Tidy Cookbook** focuses strictly on the 4 essential steps of daily meal preparation:
+
+1. **What to eat today?** — When you can't decide, roll through cards filtered by category (Meat, Seafood, Vegetables, Diet, Staples). Swipe left or right to switch, and add directly to your meal order.
+2. **Effortless Discovery** — Browse curated homestyle recipes with ultra-fast search supporting Chinese names, full Pinyin, initials (e.g. `xcr` for Stir-fried Pork), and ingredients.
+3. **Collaborative Ordering** — Couples or family members can order together from their own phones with real-time sync, portion controls, swipe-to-delete gestures, and order locking.
+4. **Smart Grocery Merging** — Ingredients across all ordered dishes are automatically parsed, multiplied by portions, and combined by name/unit (e.g., `Pork Belly 300g`, `Ginger 4 slices`). Checklist progress syncs across devices in real time and can be copied to clipboard in one tap.
+
+---
+
+## ✨ Key Features
+
+- 🎲 **Interactive Card Drawing**: Tactile card-swipe gestures with category filters (Meat, Seafood, Veggies, Healthy, Staples) and recency deduplication to avoid repetitive recommendations.
+- 📖 **Dual-Pane Menu with Priority Image Loading**: Left vertical category rail with instant positioning and scroll-spy. Employs a custom Priority Scheduler to prevent out-of-viewport images from saturating network bandwidth during long-distance jumps.
+- ⚡ **Native-Grade SPA View Persistence (Keep-Alive)**: Replaces traditional page teardowns with multi-view state preservation. Preserves scroll positions across tab switches with response latency `< 16ms`.
+- 🔄 **Real-Time Multi-Device Sync**: Powered by Cloudflare Durable Objects and WebSockets for real-time order broadcast and collaborative checklist toggling.
+- 📦 **Offline-First Resilience**: Full offline interaction support with local Outbox queuing and automatic state alignment upon network recovery.
+- 🧺 **Intelligent Ingredient Aggregation**: Proprietary merging algorithm combines duplicate ingredients across dishes and multiplies quantities by servings.
+- 📋 **Receipt-Style History Log**: Filter orders by `All`, `Last 7 Days`, `Last Month`, or `Last 3 Months`, backed by seamless infinite-scroll pagination and daily automated archiving (04:00 AM CST).
+- 🎨 **Minimalist Ink-and-Paper Aesthetic**: Custom Tailwind palette (`paper`, `ink`, `chili`, `brine`, `leaf`, `caramel`), mobile safe-area insets, and physical haptic feedback.
+
+---
+
+## 🛠️ Architecture & Tech Stack
+
+```
+┌────────────────────────────────────────────────────────┐
+│             Frontend UI (Next.js 16 Static Export)     │
+│   React 19 · Tailwind CSS v4 · Framer Motion · Vaul    │
+└───────────────────────────┬────────────────────────────┘
+                            │ (Free static asset delivery via Workers Assets)
+┌───────────────────────────▼────────────────────────────┐
+│         Edge Compute (Cloudflare Workers & Assets)      │
+│  - /api/* Route Proxy & PBKDF2-SHA256 Token Auth       │
+│  - Automated Cron Trigger (Daily 04:00 CST Archival)   │
+└─────────────┬────────────────────────────┬─────────────┘
+              │ Real-time WebSocket Sync    │ SQL Persistence
+┌─────────────▼───────────────┐ ┌──────────▼─────────────┐
+│  Durable Objects (KitchenDO)│ │   Cloudflare D1 (SQL)   │
+│  - Realtime state machine   │ │  - user / session      │
+│  - WebSocket broadcast pool │ │  - cart_item / state   │
+│  - Order Bark push watcher  │ │  - meal / meal_item    │
+└─────────────────────────────┘ └─────────────────────────┘
+```
+
+- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + Zustand. Exported as a purely static SPA (`output: "export"`) hosted on Cloudflare Workers Assets with zero serverless request fees for static files.
+- **Persistence**: Cloudflare D1 (Serverless SQLite at the edge).
+- **Real-time Engine**: Cloudflare Durable Objects with Hibernation API (zero cost while idle; platform-level Ping/Pong auto-response).
+- **Session Durability**: 90-day sliding session token stored in both HTTP cookies and `localStorage` with automated renewal upon access.
+- **Push Notifications**: Instant order alerts dispatched via Bark API upon checkout confirmation.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+Node.js >= 18 and `pnpm` are required:
+
+```bash
+git clone https://github.com/RUIIIOVO/tidy-cookbook.git
+cd tidy-cookbook
+pnpm install
+```
+
+### 2. Local Development
+
+```bash
+pnpm dev
+```
+Open `http://localhost:3000` in your mobile browser emulator.
+
+### 3. Build & Quality Verification
+
+```bash
+pnpm build            # Optimizes dish images + generates manifest + builds static SPA
+pnpm lint             # ESLint code style and rules check
+pnpm cf:typecheck     # TypeScript check for Cloudflare Worker backend
+pnpm preview          # Local preview via Miniflare / Cloudflare Workers environment
+```
+
+---
+
+## 🌐 Cloudflare Deployment Guide
+
+Tidy Cookbook is designed to run entirely within Cloudflare's permanent free tier.
+
+### Step 1: Initialize Wrangler Configuration
+
+Copy the example configuration:
+```bash
+cp wrangler.example.jsonc wrangler.jsonc
+```
+
+Log in to Cloudflare:
+```bash
+pnpm exec wrangler login
+```
+
+### Step 2: Set Up Cloudflare D1 Database
+
+1. Create a D1 instance:
+   ```bash
+   pnpm exec wrangler d1 create tidy-cookbook
+   ```
+   Copy the generated `database_id` into your `wrangler.jsonc`.
+
+2. Apply database schemas and incremental migrations:
+   ```bash
+   pnpm exec wrangler d1 execute tidy-cookbook --remote --file=./schema.sql
+   pnpm exec wrangler d1 migrations apply tidy-cookbook --remote
+   ```
+
+3. Create the initial administrator account (Owner role):
+   ```bash
+   node scripts/seed-users.mjs yourUsername:yourPassword:owner > /tmp/seed.sql
+   pnpm exec wrangler d1 execute tidy-cookbook --remote --file=/tmp/seed.sql && rm /tmp/seed.sql
+   ```
+
+### Step 3: Configure Bark Notifications (Optional)
+
+To receive push notifications on your iPhone when meals are locked:
+```bash
+pnpm exec wrangler secret put BARK_URL
+# Enter: https://api.day.app/YOUR_DEVICE_KEY/
+```
+
+### Step 4: Build and Deploy
+
+```bash
+pnpm build
+pnpm deploy
+```
+
+> **Custom Domain**: For optimal access speed and resilience against SNI blocking, bind a custom domain (e.g. `cook.yourdomain.com`) in the Cloudflare dashboard.
+
+---
+
+## 🍳 Recipe Authoring Guide
+
+All dishes are maintained in a compact format inside `src/data/raw.ts`:
+
+```ts
+[94, "Dish Name", "One-sentence sensory description (how it tastes, no fluff)", "category_id", spice_level(0-3), ["Tag1", "Tag2"],
+  "Main|Ingredient amount@Secondary|Ingredient amount@Seasoning|Ingredient amount",
+  "Step 1@Step 2@Step 3@Step 4"],
+```
+
+- **ID Convention**: Sequential positive integer at the start of each row. Once assigned, IDs **must never be modified, reused, or reordered**, as database records and image assets are permanently keyed to this number.
+- **Update Pinyin Index**: After updating dishes, run:
+  ```bash
+  node scripts/build-pinyin.mjs
+  ```
+- **Automated AI Visuals Pipeline**: Add English image prompts to `scripts/dish_prompts.json` and run:
+  ```bash
+  python3 scripts/gen-dish-images.py --ids 94
+  ./scripts/optimize-images.sh
+  node scripts/build-image-manifest.mjs
+  ```
+
+---
+
+## 📄 License
+
+Distributed under the [MIT License](./LICENSE).

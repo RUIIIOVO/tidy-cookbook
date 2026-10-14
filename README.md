@@ -1,136 +1,197 @@
-# Tidy Cookbook
+<div align="center">
 
-> A clean, mobile-first home cooking app. Browse the menu, roll the dice when you can't decide, build tonight's order, and get an auto-merged grocery list.
->
-> 简洁的家常菜谱 H5。翻菜单、拿不定主意就抽一道、点好这一餐、自动合并出买菜清单。
+# 🍳 今天吃什么 (Tidy Cookbook)
 
-<!-- 截图位：docs/screenshots/{home,menu,detail,cart}.png -->
+**移动端优先的极简家常菜谱 · 抽菜灵感 · 智能合并买菜清单 · 全员多端实时同步**
 
-| 抽菜 | 菜单 | 详情 | 点菜单 |
-| :--: | :--: | :--: | :----: |
-|  —   |  —   |  —   |   —    |
+[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers_%26_D1_%26_DO-F38020?style=flat-square&logo=cloudflare)](https://workers.cloudflare.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 
-## Why
+[English](./README_EN.md) | **简体中文**
 
-市面上的菜谱 App 都在卖课、推广告、塞短视频。这个项目只解决四件事：
+</div>
 
-1. **今天吃什么** — 按分类随机抽一道，不合意就换，抽中直接进点菜单
-2. **翻菜单** — 91 道家常菜，图文列表，拼音首字母搜索（`xcr` → 小炒肉）
-3. **点这一餐** — 加减份数、批量删除、锁单确认
-4. **买菜清单** — 把这一餐所有食材跨菜品合并、按份数倍乘，一键复制发微信
+---
 
-没有广告、没有推荐算法、没有短视频。菜谱在代码里，点菜单在你自己的 Cloudflare 账号里。
+## 📱 视觉预览 (Screenshots)
 
-## Features
+| 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 买菜清单 | 5. 历史归档 |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
+| 纠结吃啥？滑卡随心抽 | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 跨菜品同名食材智能合并 | 时间段筛选与下滑懒加载 |
 
-- 🎲 **抽菜** — 可按荤 / 海鲜 / 素 / 主食筛选，避免连续重复
-- 📖 **菜单** — 4 大类 13 小类，左侧竖向导航 + 滚动联动高亮
-- 🔍 **搜索** — 菜名 / 全拼 / 首字母 / 食材，构建期预生成拼音，不打字典进包
-- 📋 **详情** — 食材按主料/辅料/调料分组带用量，做法分步
-- 🛒 **点菜单** — 分类分组、批量管理、锁单 / 取消锁单
-- 🧺 **买菜清单** — 同名食材自动合并（`姜 3片 + 1块`），可逐条打勾，一键复制
-- 📱 **移动端优先** — 安全区适配、触感反馈、PWA 可加到主屏
+---
 
-## Tech Stack
+## 💡 为什么做这个项目 (Why Tidy Cookbook)
 
-| 层 | 选择 |
-| --- | --- |
-| 框架 | Next.js 16 (App Router) + React 19 |
-| 样式 | Tailwind CSS v4，纸墨主题，无 webfont |
-| 图标 | [Phosphor Icons](https://phosphoricons.com) |
-| 动效 | motion (Framer Motion) |
-| 抽屉 / Toast | vaul · sonner |
-| 状态 | Zustand + persist（localStorage 作离线缓存） |
-| 同步 | Durable Object + WebSocket，多设备实时同步 |
-| 存储 | Cloudflare D1（账号 / 点菜单 / 历史订单） |
-| 部署 | Next.js `output: 'export'` + Cloudflare Workers Assets |
+市面上的主流美食与菜谱类 App 充斥着卖课买课、电商带货、冗长短视频与商业广告。做饭本来是一件纯粹、治愈的日常琐事，不应被算法和推荐流绑架。
 
-菜品数据是**构建期静态模块**，不查库、可全文搜索、可被边缘缓存。整站静态导出后由 Workers Assets 托管——静态资源请求免费且不计入 Workers 配额，只有 `/api/*` 才会唤醒 Worker。
+**Tidy Cookbook** 只专注解决每天做饭决策的四个核心步骤：
 
-点菜单**离线优先**：本地先改，操作进 outbox，WebSocket 发出后转 inflight，收到服务端快照才确认。断网照常加菜，重连自动回放。
+1. **今天吃什么？** —— 拿不定主意时，按荤/素/海鲜/轻食等分类随心抽一道，不合心意左右滑换一道，抽中直接加入点菜单。
+2. **快速挑菜** —— 收录精选家常菜，支持**菜名 / 全拼 / 首字母 / 食材**极速拼音搜索（如输入 `xcr` 秒出小炒肉）。
+3. **点这一餐** —— 全家人或情侣可以通过各自手机协同点菜，增减份数、左滑删除、锁单确认，全端状态毫秒级实时同步。
+4. **智能买菜清单** —— 自动将整餐所有菜品的食材提取并按同名食材智能合并累加，按份数倍乘（如：`五花肉 300g`、`姜 4片`），买菜时打勾状态全员实时同步，还可一键复制文本发送到微信。
 
-## Quick Start
+---
+
+## ✨ 核心特性 (Key Features)
+
+- 🎲 **抽菜灵感**：卡片式触感翻动，支持荤、海鲜、素菜、减脂轻食、主食单向筛选，内置最近历史去重算法，避免连续抽中重复菜品。
+- 📖 **双联交互菜单**：左侧竖向分类导航栏，支持点击瞬间直达与滚动联动监听；图片采用动态优先级调度器（Priority Scheduler），大跨度跳转不浪费带宽。
+- ⚡ **原生级 SPA 视口保活（Keep-Alive）**：底栏 Tab 切换采用单页多视图保活架构，消灭传统路由反复销毁与 DOM 重建带来的卡顿，内存保留每个 Tab 独立的滚动位置，切换响应速度 `< 16ms`。
+- 🔄 **全端实时协同（Real-time Sync）**：基于 Cloudflare Durable Objects 与 WebSocket，支持点菜单与买菜清单勾选状态的全员实时双向广播。
+- 📦 **离线优先设计（Offline-First）**：无网状态下依然可加菜、勾选清单；网络恢复后自动进行 Outbox 队列回放与快照对齐。
+- 🛒 **智能食材合并**：独创跨菜品食材解析合并引擎，同名同单位食材自动数值倍乘累加，支持调料一键折叠展开。
+- 📋 **小票账单式历史**：支持按 `全部`、`近 7 天`、`近 1 个月`、`近 3 个月` 筛选；向下滚动自动流式分页懒加载；支持每日凌晨 4:00 自动定时归档并重置点菜单。
+- 🎨 **纸墨极简设计系统**：严格遵守自定义调色板（`paper`、`ink`、`chili`、`brine`、`leaf`、`caramel`），移动端安全区深度适配，内嵌物理震动触感（Haptic Feedback）。
+
+---
+
+## 🛠️ 技术架构 (Tech Stack)
+
+```
+┌────────────────────────────────────────────────────────┐
+│               前端展示层 (Next.js 16 静态导出)             │
+│  React 19 · Tailwind CSS v4 · Framer Motion · Vaul    │
+└───────────────────────────┬────────────────────────────┘
+                            │ (静态资源免费托管 / 不计 Worker 额度)
+┌───────────────────────────▼────────────────────────────┐
+│         边缘服务层 (Cloudflare Workers & Assets)        │
+│  - /api/*  路由代理与会话认证 (PBKDF2-SHA256 Token)       │
+│  - 定时调度器 (Cron Trigger: 每日北京时间 04:00 自动归档)   │
+└─────────────┬────────────────────────────┬─────────────┘
+              │ WebSocket 双向同步          │ 结构化持久化
+┌─────────────▼───────────────┐ ┌──────────▼─────────────┐
+│  Durable Objects (KitchenDO)│ │   Cloudflare D1 (SQL)   │
+│  - 厨房实时快照状态机        │ │  - user / session     │
+│  - 全员 WebSocket 广播通道  │ │  - cart_item / state  │
+│  - 下单 Bark 推送看守       │ │  - meal / meal_item   │
+└─────────────────────────────┘ └─────────────────────────┘
+```
+
+- **前端架构**：Next.js 16 (App Router) + React 19 + TypeScript + Zustand。采用 `output: "export"` 纯静态导出，由 Workers Assets 提供边缘零成本托管。
+- **持久化存储**：Cloudflare D1（基于 SQLite 的边缘分布式数据库）。
+- **实时同步**：Cloudflare Durable Objects（启用 Hibernation API，休眠时不消耗计费时长；平台层自应答 Ping/Pong 心跳）。
+- **会话持久化**：支持 Cookie 与 `localStorage` 令牌双重容灾，免登状态缓存 90 天，配合服务端自动滑动续期。
+- **通知机制**：锁单确认后通过 Bark API 实时推送订单摘要至手机设备。
+
+---
+
+## 🚀 快速上手 (Quick Start)
+
+### 1. 环境准备
+本项目采用 `pnpm` 作为包管理器，要求 Node.js >= 18：
 
 ```bash
+git clone https://github.com/RUIIIOVO/tidy-cookbook.git
+cd tidy-cookbook
 pnpm install
-pnpm dev            # http://localhost:3000
 ```
 
-其他命令：
+### 2. 本地开发
 
 ```bash
-pnpm build                       # 压图 + 生产构建（产出 ./out）
-pnpm lint                        # ESLint
-pnpm cf:typecheck                # worker/ 的类型检查（Next 的 tsconfig 不覆盖它）
-pnpm preview                     # 在本地 Workers 运行时里跑
-pnpm deploy                      # 构建并部署到 Cloudflare
-node scripts/build-pinyin.mjs    # 改了菜品数据后重新生成拼音索引
+pnpm dev
+```
+浏览器打开 `http://localhost:3000` 即可开始预览。
+
+### 3. 构建与检查命令
+
+```bash
+pnpm build            # 优化配图 + 重建清单 + 编译静态站点 (产出 ./out)
+pnpm lint             # ESLint 语法与规范检查
+pnpm cf:typecheck     # Cloudflare Worker 后端代码类型检查
+pnpm preview          # 在本地 Miniflare / Workers 完整运行时环境中模拟运行
 ```
 
-## 部署到自己的 Cloudflare
+---
 
+## 🌐 私有化部署指南 (Cloudflare Deployment)
+
+本项目专为 Cloudflare 免费配额优化设计，全套基础设施可在免费额度内终身免费运行。
+
+### 步骤一：配置 Wrangler
+
+复制配置文件模版：
 ```bash
 cp wrangler.example.jsonc wrangler.jsonc
+```
+
+登录 Cloudflare 账号：
+```bash
 pnpm exec wrangler login
-pnpm exec wrangler d1 create tidy-cookbook        # 把 database_id 填进 wrangler.jsonc
-pnpm exec wrangler d1 execute tidy-cookbook --remote --file=./schema.sql
-# 已经建过库的：按顺序补跑 migrations/ 下的增量 SQL
+```
 
-# 生成账号（密码自己定）。owner 能清空点菜单和删历史，guest 只能点菜
-node scripts/seed-users.mjs 你的用户名:你的密码:owner > /tmp/seed.sql
-pnpm exec wrangler d1 execute tidy-cookbook --remote --file=/tmp/seed.sql && rm /tmp/seed.sql
+### 步骤二：初始化 D1 数据库
 
+1. 创建 D1 数据库：
+   ```bash
+   pnpm exec wrangler d1 create tidy-cookbook
+   ```
+   记录命令输出的 `database_id`，将其填入 `wrangler.jsonc` 对应字段。
+
+2. 执行数据表初始化迁移：
+   ```bash
+   pnpm exec wrangler d1 execute tidy-cookbook --remote --file=./schema.sql
+   pnpm exec wrangler d1 migrations apply tidy-cookbook --remote
+   ```
+
+3. 生成初始管理员账号（owner 权限）：
+   ```bash
+   node scripts/seed-users.mjs 你的用户名:你的密码:owner > /tmp/seed.sql
+   pnpm exec wrangler d1 execute tidy-cookbook --remote --file=/tmp/seed.sql && rm /tmp/seed.sql
+   ```
+
+### 步骤三：绑定 Bark 通知推送密钥（可选）
+
+如需在锁单时接收 Bark 推送通知：
+```bash
+pnpm exec wrangler secret put BARK_URL
+# 输入形如：https://api.day.app/YOUR_KEY/
+```
+
+### 步骤四：一键部署
+
+```bash
+pnpm build
 pnpm deploy
 ```
 
-密码用 PBKDF2-SHA256 / 10 万轮 / 每人独立 salt，明文不出本机。
+> **关于大陆访问优化**：Cloudflare 默认的 `*.workers.dev` 域名在部分地区可能存在 SNI 阻断。建议在 Cloudflare 仪表盘绑定自己的自定义域名（如 `cook.yourdomain.com`），享受国内高速直连。
 
-Fork 之后要改 `wrangler.jsonc` 里的三处：`name`、`d1_databases[0].database_id`、
-`routes[0].pattern`。里面没有凭据——`database_id` 只是资源标识，没有 API token
-用不了；真正的凭据在 `~/.wrangler`，从不入库。
+---
 
-> **中国大陆访问**：`*.workers.dev` 被 SNI 定向封锁，实测 DNS 会被投毒到无关地址。
-> 绑一个自有域名走 `custom_domain` 即可直连，证书由 Cloudflare 自动签发并续期。
+## 🍳 增改菜谱规范 (Custom Dishes)
 
-### 自动部署
+项目中所有菜谱均以紧凑编码集中收录于 `src/data/raw.ts`。
 
-`.github/workflows/deploy.yml` 在推到 `main` 时跑 lint → worker 类型检查 → 构建 →
-部署，任一步失败就不会发布。需要在仓库 Settings → Secrets 里配两个值：
-
-| Secret | 来源 |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens)，用 **Edit Cloudflare Workers** 模板 |
-| `CLOUDFLARE_ACCOUNT_ID` | `pnpm exec wrangler whoami` 输出里的 Account ID |
-
-## 加自己的菜
-
-只改 `src/data/raw.ts`，一道菜一行紧凑编码：
-
+### 编码格式规范：
 ```ts
-[1, "湘味辣椒小炒肉", "五花肉配螺丝椒，香辣下饭", "pork", 2, ["下饭", "快手"],
-  "主|五花肉 300g;螺丝椒 5根@辅|蒜 4瓣;姜 3片@调|生抽 1勺;盐 适量",
-  "五花肉切薄片@热锅不放油，先下肥肉煸出油@...大火快炒至虎皮起皱"],
+[94, "菜品名称", "一句话口感描述（吃起来什么样，禁止口号）", "小类分类", 辣度(0-3), ["标签1", "标签2"],
+  "主|主料 份量@辅|辅料 份量@调|调料 份量",
+  "第一步做法@第二步做法@第三步做法@第四步做法"],
 ```
 
-字段依次是：`id, 名称, 一句话描述, 小类, 辣度0-3, 标签[], 食材, 步骤`。
-`id` 是手写的数字，递增分配，一经使用永不改、不复用。
-食材用 `主|辅|调` 分组、`;` 分隔，步骤用 `@` 分隔。
+- **菜品 ID**：每行开头的手写递增正整数，一经使用**永不修改、不复用、不重排**（数据库历史订单与配图文件名均绑定此编号）。
+- **更新索引**：每当修改或添加菜品后，只需执行：
+  ```bash
+  node scripts/build-pinyin.mjs
+  ```
+  脚本会自动重新生成无字典依赖的拼音首字母索引。
+- **自动配图管线**：在 `scripts/dish_prompts.json` 中添加英文提示词，运行：
+  ```bash
+  python3 scripts/gen-dish-images.py --ids 94
+  ./scripts/optimize-images.sh
+  node scripts/build-image-manifest.mjs
+  ```
+  自动生成统一质感的餐盘摄影级配图并优化为 800px WebP 格式。
 
-写完跑一次：
+---
 
-```bash
-node scripts/build-pinyin.mjs
-```
+## 📄 开源许可证 (License)
 
-拼音和首字母会自动生成到 `src/data/pinyin.generated.json`，不要手改。
-
-## Roadmap
-
-- [ ] 76 张统一风格配图（`scripts/gen_image.py`，走 Gemini 免费额度）
-- [ ] 历史订单接 Cloudflare D1 + OpenNext 部署
-- [ ] 首页「一键配一桌」（2 荤 1 素 1 汤等搭配规则）
-- [ ] 转盘皮肤
-
-## License
-
-MIT
+本项目基于 [MIT License](./LICENSE) 协议开源。
