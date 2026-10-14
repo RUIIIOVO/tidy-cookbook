@@ -14,25 +14,78 @@ export type Meal = {
 type HistoryState = {
   meals: Meal[];
   loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  nextCursor: number | null;
   error: string | null;
   load: () => Promise<void>;
+  loadMore: () => Promise<void>;
   remove: (id: string) => Promise<boolean>;
 };
+
+const PAGE_SIZE = 15;
 
 export const useHistory = create<HistoryState>()((set, get) => ({
   meals: [],
   loading: false,
+  loadingMore: false,
+  hasMore: false,
+  nextCursor: null,
   error: null,
 
   load: async () => {
+    // 首次/重置加载
     set({ loading: true, error: null });
     try {
-      const r = await fetch("/api/history", { credentials: "same-origin", headers: authHeaders() });
+      const r = await fetch(`/api/history?limit=${PAGE_SIZE}`, {
+        credentials: "same-origin",
+        headers: authHeaders(),
+      });
       if (!r.ok) throw new Error(String(r.status));
-      const { meals } = (await r.json()) as { meals: Meal[] };
-      set({ meals, loading: false });
+      const data = (await r.json()) as {
+        meals: Meal[];
+        nextCursor: number | null;
+        hasMore: boolean;
+      };
+      set({
+        meals: data.meals,
+        hasMore: Boolean(data.hasMore),
+        nextCursor: data.nextCursor ?? null,
+        loading: false,
+      });
     } catch {
       set({ loading: false, error: "暂无历史记录" });
+    }
+  },
+
+  loadMore: async () => {
+    const { loading, loadingMore, hasMore, nextCursor, meals } = get();
+    if (loading || loadingMore || !hasMore || nextCursor === null) return;
+
+    set({ loadingMore: true });
+    try {
+      const r = await fetch(
+        `/api/history?limit=${PAGE_SIZE}&before=${nextCursor}`,
+        {
+          credentials: "same-origin",
+          headers: authHeaders(),
+        },
+      );
+      if (!r.ok) throw new Error(String(r.status));
+      const data = (await r.json()) as {
+        meals: Meal[];
+        nextCursor: number | null;
+        hasMore: boolean;
+      };
+
+      set({
+        meals: [...meals, ...data.meals],
+        hasMore: Boolean(data.hasMore),
+        nextCursor: data.nextCursor ?? null,
+        loadingMore: false,
+      });
+    } catch {
+      set({ loadingMore: false });
     }
   },
 

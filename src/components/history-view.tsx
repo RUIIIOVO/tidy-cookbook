@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, CaretDown, Trash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, CaretDown, SpinnerGap, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -22,10 +22,15 @@ export function HistoryView() {
   const doLogout = useAuth((s) => s.logout);
   const meals = useHistory((s) => s.meals);
   const loading = useHistory((s) => s.loading);
+  const loadingMore = useHistory((s) => s.loadingMore);
+  const hasMore = useHistory((s) => s.hasMore);
   const error = useHistory((s) => s.error);
   const load = useHistory((s) => s.load);
+  const loadMore = useHistory((s) => s.loadMore);
   const confirm = useConfirm((s) => s.confirm);
   const locked = useCart((s) => s.locked);
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void load();
@@ -36,6 +41,24 @@ export function HistoryView() {
     if (locked) void load();
   }, [locked, load]);
 
+  // 触底自动触发下一页流式懒加载
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
+
   return (
     <div className="px-4 pt-4">
       <div className="flex items-start justify-between gap-3">
@@ -43,7 +66,8 @@ export function HistoryView() {
           <h1 className="font-display text-[22px] tracking-wider text-ink">历史订单</h1>
           {meals.length > 0 && (
             <p className="mt-1 text-[11px] text-ink-3">
-              共 <span className="tabular-nums">{meals.length}</span> 餐
+              已载入 <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
+              {hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
             </p>
           )}
         </div>
@@ -77,11 +101,31 @@ export function HistoryView() {
         <Placeholder text="还没有记录" hint="锁单后会自动归档到这里" />
       )}
 
-      <div className="mt-4 flex flex-col gap-3 pb-6">
+      <div className="mt-4 flex flex-col gap-3 pb-4">
         {meals.map((m) => (
           <MealCard key={m.id} meal={m} canDelete={canDelete(me)} />
         ))}
       </div>
+
+      {/* 底部触底哨兵 & 加载指示器 */}
+      {hasMore && (
+        <div ref={sentinelRef} className="flex items-center justify-center py-4">
+          {loadingMore ? (
+            <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
+              <SpinnerGap size={14} className="animate-spin text-accent" />
+              <span>加载更多历史订单…</span>
+            </div>
+          ) : (
+            <span className="h-4 w-full" aria-hidden="true" />
+          )}
+        </div>
+      )}
+
+      {!hasMore && meals.length >= 15 && (
+        <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
+          — 已展示全部历史订单 —
+        </p>
+      )}
 
       <DishSheet />
     </div>

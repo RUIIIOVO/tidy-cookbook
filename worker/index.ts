@@ -109,8 +109,12 @@ export default {
 
       if (url.pathname === "/api/sync") return connectKitchen(req, env, user);
 
-      if (url.pathname === "/api/history" && req.method === "GET")
-        return json({ meals: await listHistory(env.DB, user.kitchenId) });
+      if (url.pathname === "/api/history" && req.method === "GET") {
+        const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 15)));
+        const beforeParam = url.searchParams.get("before");
+        const before = beforeParam ? Number(beforeParam) : null;
+        return json(await listHistory(env.DB, user.kitchenId, limit, before));
+      }
 
       if (url.pathname === "/api/history" && req.method === "DELETE") {
         if (user.role !== "owner")
@@ -167,18 +171,38 @@ function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Resp
   });
 }
 
-async function listHistory(db: D1Database, kitchenId: string) {
-  const meals = await db
-    .prepare(
-      `SELECT m.id, m.ordered_at AS orderedAt, u.display_name AS orderedBy
+async function listHistory(
+  db: D1Database,
+  kitchenId: string,
+  limit = 15,
+  before: number | null = null,
+) {
+  let query = `SELECT m.id, m.ordered_at AS orderedAt, u.display_name AS orderedBy
          FROM meal m LEFT JOIN user u ON u.id = m.ordered_by
-        WHERE m.kitchen_id = ? ORDER BY m.ordered_at DESC LIMIT 100`,
-    )
-    .bind(kitchenId)
+        WHERE m.kitchen_id = ?`;
+  const binds: unknown[] = [kitchenId];
+
+  if (before !== null && Number.isFinite(before)) {
+    query += ` AND m.ordered_at < ?`;
+    binds.push(before);
+  }
+
+  // 多查 1 条用以判断是否还有后续页
+  query += ` ORDER BY m.ordered_at DESC LIMIT ?`;
+  binds.push(limit + 1);
+
+  const meals = await db
+    .prepare(query)
+    .bind(...binds)
     .all<{ id: string; orderedAt: number; orderedBy: string | null }>();
 
-  const rows = meals.results ?? [];
-  if (!rows.length) return [];
+  const rawRows = meals.results ?? [];
+  const hasMore = rawRows.length > limit;
+  const rows = hasMore ? rawRows.slice(0, limit) : rawRows;
+
+  if (!rows.length) {
+    return { meals: [], nextCursor: null, hasMore: false };
+  }
 
   const marks = rows.map(() => "?").join(",");
   const items = await db
@@ -202,9 +226,18 @@ async function listHistory(db: D1Database, kitchenId: string) {
     arr.push({ dishId: it.dishId, qty: it.qty, addedBy: normalize(it.addedBy) });
     byMeal.set(it.mealId, arr);
   }
-  return rows.map((m) => ({
+
+  const resultMeals = rows.map((m) => ({
     ...m,
     orderedBy: normalize(m.orderedBy),
     items: byMeal.get(m.id) ?? [],
   }));
+
+  const nextCursor = hasMore && rows.length > 0 ? rows[rows.length - 1].orderedAt : null;
+
+  return {
+    meals: resultMeals,
+    nextCursor,
+    hasMore,
+  };
 }
