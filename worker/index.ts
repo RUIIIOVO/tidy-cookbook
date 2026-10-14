@@ -113,7 +113,9 @@ export default {
         const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 15)));
         const beforeParam = url.searchParams.get("before");
         const before = beforeParam ? Number(beforeParam) : null;
-        return json(await listHistory(env.DB, user.kitchenId, limit, before));
+        const sinceParam = url.searchParams.get("since");
+        const since = sinceParam ? Number(sinceParam) : null;
+        return json(await listHistory(env.DB, user.kitchenId, limit, before, since));
       }
 
       if (url.pathname === "/api/history" && req.method === "DELETE") {
@@ -176,11 +178,17 @@ async function listHistory(
   kitchenId: string,
   limit = 15,
   before: number | null = null,
+  since: number | null = null,
 ) {
   let query = `SELECT m.id, m.ordered_at AS orderedAt, u.display_name AS orderedBy
          FROM meal m LEFT JOIN user u ON u.id = m.ordered_by
         WHERE m.kitchen_id = ?`;
   const binds: unknown[] = [kitchenId];
+
+  if (since !== null && Number.isFinite(since)) {
+    query += ` AND m.ordered_at >= ?`;
+    binds.push(since);
+  }
 
   if (before !== null && Number.isFinite(before)) {
     query += ` AND m.ordered_at < ?`;

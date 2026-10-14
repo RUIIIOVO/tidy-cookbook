@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
-import { useHistory, type Meal } from "@/lib/history-store";
+import { RANGE_OPTIONS, useHistory, type Meal } from "@/lib/history-store";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
@@ -24,6 +24,8 @@ export function HistoryView() {
   const loadingMore = useHistory((s) => s.loadingMore);
   const hasMore = useHistory((s) => s.hasMore);
   const error = useHistory((s) => s.error);
+  const range = useHistory((s) => s.range);
+  const setRange = useHistory((s) => s.setRange);
   const load = useHistory((s) => s.load);
   const loadMore = useHistory((s) => s.loadMore);
   const confirm = useConfirm((s) => s.confirm);
@@ -94,10 +96,38 @@ export function HistoryView() {
         )}
       </div>
 
+      {/* 顶部时间跨度筛选 Tab */}
+      <div className="mt-3.5 flex items-center gap-1.5 rounded-xl border border-line bg-paper-2/40 p-1">
+        {RANGE_OPTIONS.map((opt) => {
+          const active = range === opt.key;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => {
+                haptic(6);
+                setRange(opt.key);
+              }}
+              className={cn(
+                "flex-1 rounded-lg py-1.5 text-center text-[11.5px] transition-all",
+                active
+                  ? "bg-card font-medium text-ink shadow-2xs"
+                  : "text-ink-3 hover:text-ink-2 active:opacity-70",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
       {loading && meals.length === 0 && <Placeholder text="读取中…" />}
       {error && !loading && <Placeholder text={error} retry={load} />}
       {!loading && !error && meals.length === 0 && (
-        <Placeholder text="还没有记录" hint="锁单后会自动归档到这里" />
+        <Placeholder
+          text={range === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === range)?.label}暂无记录`}
+          hint={range === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
+        />
       )}
 
       <div className="mt-4 flex flex-col gap-3 pb-4">

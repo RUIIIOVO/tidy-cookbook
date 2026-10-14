@@ -123,12 +123,14 @@ function CustomOptionDrawerContent({
         if (!o) clear();
       }}
       repositionInputs={false}
+      scrollLockTimeout={0}
+      closeThreshold={0.2}
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-ink/35" />
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[88dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none">
-          <div className="shrink-0 pt-2.5 pb-1">
-            <div className="mx-auto h-1 w-9 rounded-full bg-line-2" />
+          <div className="shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing">
+            <div className="mx-auto h-1 w-10 rounded-full bg-line-2 transition-colors hover:bg-ink-3" />
           </div>
 
           {/* 顶栏 */}
@@ -151,7 +153,7 @@ function CustomOptionDrawerContent({
           </div>
 
           {/* 选项主体 */}
-          <div className="no-scrollbar flex-1 space-y-7 overflow-y-auto px-5 pt-4 pb-6">
+          <div className="no-scrollbar flex-1 space-y-7 overflow-y-auto overscroll-contain px-5 pt-4 pb-6">
             {cfg.groups.map((group) => {
               const currentVal = form[group.id];
               const isSelected = (opt: string) =>
