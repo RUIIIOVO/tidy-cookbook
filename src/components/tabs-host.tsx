@@ -7,6 +7,7 @@ import { DrawView } from "./draw-view";
 import { MenuView } from "./menu-view";
 import { CartView } from "./cart-view";
 import { HistoryView } from "./history-view";
+import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
 
 export function TabsHost() {
   const pathname = usePathname();
@@ -80,6 +81,10 @@ export function TabsHost() {
           <HistoryView />
         </div>
       )}
+
+      {/* 全局唯一详情抽屉与自选定制抽屉单例，杜绝多 Tab 视图保活时重叠渲染双层弹窗 */}
+      <DishSheet />
+      <CustomOptionDrawer />
     </>
   );
 }

@@ -24,7 +24,6 @@ import { useGuard } from "@/lib/use-guard";
 import { AddButton } from "./add-button";
 import { SwipeRow } from "./swipe-row";
 import { Avatar } from "./avatar";
-import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
 import { DishThumb } from "./dish-thumb";
 import { CUSTOM_CONFIGS, formatCustomSummary } from "@/data/custom-options";
 import { useCustomStore } from "@/lib/custom-store";
@@ -340,9 +339,6 @@ export function CartView() {
           </button>
         )}
       </div>
-
-      <DishSheet />
-      <CustomOptionDrawer />
     </div>
   );
 }

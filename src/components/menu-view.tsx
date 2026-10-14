@@ -17,7 +17,6 @@ import {
   scheduleIdlePreload,
 } from "@/lib/images";
 import { DishCard } from "./dish-card";
-import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
 
 export function MenuView() {
   const [q, setQ] = useState("");
@@ -250,9 +249,6 @@ export function MenuView() {
           )}
         </div>
       </div>
-
-      <DishSheet />
-      <CustomOptionDrawer />
     </div>
   );
 }

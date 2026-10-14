@@ -12,7 +12,6 @@ import { useCart } from "@/lib/store";
 import { useGuard } from "@/lib/use-guard";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, haptic } from "@/lib/utils";
-import { DishSheet } from "./lazy-sheets";
 import { DishThumb } from "./dish-thumb";
 
 type Filter = "all" | CategoryId;
@@ -409,8 +408,6 @@ export function DrawView() {
           </>
         )}
       </div>
-
-      <DishSheet />
     </div>
   );
 }

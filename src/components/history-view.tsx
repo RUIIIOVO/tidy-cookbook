@@ -14,7 +14,6 @@ import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
-import { DishSheet } from "./lazy-sheets";
 import { DishThumb } from "./dish-thumb";
 
 export function HistoryView() {
@@ -126,8 +125,6 @@ export function HistoryView() {
           — 已展示全部历史订单 —
         </p>
       )}
-
-      <DishSheet />
     </div>
   );
 }
