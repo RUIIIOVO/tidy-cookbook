@@ -10,7 +10,12 @@ import { searchDishes } from "@/lib/search";
 import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { cn, haptic } from "@/lib/utils";
-import { hasImage, scheduleIdlePreload } from "@/lib/images";
+import {
+  cancelIdlePreload,
+  hasImage,
+  preloadPriorityImages,
+  scheduleIdlePreload,
+} from "@/lib/images";
 import { DishCard } from "./dish-card";
 import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
 
@@ -58,11 +63,14 @@ export function MenuView() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [searching]);
 
-  const scrollToSection = useCallback((key: string, smooth: boolean) => {
+  const scrollToSection = useCallback((key: string) => {
     const el = document.getElementById(`sec-${key}`);
     if (!el) return false;
     const y = el.getBoundingClientRect().top + window.scrollY - 92;
-    window.scrollTo({ top: y, behavior: smooth ? "smooth" : "auto" });
+    // 业界标准：分类大跨度跳转严禁使用 smooth 滚动！
+    // smooth 会滚过沿途所有 section，导致数十张无关图片全部触发原生 lazy 加载并塞满网络通道。
+    // 使用 instant (auto) 定位瞬间直达，并把网络通道 100% 留给目标区域图片。
+    window.scrollTo({ top: y, behavior: "auto" });
     return true;
   }, []);
 
@@ -70,27 +78,40 @@ export function MenuView() {
     (key: string) => {
       haptic(8);
       setActive(key as SubId);
-      lockRef.current = Date.now() + 900;
-      // 搜索中右侧是结果列表，分区还没渲染：先退出搜索，等下一帧分区出来再跳
-      if (scrollToSection(key, true)) return;
+      lockRef.current = Date.now() + 600;
+
+      // 1. 立即清除先前后台排队的所有低优先级空闲预热
+      cancelIdlePreload();
+
+      // 2. 靶向高优先级预热：立即将目标小类前 6 道菜提升为 P0 发起解码
+      const targetSec = sections.find((s) => s.key === key);
+      if (targetSec) {
+        const prioritySrcs = targetSec.dishes
+          .filter((d) => hasImage(d.id))
+          .map((d) => d.image);
+        preloadPriorityImages(prioritySrcs, 6);
+      }
+
+      // 3. 瞬时直达目标位置
+      if (scrollToSection(key)) return;
       setQ("");
-      requestAnimationFrame(() => requestAnimationFrame(() => scrollToSection(key, false)));
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToSection(key)));
     },
     [scrollToSection],
   );
 
-  // 只预热「当前小类 + 后面两个小类」的配图：慢网络下不和眼前的图抢带宽。
-  // 随滚动 / 点击切换小类逐步往后推，已经预热过的不会重复下载。
+  // 用户停留后空闲调度：轻量预热下一个紧邻小类（只预热 1 个，不再是 3 个）
   useEffect(() => {
     if (searching) return;
     const i = sections.findIndex((s) => s.key === active);
     if (i < 0) return;
-    const srcs = sections
-      .slice(i, i + 3)
-      .flatMap((s) => s.dishes)
+    const nextSec = sections[i + 1];
+    if (!nextSec) return;
+
+    const srcs = nextSec.dishes
       .filter((d) => hasImage(d.id))
       .map((d) => d.image);
-    scheduleIdlePreload(srcs, 4);
+    scheduleIdlePreload(srcs, 2);
   }, [active, searching]);
 
   return (
@@ -188,8 +209,8 @@ export function MenuView() {
                 找到 <span className="tabular-nums text-ink">{results.length}</span> 道
               </p>
               <div className="space-y-2">
-                {results.map((d) => (
-                  <DishCard key={d.id} dish={d} />
+                {results.map((d, index) => (
+                  <DishCard key={d.id} dish={d} priority={index < 6} />
                 ))}
               </div>
               {results.length === 0 && (
@@ -215,8 +236,12 @@ export function MenuView() {
                     <span className="h-px flex-1 bg-line" />
                   </div>
                   <div className="space-y-2">
-                    {s.dishes.map((d) => (
-                      <DishCard key={d.id} dish={d} />
+                    {s.dishes.map((d, index) => (
+                      <DishCard
+                        key={d.id}
+                        dish={d}
+                        priority={s.key === active && index < 6}
+                      />
                     ))}
                   </div>
                 </section>

@@ -55,32 +55,62 @@ export function preloadImage(src: string): Promise<void> {
   return p;
 }
 
-/** 空闲时分批预热图片资源池，加速后续分类切换与点击响应 */
-const queued = new Set<string>();
+/** 空闲预热队列控制 */
+let activeQueue: string[] = [];
+let scheduledHandle: number | null = null;
+let scheduledTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function scheduleIdlePreload(srcs: string[], batchSize = 4) {
+/** 立即终止并清空当前所有未完成的空闲预热任务，把带宽彻底让给用户当前操作 */
+export function cancelIdlePreload() {
+  activeQueue = [];
+  if (scheduledHandle !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+    (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(scheduledHandle);
+    scheduledHandle = null;
+  }
+  if (scheduledTimer !== null) {
+    clearTimeout(scheduledTimer);
+    scheduledTimer = null;
+  }
+}
+
+/** 靶向高优先级预热：用户点击指定分类后，优先把目标区域前几张图片快速解码并填入内存缓存 */
+export function preloadPriorityImages(srcs: string[], count = 6) {
   if (typeof window === "undefined") return;
-  // 同一张图只排一次队：菜单页会随滚动反复调用，避免重复下载
-  const queue = srcs.filter((s) => !queued.has(s) && !decoded.has(s));
-  for (const s of queue) queued.add(s);
-  if (queue.length === 0) return;
+  cancelIdlePreload();
+  const targets = srcs.filter((s) => !decoded.has(s)).slice(0, count);
+  for (const s of targets) {
+    void preloadImage(s);
+  }
+}
+
+/** 空闲时分批轻量预热紧邻分类的图片，单批 2 张，避免占用主通道带宽 */
+export function scheduleIdlePreload(srcs: string[], batchSize = 2) {
+  if (typeof window === "undefined") return;
+  cancelIdlePreload();
+
+  activeQueue = srcs.filter((s) => !decoded.has(s));
+  if (activeQueue.length === 0) return;
+
   const processNextBatch = () => {
-    if (queue.length === 0) return;
-    const batch = queue.splice(0, batchSize);
+    scheduledHandle = null;
+    scheduledTimer = null;
+    if (activeQueue.length === 0) return;
+
+    const batch = activeQueue.splice(0, batchSize);
     void Promise.allSettled(batch.map((s) => preloadImage(s))).then(() => {
-      if (queue.length > 0) {
+      if (activeQueue.length > 0) {
         if ("requestIdleCallback" in window) {
-          window.requestIdleCallback(() => processNextBatch(), { timeout: 1500 });
+          scheduledHandle = window.requestIdleCallback(() => processNextBatch(), { timeout: 2000 });
         } else {
-          setTimeout(processNextBatch, 200);
+          scheduledTimer = setTimeout(processNextBatch, 300);
         }
       }
     });
   };
 
   if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(() => processNextBatch(), { timeout: 1500 });
+    scheduledHandle = window.requestIdleCallback(() => processNextBatch(), { timeout: 2000 });
   } else {
-    setTimeout(processNextBatch, 300);
+    scheduledTimer = setTimeout(processNextBatch, 500);
   }
 }
