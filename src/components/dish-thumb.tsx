@@ -36,7 +36,17 @@ export function DishThumb({
   if (hasImage(dish.id) && !isError) {
     return (
       <div className={cn("relative overflow-hidden bg-paper-2", className)}>
-        {!loaded && <span aria-hidden className="shimmer absolute inset-0" />}
+        {/* 未加载完成时的优雅骨架态与微动效 */}
+        {!loaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-paper-2">
+            <span aria-hidden className="shimmer absolute inset-0" />
+            {variant === "lg" && (
+              <div className="relative flex flex-col items-center justify-center gap-2 text-ink-3/40 animate-pulse">
+                <Icon size={32} weight="light" color={t.hex} style={{ opacity: 0.3 }} />
+              </div>
+            )}
+          </div>
+        )}
         <Image
           src={dish.image}
           alt={dish.name}

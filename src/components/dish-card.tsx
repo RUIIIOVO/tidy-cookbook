@@ -4,6 +4,7 @@ import type { Dish } from "@/data/types";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
 import { useCustomModal } from "@/lib/custom-modal-store";
 import { useDishSheet } from "@/lib/ui-store";
+import { haptic } from "@/lib/utils";
 import { AddButton } from "./add-button";
 import { DishThumb } from "./dish-thumb";
 import { Meta } from "./meta";
@@ -17,10 +18,14 @@ export function DishCard({ dish, priority }: { dish: Dish; priority?: boolean })
     <div
       role="button"
       tabIndex={0}
-      onClick={() => open(dish.id)}
+      onClick={() => {
+        haptic(6);
+        open(dish.id);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
+          haptic(6);
           open(dish.id);
         }
       }}

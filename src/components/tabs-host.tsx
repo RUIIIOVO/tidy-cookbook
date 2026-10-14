@@ -7,7 +7,8 @@ import { DrawView } from "./draw-view";
 import { MenuView } from "./menu-view";
 import { CartView } from "./cart-view";
 import { HistoryView } from "./history-view";
-import { CustomOptionDrawer, DishSheet } from "./lazy-sheets";
+import { DishSheet } from "./dish-sheet";
+import { CustomOptionDrawer } from "./custom-option-drawer";
 
 export function TabsHost() {
   const pathname = usePathname();
