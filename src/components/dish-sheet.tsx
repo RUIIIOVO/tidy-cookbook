@@ -25,6 +25,7 @@ export function DishSheet() {
 
   const dish = dishId ? getDish(dishId) : undefined;
   const isCustomizable = dishId ? !!CUSTOM_CONFIGS[dishId] : false;
+  const orderCount = useCart((s) => (dish ? s.stats[dish.id] || 0 : 0));
 
   // 抽屉收起动画期间按钮仍可点，挡住二次加入
   const addToCart = useGuard(() => {
@@ -98,13 +99,22 @@ export function DishSheet() {
                     </div>
                     <div className="mt-0.5 text-[13px] text-ink">{spicyLabel[dish.spicy]}</div>
                   </div>
-                  <div className="flex-[2] px-3 py-2.5 text-center">
+                  <div className="flex-1 px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
                       <metaIcon.tags size={12} weight="regular" />
                       标签
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-ink">
-                      {dish.tags.length ? dish.tags.map((tg) => <span key={tg}>{tg}</span>) : "家常"}
+                    <div className="mt-0.5 truncate text-[13px] text-ink">
+                      {dish.tags[0] ?? "家常"}
+                    </div>
+                  </div>
+                  <div className="flex-1 px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                      <span className="text-[10px]">🍽️</span>
+                      做过
+                    </div>
+                    <div className="mt-0.5 text-[13px] tabular-nums font-medium text-caramel">
+                      {orderCount > 0 ? `${orderCount} 次` : <span className="text-ink-3 font-normal">未做过</span>}
                     </div>
                   </div>
                 </div>

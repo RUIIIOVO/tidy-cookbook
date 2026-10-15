@@ -123,13 +123,29 @@ export default {
           return json({ error: "只有 rui 和 hui 能删历史" }, { status: 403 });
         const id = url.searchParams.get("id");
         if (!id) return json({ error: "缺少 id" }, { status: 400 });
-        await env.DB.batch([
+
+        // 查出该订单包含的菜品与数量，同步扣减累计统计表
+        const items = await env.DB.prepare(`SELECT dish_id as dishId, qty FROM meal_item WHERE meal_id = ?`)
+          .bind(id)
+          .all<{ dishId: string; qty: number }>();
+
+        const stmts: D1PreparedStatement[] = [
           env.DB.prepare(`DELETE FROM meal_item WHERE meal_id = ?`).bind(id),
           env.DB.prepare(`DELETE FROM meal WHERE id = ? AND kitchen_id = ?`).bind(
             id,
             user.kitchenId,
           ),
-        ]);
+        ];
+
+        for (const it of items.results ?? []) {
+          stmts.push(
+            env.DB.prepare(
+              `UPDATE dish_stat SET order_count = MAX(0, order_count - ?) WHERE kitchen_id = ? AND dish_id = ?`,
+            ).bind(it.qty, user.kitchenId, it.dishId),
+          );
+        }
+
+        await env.DB.batch(stmts);
         return json({ ok: true });
       }
 

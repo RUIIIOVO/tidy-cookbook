@@ -48,6 +48,8 @@ export type Snapshot = {
   rev: number;
   /** 买菜清单里已勾选（已买）的食材名，全员共享 */
   bought: string[];
+  /** 菜品历史累计点单次数，dishId -> 次数/份数 (O(1) 极速读取) */
+  stats: Record<string, number>;
 };
 
 type ClientOp =
@@ -82,7 +84,7 @@ export class KitchenDO implements DurableObject {
   /** 首次用到时从 D1 装载，之后常驻内存直到休眠 */
   private async load(): Promise<Snapshot> {
     if (this.snap) return this.snap;
-    const [items, st, bought] = await Promise.all([
+    const [items, st, bought, statsRows] = await Promise.all([
       this.env.DB.prepare(
         `SELECT c.dish_id AS dishId, c.qty, c.added_at AS addedAt,
                 c.added_by AS addedById, u.display_name AS addedBy
@@ -97,12 +99,22 @@ export class KitchenDO implements DurableObject {
       this.env.DB.prepare(`SELECT name FROM shopping_done WHERE kitchen_id = ? ORDER BY updated_at`)
         .bind(this.kitchenId)
         .all<{ name: string }>(),
+      this.env.DB.prepare(`SELECT dish_id as dishId, order_count as count FROM dish_stat WHERE kitchen_id = ?`)
+        .bind(this.kitchenId)
+        .all<{ dishId: string; count: number }>(),
     ]);
+
+    const stats: Record<string, number> = {};
+    for (const r of statsRows.results ?? []) {
+      stats[r.dishId] = r.count;
+    }
+
     this.snap = {
       items: items.results ?? [],
       locked: !!st?.locked,
       rev: ++this.rev,
       bought: (bought.results ?? []).map((r) => r.name),
+      stats,
     };
     this.lockedAt = st?.updated_at ?? 0;
     this.lockedBy = st?.locked_by ?? null;
@@ -146,6 +158,16 @@ export class KitchenDO implements DurableObject {
           ).bind(mealId, i.dishId, i.qty, i.addedById),
         ),
       );
+      // 原子递增点菜统计计数表，并将新计数同步到内存快照中
+      for (const i of snap.items) {
+        stmts.push(
+          this.env.DB.prepare(
+            `INSERT INTO dish_stat (kitchen_id, dish_id, order_count) VALUES (?,?,?)
+             ON CONFLICT(kitchen_id, dish_id) DO UPDATE SET order_count = order_count + excluded.order_count`,
+          ).bind(K, i.dishId, i.qty),
+        );
+        snap.stats[i.dishId] = (snap.stats[i.dishId] || 0) + i.qty;
+      }
     }
     stmts.push(
       this.env.DB.prepare(`DELETE FROM cart_item WHERE kitchen_id = ?`).bind(K),

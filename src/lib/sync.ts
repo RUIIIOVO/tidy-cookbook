@@ -74,6 +74,7 @@ export function connect() {
       items?: CartItem[];
       locked?: boolean;
       bought?: string[];
+      stats?: Record<string, number>;
       reason?: string;
     };
     try {
@@ -83,7 +84,7 @@ export function connect() {
     }
     const st = useCart.getState();
     if (msg.type === "snapshot") {
-      st.applySnapshot(msg.items ?? [], !!msg.locked, msg.bought ?? []);
+      st.applySnapshot(msg.items ?? [], !!msg.locked, msg.bought ?? [], msg.stats);
     } else if (msg.type === "denied") {
       st.onDenied?.(msg.reason ?? "没有权限");
       // 服务端拒绝了，拉一次权威状态把乐观更新回滚掉

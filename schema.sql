@@ -69,6 +69,14 @@ CREATE TABLE IF NOT EXISTS meal_item (
   added_by TEXT,                 -- 第一个点这道菜的 user.id；老记录为空
   PRIMARY KEY (meal_id, dish_id)
 );
+-- 菜品历史累计点单统计（O(1) 极速读取）
+CREATE TABLE IF NOT EXISTS dish_stat (
+  kitchen_id  TEXT NOT NULL,
+  dish_id     TEXT NOT NULL,
+  order_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (kitchen_id, dish_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_meal_kitchen ON meal(kitchen_id, ordered_at DESC);
 
 INSERT OR IGNORE INTO kitchen (id, name, created_at)

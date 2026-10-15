@@ -1,13 +1,20 @@
 "use client";
 
 import type { Dish } from "@/data/types";
+import { useCart } from "@/lib/store";
 
-/** 列表卡片的元信息：只显示标签（最多两个） */
+/** 列表卡片的元信息：展示历史点单次数 + 标签 */
 export function Meta({ dish }: { dish: Dish }) {
-  const tags = dish.tags.slice(0, 2);
-  if (tags.length === 0) return <div />;
+  const count = useCart((s) => s.stats[dish.id] || 0);
+  const tags = dish.tags.slice(0, count > 0 ? 1 : 2);
+
   return (
     <div className="flex items-center gap-1.5">
+      {count > 0 && (
+        <span className="rounded-full bg-caramel-soft px-2 py-0.5 text-[10px] font-medium text-caramel tabular-nums">
+          点过 {count} 次
+        </span>
+      )}
       {tags.map((t) => (
         <span
           key={t}

@@ -32,6 +32,8 @@ type CartState = {
   locked: boolean;
   /** 买菜清单里已勾选（已买）的食材名；和点菜单一样走服务端同步，全员共享 */
   bought: string[];
+  /** 菜品历史累计点单次数：dishId -> count，O(1) 极速读取 */
+  stats: Record<string, number>;
   /** 还没送到服务端的操作 */
   outbox: Op[];
   /** 已发出、等服务端快照确认的操作 */
@@ -54,7 +56,12 @@ type CartState = {
   enqueue: (op: Op) => void;
   takeOutbox: () => Op[];
   requeueInflight: () => void;
-  applySnapshot: (items: CartItem[], locked: boolean, bought: string[]) => void;
+  applySnapshot: (
+    items: CartItem[],
+    locked: boolean,
+    bought: string[],
+    stats?: Record<string, number>,
+  ) => void;
   setOnDenied: (fn: (reason: string) => void) => void;
 };
 
@@ -80,6 +87,7 @@ export const useCart = create<CartState>()(
         items: [],
         locked: false,
         bought: [],
+        stats: {},
         outbox: [],
         inflight: [],
 
@@ -170,8 +178,14 @@ export const useCart = create<CartState>()(
           set((s) => ({ outbox: [...s.inflight, ...s.outbox], inflight: [] })),
 
         /** 服务端为准。inflight 到此确认完成。 */
-        applySnapshot: (items, locked, bought) =>
-          set({ items: items.map(fixItem), locked, bought, inflight: [] }),
+        applySnapshot: (items, locked, bought, stats) =>
+          set((s) => ({
+            items: items.map(fixItem),
+            locked,
+            bought,
+            stats: stats ?? s.stats,
+            inflight: [],
+          })),
 
         setOnDenied: (fn) => set({ onDenied: fn }),
       };
@@ -184,6 +198,7 @@ export const useCart = create<CartState>()(
         items: s.items,
         locked: s.locked,
         bought: s.bought,
+        stats: s.stats,
         outbox: s.outbox,
         inflight: s.inflight,
       }),
@@ -199,6 +214,7 @@ export const useCart = create<CartState>()(
           ...p,
           items: (p.items ?? current.items).map(fixItem),
           bought: p.bought ?? [],
+          stats: p.stats ?? {},
           outbox: (p.outbox ?? []).map(fixOp),
           inflight: (p.inflight ?? []).map(fixOp),
         };
