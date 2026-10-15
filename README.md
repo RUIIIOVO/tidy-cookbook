@@ -62,24 +62,42 @@
 
 ## 🛠️ 技术架构 (Tech Stack)
 
-```
-┌────────────────────────────────────────────────────────┐
-│               前端展示层 (Next.js 16 静态导出)             │
-│  React 19 · Tailwind CSS v4 · Framer Motion · Vaul    │
-└───────────────────────────┬────────────────────────────┘
-                            │ (静态资源免费托管 / 不计 Worker 额度)
-┌───────────────────────────▼────────────────────────────┐
-│         边缘服务层 (Cloudflare Workers & Assets)        │
-│  - /api/*  路由代理与会话认证 (PBKDF2-SHA256 Token)       │
-│  - 定时调度器 (Cron Trigger: 每日北京时间 04:00 自动归档)   │
-└─────────────┬────────────────────────────┬─────────────┘
-              │ WebSocket 双向同步          │ 结构化持久化
-┌─────────────▼───────────────┐ ┌──────────▼─────────────┐
-│  Durable Objects (KitchenDO)│ │   Cloudflare D1 (SQL)   │
-│  - 厨房实时快照状态机        │ │  - user / session     │
-│  - 全员 WebSocket 广播通道  │ │  - cart_item / state  │
-│  - 下单 Bark 推送看守       │ │  - meal / meal_item   │
-└─────────────────────────────┘ └─────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Client["📱 客户端 (Client / PWA)"]
+        UI["Next.js 16 SPA (React 19)"]
+        Store["Zustand + 本地持久化 (localStorage)"]
+        SyncMgr["SyncManager (离线优先 Outbox 队列)"]
+        UI <--> Store
+        Store <--> SyncMgr
+    end
+
+    subgraph CF["☁️ Cloudflare 边缘平台 (Serverless Edge)"]
+        Assets["Workers Assets<br/>(静态资源托管 / 零费用)"]
+        Worker["Cloudflare Worker<br/>(/api/* 路由代理 & 会话认证)"]
+        Cron["Cron Trigger<br/>(每日 04:00 CST 自动归档)"]
+        
+        subgraph Realtime["🔄 实时同步状态机"]
+            DO["Durable Objects (KitchenDO)<br/>- 房间状态机<br/>- WebSocket 广播池"]
+        end
+
+        subgraph Database["💾 关系型数据库"]
+            D1[("Cloudflare D1 (SQLite)<br/>- 用户与会话 (user, session)<br/>- 点菜单与状态 (cart_item, cart_state)<br/>- 历史记录 (meal, meal_item)<br/>- 买菜清单勾选 (shopping_done)")]
+        end
+    end
+
+    subgraph External["🔔 外部集成"]
+        Bark["Bark Push Service<br/>(锁单即时通知)"]
+    end
+
+    Client -- "1. 静态资源请求 (HTTP/2)" --> Assets
+    Client -- "2. REST API (/api/*)" --> Worker
+    SyncMgr <-- "3. WebSocket 双向同步" --> DO
+
+    Cron -- "每日定时触发" --> DO
+    Worker -- "认证 & 读写" --> D1
+    DO -- "持久化状态对齐" --> D1
+    DO -. "锁单触发推送" .-> Bark
 ```
 
 - **前端架构**：Next.js 16 (App Router) + React 19 + TypeScript + Zustand。采用 `output: "export"` 纯静态导出，由 Workers Assets 提供边缘零成本托管。

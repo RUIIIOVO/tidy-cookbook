@@ -62,24 +62,42 @@ Most commercial recipe apps are cluttered with paid courses, e-commerce ads, alg
 
 ## 🛠️ Architecture & Tech Stack
 
-```
-┌────────────────────────────────────────────────────────┐
-│             Frontend UI (Next.js 16 Static Export)     │
-│   React 19 · Tailwind CSS v4 · Framer Motion · Vaul    │
-└───────────────────────────┬────────────────────────────┘
-                            │ (Free static asset delivery via Workers Assets)
-┌───────────────────────────▼────────────────────────────┐
-│         Edge Compute (Cloudflare Workers & Assets)      │
-│  - /api/* Route Proxy & PBKDF2-SHA256 Token Auth       │
-│  - Automated Cron Trigger (Daily 04:00 CST Archival)   │
-└─────────────┬────────────────────────────┬─────────────┘
-              │ Real-time WebSocket Sync    │ SQL Persistence
-┌─────────────▼───────────────┐ ┌──────────▼─────────────┐
-│  Durable Objects (KitchenDO)│ │   Cloudflare D1 (SQL)   │
-│  - Realtime state machine   │ │  - user / session      │
-│  - WebSocket broadcast pool │ │  - cart_item / state   │
-│  - Order Bark push watcher  │ │  - meal / meal_item    │
-└─────────────────────────────┘ └─────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Client["📱 Client Application (PWA / Mobile Web)"]
+        UI["Next.js 16 SPA (React 19)"]
+        Store["Zustand + Local Persistence (localStorage)"]
+        SyncMgr["SyncManager (Offline-First Outbox Queue)"]
+        UI <--> Store
+        Store <--> SyncMgr
+    end
+
+    subgraph CF["☁️ Cloudflare Edge Infrastructure"]
+        Assets["Workers Assets<br/>(Static Hosting / Free Tier)"]
+        Worker["Cloudflare Worker<br/>(/api/* Route Proxy & Auth)"]
+        Cron["Cron Trigger<br/>(Daily 04:00 CST Archival)"]
+        
+        subgraph Realtime["🔄 Realtime State Machine"]
+            DO["Durable Objects (KitchenDO)<br/>- In-memory State Machine<br/>- WebSocket Broadcast Pool"]
+        end
+
+        subgraph Database["💾 Edge Database"]
+            D1[("Cloudflare D1 (SQLite)<br/>- Users & Sessions (user, session)<br/>- Cart Items & State (cart_item, cart_state)<br/>- Order History (meal, meal_item)<br/>- Checklist State (shopping_done)")]
+        end
+    end
+
+    subgraph External["🔔 External Integrations"]
+        Bark["Bark Push Service<br/>(Order Confirmation Alert)"]
+    end
+
+    Client -- "1. Static Assets (HTTP/2)" --> Assets
+    Client -- "2. REST API (/api/*)" --> Worker
+    SyncMgr <-- "3. Bidirectional WebSocket" --> DO
+
+    Cron -- "Automated Trigger" --> DO
+    Worker -- "Auth & Data Access" --> D1
+    DO -- "State Persistence" --> D1
+    DO -. "Order Notification" .-> Bark
 ```
 
 - **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + Zustand. Exported as a purely static SPA (`output: "export"`) hosted on Cloudflare Workers Assets with zero serverless request fees for static files.
