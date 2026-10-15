@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { catIcon } from "@/lib/icons";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
@@ -150,13 +149,14 @@ export function MenuView() {
                         onClick={() => jump(s.id)}
                         className="relative flex h-9 w-full items-center justify-center"
                       >
-                        {on && (
-                          <motion.span
-                            layoutId="rail-pill"
-                            transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                            className="absolute inset-x-1.5 inset-y-0.5 rounded-lg bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                          />
-                        )}
+                        <span
+                          className={cn(
+                            "absolute inset-x-1.5 inset-y-0.5 rounded-lg transition-all duration-200",
+                            on
+                              ? "bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] opacity-100 scale-100"
+                              : "opacity-0 scale-95 pointer-events-none",
+                          )}
+                        />
                         <span
                           className={cn(
                             "relative text-[12px] leading-none whitespace-nowrap transition-colors duration-200",
