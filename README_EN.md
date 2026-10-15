@@ -2,7 +2,7 @@
 
 # 🍳 Tidy Cookbook
 
-**A mobile-first, minimalist home cooking assistant featuring smart dish picking, auto-merged grocery lists, and real-time multi-device synchronization.**
+**A distraction-free, collaborative home cooking app. Tactile dish picking, real-time shared ordering, and auto-merged grocery lists.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)

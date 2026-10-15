@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "今天吃什么",
-  description: "家常菜谱 · 抽菜 · 点菜单",
+  description: "告别“今天吃什么”的日常纠结。极简家常菜谱与协同点餐助手：抽菜灵感决策，配料智能汇总，全端实时同步。",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "今天吃什么" },
 };
 

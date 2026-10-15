@@ -1,6 +1,7 @@
 {
   "name": "tidy-cookbook",
   "version": "0.1.0",
+  "description": "告别“今天吃什么”的日常纠结。极简家常菜谱与协同点餐助手：抽菜灵感决策，配料智能汇总，全端实时同步。",
   "private": true,
   "scripts": {
     "dev": "next dev",

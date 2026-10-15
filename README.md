@@ -2,7 +2,7 @@
 
 # 🍳 今天吃什么 (Tidy Cookbook)
 
-**移动端优先的极简家常菜谱 · 抽菜灵感 · 智能合并买菜清单 · 全员多端实时同步**
+**告别“今天吃什么”的日常纠结。极简家常菜谱 · 抽菜灵感决策 · 双人协同点餐 · 配料智能合并**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)
