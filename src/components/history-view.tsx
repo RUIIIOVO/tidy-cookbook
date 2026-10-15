@@ -33,6 +33,73 @@ export function HistoryView() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // 页面级横滑手势（Swipe Left / Right）流畅切换时间段 Tab
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
+    isHorizontalSwipeRef.current = null;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || isHorizontalSwipeRef.current === false) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartRef.current.x;
+    const dy = t.clientY - touchStartRef.current.y;
+
+    // 当位移超过 10px 时立即锁定主方向：防误触保护
+    if (isHorizontalSwipeRef.current === null) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        // 如果垂直滚屏位移明显大于水平位移，锁定为正常看订单上下滚屏，彻底放弃横滑触发
+        if (Math.abs(dy) >= Math.abs(dx) * 1.2) {
+          isHorizontalSwipeRef.current = false;
+        } else {
+          isHorizontalSwipeRef.current = true;
+        }
+      }
+    }
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    // 只有在明确被判定为看订单的垂直滚动时才忽略；未锁定时允许通过终点位移综合裁决
+    if (!touchStartRef.current || isHorizontalSwipeRef.current === false) {
+      touchStartRef.current = null;
+      isHorizontalSwipeRef.current = null;
+      return;
+    }
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartRef.current.x;
+    const dy = t.clientY - touchStartRef.current.y;
+    const dt = Date.now() - touchStartRef.current.time;
+
+    touchStartRef.current = null;
+    isHorizontalSwipeRef.current = null;
+
+    // 滑动有效判定：横向位移超过 35px，横向位移明显大于纵向，且时长在 600ms 内
+    if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.1 && dt < 600) {
+      const curIndex = RANGE_OPTIONS.findIndex((o) => o.key === range);
+      if (dx < 0 && curIndex < RANGE_OPTIONS.length - 1) {
+        // 左滑 -> 切换到下一个时间范围（全部 -> 近7天 -> 近1月 -> 近3月）
+        haptic(6);
+        haptic(6);
+        setRange(RANGE_OPTIONS[curIndex + 1].key);
+      } else if (dx > 0 && curIndex > 0) {
+        // 右滑 -> 切换到上一个时间范围
+        haptic(6);
+        setRange(RANGE_OPTIONS[curIndex - 1].key);
+      }
+    }
+  };
+
+  const onTouchCancel = () => {
+    touchStartRef.current = null;
+    isHorizontalSwipeRef.current = null;
+  };
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -61,7 +128,15 @@ export function HistoryView() {
   }, [hasMore, loadMore]);
 
   return (
-    <div className="px-4 pt-4">
+    <div
+      id="history-view"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
+      style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
+      className="px-4 pt-4 min-h-[calc(100dvh-3.5rem)]"
+    >
       {/* 顶部吸顶栏：下滑滚动时标题栏与时间筛选 Tab 常驻顶部，毛玻璃穿透 */}
       <header className="sticky top-0 z-20 -mx-4 -mt-4 bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg hairline-b">
         <div className="flex items-start justify-between gap-3">

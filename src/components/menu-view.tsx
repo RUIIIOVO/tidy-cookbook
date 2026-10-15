@@ -64,11 +64,26 @@ export function MenuView() {
   const scrollToSection = useCallback((key: string) => {
     const el = document.getElementById(`sec-${key}`);
     if (!el) return false;
-    const y = el.getBoundingClientRect().top + window.scrollY - 92;
-    // 业界标准：分类大跨度跳转严禁使用 smooth 滚动！
-    // smooth 会滚过沿途所有 section，导致数十张无关图片全部触发原生 lazy 加载并塞满网络通道。
-    // 使用 instant (auto) 定位瞬间直达，并把网络通道 100% 留给目标区域图片。
-    window.scrollTo({ top: y, behavior: "auto" });
+    const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 92);
+    
+    // 240ms 物理阻尼疾速顺滑滑屏：既消灭长距离滚动的死慢延迟，又具备极其跟手的物理惯性与丝滑过渡感
+    const startY = window.scrollY;
+    const diff = targetY - startY;
+    if (Math.abs(diff) < 4) return true;
+
+    const startTime = performance.now();
+    const duration = 240; // 恒定 240ms 疾速入场
+    const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      window.scrollTo(0, startY + diff * easeOutQuart(progress));
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
     return true;
   }, []);
 
