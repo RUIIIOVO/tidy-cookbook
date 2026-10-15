@@ -109,43 +109,46 @@ export function CartView() {
 
   return (
     <div className="px-4 pt-4">
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="font-display text-[22px] tracking-wider text-ink">点菜单</h1>
-          <p className="mt-1 text-[11px] text-ink-3">
-            共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
-            <span className="tabular-nums text-ink-2">{total}</span> 份
-            {locked && <span className="ml-2 text-accent">已确认</span>}
-          </p>
+      {/* 顶部吸顶栏：下滑滚动时标题与管理按钮常驻顶部，毛玻璃穿透 */}
+      <header className="sticky top-0 z-20 -mx-4 -mt-4 bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg hairline-b">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="font-display text-[22px] tracking-wider text-ink">点菜单</h1>
+            <p className="mt-1 text-[11px] text-ink-3">
+              共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
+              <span className="tabular-nums text-ink-2">{total}</span> 份
+              {locked && <span className="ml-2 text-accent">已确认</span>}
+            </p>
+          </div>
+          {!locked && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic(6);
+                setSelecting((v) => !v);
+                setPicked([]);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
+                selecting
+                  ? "border-accent bg-accent-soft text-accent font-medium"
+                  : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
+              )}
+            >
+              {selecting ? (
+                <>
+                  <Check size={12} weight="bold" />
+                  <span>完成</span>
+                </>
+              ) : (
+                <>
+                  <PencilSimple size={12} weight="regular" />
+                  <span>管理</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
-        {!locked && (
-          <button
-            type="button"
-            onClick={() => {
-              haptic(6);
-              setSelecting((v) => !v);
-              setPicked([]);
-            }}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
-              selecting
-                ? "border-accent bg-accent-soft text-accent font-medium"
-                : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
-            )}
-          >
-            {selecting ? (
-              <>
-                <Check size={12} weight="bold" />
-                <span>完成</span>
-              </>
-            ) : (
-              <>
-                <PencilSimple size={12} weight="regular" />
-                <span>管理</span>
-              </>
-            )}
-          </button>
-        )}
       </header>
 
       <div className="mt-4 space-y-5 pb-36">

@@ -62,80 +62,83 @@ export function HistoryView() {
 
   return (
     <div className="px-4 pt-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display text-[22px] tracking-wider text-ink">历史订单</h1>
-          {/* 恒定高度容器，彻底消除切 Tab 时高度塌陷引发的页面抖动跳跃 */}
-          <div className="mt-1 min-h-[18px]">
-            {loading && meals.length === 0 ? (
-              <p className="text-[11px] text-ink-3">读取中…</p>
-            ) : meals.length > 0 ? (
-              <p className="text-[11px] text-ink-3">
-                {range === "all" ? (
-                  <>
-                    共 <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
-                  </>
-                ) : (
-                  <>
-                    {RANGE_OPTIONS.find((o) => o.key === range)?.label} ·{" "}
-                    <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
-                  </>
-                )}
-                {hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
-              </p>
-            ) : (
-              <p className="text-[11px] text-ink-3">暂无记录</p>
-            )}
-          </div>
-        </div>
-        {me && (
-          <button
-            type="button"
-            aria-label={`${me.displayName}，点此退出登录`}
-            onClick={() =>
-              confirm({
-                title: `退出 ${me.displayName}？`,
-                confirmText: "退出",
-                onConfirm: () => void doLogout(),
-              })
-            }
-            className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-card py-1 pr-3 pl-1 transition active:scale-95"
-          >
-            <Avatar name={me.displayName} className="size-[26px] text-[12px]" />
-            <span className="text-left leading-tight">
-              <span className="block text-[12px] text-ink">{me.displayName}</span>
-              <span className="block text-[9.5px] text-ink-3">
-                {me.role === "owner" ? "厨神" : "客人"}
-              </span>
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* 顶部时间跨度筛选：与首页抽菜分类一致的 rounded-full 独立胶囊形态 */}
-      <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
-        {RANGE_OPTIONS.map((opt) => {
-          const active = range === opt.key;
-          return (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => {
-                haptic(6);
-                setRange(opt.key);
-              }}
-              className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
-                active
-                  ? "border-accent bg-accent font-medium text-white shadow-2xs"
-                  : "border-line bg-card text-ink-2 active:bg-paper",
+      {/* 顶部吸顶栏：下滑滚动时标题栏与时间筛选 Tab 常驻顶部，毛玻璃穿透 */}
+      <header className="sticky top-0 z-20 -mx-4 -mt-4 bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg hairline-b">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-[22px] tracking-wider text-ink">历史订单</h1>
+            {/* 恒定高度容器，彻底消除切 Tab 时高度塌陷引发的页面抖动跳跃 */}
+            <div className="mt-1 min-h-[18px]">
+              {loading && meals.length === 0 ? (
+                <p className="text-[11px] text-ink-3">读取中…</p>
+              ) : meals.length > 0 ? (
+                <p className="text-[11px] text-ink-3">
+                  {range === "all" ? (
+                    <>
+                      共 <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
+                    </>
+                  ) : (
+                    <>
+                      {RANGE_OPTIONS.find((o) => o.key === range)?.label} ·{" "}
+                      <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
+                    </>
+                  )}
+                  {hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
+                </p>
+              ) : (
+                <p className="text-[11px] text-ink-3">暂无记录</p>
               )}
+            </div>
+          </div>
+          {me && (
+            <button
+              type="button"
+              aria-label={`${me.displayName}，点此退出登录`}
+              onClick={() =>
+                confirm({
+                  title: `退出 ${me.displayName}？`,
+                  confirmText: "退出",
+                  onConfirm: () => void doLogout(),
+                })
+              }
+              className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-card py-1 pr-3 pl-1 transition active:scale-95"
             >
-              {opt.label}
+              <Avatar name={me.displayName} className="size-[26px] text-[12px]" />
+              <span className="text-left leading-tight">
+                <span className="block text-[12px] text-ink">{me.displayName}</span>
+                <span className="block text-[9.5px] text-ink-3">
+                  {me.role === "owner" ? "厨神" : "客人"}
+                </span>
+              </span>
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
+
+        {/* 顶部时间跨度筛选：与首页抽菜分类一致的 rounded-full 独立胶囊形态 */}
+        <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
+          {RANGE_OPTIONS.map((opt) => {
+            const active = range === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  haptic(6);
+                  setRange(opt.key);
+                }}
+                className={cn(
+                  "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
+                  active
+                    ? "border-accent bg-accent font-medium text-white shadow-2xs"
+                    : "border-line bg-card text-ink-2 active:bg-paper",
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </header>
 
       {loading && meals.length === 0 && <Placeholder text="读取中…" />}
       {error && !loading && <Placeholder text={error} retry={load} />}
