@@ -12,13 +12,22 @@
 
 [English](./README_EN.md) | **简体中文**
 
+<br />
+
+<!-- 抽卡物理飞卡动效演示 -->
+<p align="center">
+  <img src="./docs/screenshots/draw-demo.gif" alt="抽菜卡片手势动效" width="280" style="border-radius: 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.12);" />
+  <br />
+  <em>🎲 实体触感卡片翻动 · 不合心意左右滑换一道 · 抽中直接加单</em>
+</p>
+
 </div>
 
 ---
 
 ## 📱 视觉预览 (Screenshots)
 
-| 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 买菜清单 | 5. 历史归档 |
+| 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 丰盛点菜单 | 5. 历史归档 |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
 | 纠结吃啥？滑卡随心抽 | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 跨菜品同名食材智能合并 | 时间段筛选与下滑懒加载 |
@@ -78,6 +87,24 @@
 - **实时同步**：Cloudflare Durable Objects（启用 Hibernation API，休眠时不消耗计费时长；平台层自应答 Ping/Pong 心跳）。
 - **会话持久化**：支持 Cookie 与 `localStorage` 令牌双重容灾，免登状态缓存 90 天，配合服务端自动滑动续期。
 - **通知机制**：锁单确认后通过 Bark API 实时推送订单摘要至手机设备。
+
+---
+
+## 🔒 数据安全与备份机制 (Data Safety & Backups)
+
+项目的数据安全与灾备策略经过深度考量，完全托管于 Cloudflare 边缘分布式基础设施中：
+
+1. **官方原生每日自动快照（Automated Backups）**：
+   - Cloudflare D1 数据库每日自动执行系统级快照备份（PITR），官方自动保留最近 **30 天** 的历史备份点；
+   - 如遇误删或异常，可登录 Cloudflare 控制台 -> **D1 SQL Database** -> `tidy-cookbook` -> **Backups** 选项卡直接一键回滚还原。
+2. **全量本地离线备份导出（Manual Dump）**：
+   - 随时可以通过 Wrangler 命令将线上真实数据库导出为标准的本地 `.sql` 备份副本：
+     ```bash
+     pnpm exec wrangler d1 export tidy-cookbook --remote --output=./backup_$(date +%Y%m%d).sql
+     ```
+3. **零敏感信息入库**：
+   - 账号密码采用 `PBKDF2-SHA256` 进行 **100,000 轮** 强化哈希计算，每人配备专属独立随机盐值，明文密码永不出设备；
+   - 所有 Cloudflare 凭证与推送秘钥（如 `BARK_URL`）均通过 Cloudflare Worker Secret 或 GitHub Actions Encrypted Secrets 安全注入，Git 提交历史 100% 干净无泄露。
 
 ---
 

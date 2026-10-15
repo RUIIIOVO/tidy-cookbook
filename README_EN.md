@@ -12,13 +12,22 @@
 
 **English** | [简体中文](./README.md)
 
+<br />
+
+<!-- Card Swipe Gesture Demo GIF -->
+<p align="center">
+  <img src="./docs/screenshots/draw-demo.gif" alt="Tactile Card Drawing Gesture Demo" width="280" style="border-radius: 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.12);" />
+  <br />
+  <em>🎲 Tactile physical card swiping · Swipe left or right if you change your mind · Add directly to meal</em>
+</p>
+
 </div>
 
 ---
 
 ## 📱 Visual Showcase
 
-| 1. Pick Inspiration | 2. Menu Exploration | 3. Recipe Details | 4. Grocery List | 5. Order History |
+| 1. Pick Inspiration | 2. Menu Exploration | 3. Recipe Details | 4. Full Cart & Grocery | 5. Order History |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
 | Indecisive? Swipe cards | 93 curated dishes with pinyin search | High-res image, ingredients & steps | Auto-merged across all dishes | Time range filters & infinite scroll |
@@ -78,6 +87,24 @@ Most commercial recipe apps are cluttered with paid courses, e-commerce ads, alg
 - **Real-time Engine**: Cloudflare Durable Objects with Hibernation API (zero cost while idle; platform-level Ping/Pong auto-response).
 - **Session Durability**: 90-day sliding session token stored in both HTTP cookies and `localStorage` with automated renewal upon access.
 - **Push Notifications**: Instant order alerts dispatched via Bark API upon checkout confirmation.
+
+---
+
+## 🔒 Data Security & Disaster Recovery
+
+Your database and meal orders are safely managed on Cloudflare's serverless edge infrastructure:
+
+1. **Automated Daily Backups**:
+   - Cloudflare D1 performs automated point-in-time recovery (PITR) snapshots daily, retaining 30 days of history;
+   - Easily restore any snapshot via Cloudflare Dashboard -> **Storage & Databases** -> **D1** -> `tidy-cookbook` -> **Backups**.
+2. **Local SQL Export**:
+   - Dump your remote live database at any time to a clean `.sql` file:
+     ```bash
+     pnpm exec wrangler d1 export tidy-cookbook --remote --output=./backup_$(date +%Y%m%d).sql
+     ```
+3. **Zero Secrets in Repository**:
+   - Passwords hashed via PBKDF2-SHA256 (100,000 rounds) with per-user cryptographic salts;
+   - All API keys and secrets (e.g., `BARK_URL`) are injected via encrypted Cloudflare Secrets or GitHub Secrets.
 
 ---
 
