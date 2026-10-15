@@ -70,7 +70,10 @@ export function HistoryView() {
             {/* 恒定高度容器，彻底消除切 Tab 时高度塌陷引发的页面抖动跳跃 */}
             <div className="mt-1 min-h-[18px]">
               {loading && meals.length === 0 ? (
-                <p className="text-[11px] text-ink-3">读取中…</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                  <span className="size-1.5 rounded-full bg-accent animate-pulse" />
+                  <span>正在整理餐单小票…</span>
+                </div>
               ) : meals.length > 0 ? (
                 <p className="text-[11px] text-ink-3">
                   {range === "all" ? (
@@ -140,7 +143,13 @@ export function HistoryView() {
         </div>
       </header>
 
-      {loading && meals.length === 0 && <Placeholder text="读取中…" />}
+      {/* 优雅的小票骨架屏：首屏加载或切换筛选时呈现拟真小票轮廓与微光微动效 */}
+      {loading && meals.length === 0 && (
+        <div className="mt-4 flex flex-col gap-3 pb-4">
+          <MealCardSkeleton />
+          <MealCardSkeleton />
+        </div>
+      )}
       {error && !loading && <Placeholder text={error} retry={load} />}
       {!loading && !error && meals.length === 0 && (
         <Placeholder
@@ -316,6 +325,51 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
 }
 
 const FOLD_AT = 3;
+
+/**
+ * 历史小票骨架屏：首屏或切 Tab 加载时 1:1 模拟真实小票的物理排版
+ * 带有纸墨微光（Shimmer）动画，彻底告别粗暴的空框或“读取中”死文字
+ */
+function MealCardSkeleton() {
+  return (
+    <div className="relative overflow-hidden rounded-card border border-line bg-card px-4 pt-4 pb-3">
+      <span aria-hidden className="shimmer absolute inset-0 opacity-70" />
+
+      {/* 小票抬头骨架 */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-1.5">
+          <div className="flex items-baseline gap-2">
+            <div className="h-4 w-28 rounded-md bg-paper-2" />
+            <div className="h-3 w-12 rounded bg-paper-2/60" />
+          </div>
+          <div className="h-2.5 w-16 rounded bg-paper-2/50" />
+        </div>
+      </div>
+
+      <div className="mt-3.5 border-t border-dashed border-line-2" />
+
+      {/* 菜品条目骨架：模拟 2 道菜 */}
+      <div className="space-y-3 py-2.5">
+        {[1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="size-10 shrink-0 rounded-md bg-paper-2" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-32 rounded bg-paper-2" />
+              <div className="h-2.5 w-14 rounded bg-paper-2/60" />
+            </div>
+            <div className="h-3 w-6 rounded bg-paper-2/50" />
+          </div>
+        ))}
+      </div>
+
+      {/* 小票底部合计与按钮骨架 */}
+      <div className="mt-1 flex items-center justify-between border-t border-dashed border-line-2 pt-3">
+        <div className="h-3 w-24 rounded bg-paper-2/60" />
+        <div className="h-7 w-20 rounded-full bg-paper-2/80" />
+      </div>
+    </div>
+  );
+}
 
 function Placeholder({
   text,
