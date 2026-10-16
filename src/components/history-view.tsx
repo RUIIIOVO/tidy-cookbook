@@ -18,6 +18,7 @@ import { mealTitle } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
+import { ui } from "@/lib/ui";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
@@ -233,10 +234,8 @@ export function HistoryView() {
                 type="button"
                 onClick={() => handleSelectTab(opt.key)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition-all duration-200",
-                  active
-                    ? "border-accent bg-accent font-medium text-white shadow-2xs"
-                    : "border-line bg-card text-ink-2 active:bg-paper",
+                  ui.chip,
+                  active ? ui.chipOn : ui.chipOff,
                 )}
               >
                 {opt.label}
@@ -469,7 +468,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
         <button
           type="button"
           onClick={again}
-          className="flex items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-[11.5px] text-accent transition active:scale-95"
+          className={cn(ui.chip, ui.chipSoft)}
         >
           <ArrowCounterClockwise size={12} weight="bold" />
           再点一次

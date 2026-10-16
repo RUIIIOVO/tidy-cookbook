@@ -59,7 +59,7 @@ const ROW_INSET = 44;
 /**
  * 买菜清单：只汇总传进来的订单（备菜页已按日期筛好），勾选状态实时同步给所有人。
  * 样式是 iOS 分组列表：组标题在卡片外，卡片内一行一样食材。
- * 顺序固定，勾选只改勾选圈和删除线，行高、位置都不变；「用于 N 道」点开看来源；调料默认收起。
+ * 顺序固定，勾选只改勾选圈和删除线，行高、位置都不变；「用于 N 道」点开看来源；调料默认展开。
  */
 export function ShoppingList({ meals }: { meals: Meal[] }) {
   // 所有订单加起来只有一道菜时，记下它（行内就不再逐行写菜名）
@@ -68,7 +68,6 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
   const today = useCart((s) => s.today);
   const online = useSyncStatus() === "online";
   const { groups, buyGroups, seasoning, total, bought } = useShoppingData(meals);
-  const [showSeasoning, setShowSeasoning] = useState(false);
   const [openName, setOpenName] = useState<string | null>(null);
 
   const copy = useGuard(async () => {
@@ -205,37 +204,15 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
         })}
 
         {seasoning && (
-          <GroupSection>
+          <GroupSection title="调料" aside={<span className="tabular-nums">{seasoning.items.length} 样</span>}>
             <GroupCard>
-              <GroupRow last inset={0}>
-                <button
-                  type="button"
-                  aria-expanded={showSeasoning}
-                  onClick={() => setShowSeasoning((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition active:bg-paper"
-                >
-                  <span className="min-w-0 text-[14px] leading-snug text-ink">
-                    调料 · <span className="tabular-nums">{seasoning.items.length}</span> 样
-                    <span className="ml-2 text-[11.5px] text-ink-3">先看看家里有没有</span>
+              <div className="flex flex-wrap gap-1.5 px-3.5 py-3">
+                {seasoning.items.map((it) => (
+                  <span key={it.name} className="rounded-full bg-paper-2 px-2.5 py-1 text-[12px] text-ink-2">
+                    {it.name}
                   </span>
-                  <CaretDown
-                    size={13}
-                    className={cn("shrink-0 text-ink-3 transition-transform", showSeasoning && "rotate-180")}
-                  />
-                </button>
-                {showSeasoning && (
-                  <div className="flex flex-wrap gap-1.5 px-3.5 pb-3.5">
-                    {seasoning.items.map((it) => (
-                      <span
-                        key={it.name}
-                        className="rounded-full bg-paper-2 px-2.5 py-1 text-[11.5px] text-ink-2"
-                      >
-                        {it.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </GroupRow>
+                ))}
+              </div>
             </GroupCard>
           </GroupSection>
         )}

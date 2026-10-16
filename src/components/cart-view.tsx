@@ -19,6 +19,7 @@ import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { catTheme } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
+import { ui } from "@/lib/ui";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { AddButton } from "./add-button";
@@ -176,10 +177,8 @@ export function CartView() {
               setPicked([]);
             }}
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
-              selecting
-                ? "border-accent bg-accent-soft text-accent font-medium"
-                : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
+              ui.chip,
+              selecting ? "border border-accent bg-accent-soft font-medium text-accent" : ui.chipOff,
             )}
           >
             {selecting ? (

@@ -24,6 +24,7 @@ import { dayLabel, mealKey, mealTitle, shortDate, slotName, type Slot } from "@/
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
 import { useSyncStatus } from "@/lib/sync";
+import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
 import { DishPickerSheet, QtyStepper, useBackClose, type DraftItem } from "./dish-picker-sheet";
@@ -181,7 +182,6 @@ function EditContent({
 
   const title = mealTitle(draft.date, draft.slot, today);
   const originTitle = mealTitle(base.date, base.slot, today);
-  const total = draft.items.reduce((n, i) => n + i.qty, 0);
 
   // ── 关闭 ──
   const requestClose = () => {
@@ -316,7 +316,6 @@ function EditContent({
   };
 
   const saveDisabled = saving || !online || stale || gone || (!empty && !dirty);
-  const deleteDisabled = saving || !online || gone;
 
   return (
     <Drawer.Root
@@ -413,7 +412,7 @@ function EditContent({
               <div className="mb-2.5 flex items-center gap-2">
                 <h3 className="font-display text-[15px] tracking-[0.2em] text-ink">菜品</h3>
                 <span className="text-[11px] text-ink-3 tabular-nums">
-                  · {draft.items.length} 道 {total} 份
+                  {draft.items.length} 道
                 </span>
                 <span className="h-px flex-1 bg-line" />
                 {!empty && (
@@ -422,10 +421,8 @@ function EditContent({
                     disabled={saving}
                     onClick={toggleManage}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95 disabled:opacity-50",
-                      selecting
-                        ? "border-accent bg-accent-soft font-medium text-accent"
-                        : "border-line bg-card/80 text-ink-2 shadow-2xs hover:border-line-2",
+                      ui.chip,
+                      selecting ? "border border-accent bg-accent-soft font-medium text-accent" : ui.chipOff,
                     )}
                   >
                     {selecting ? (
@@ -546,7 +543,7 @@ function EditContent({
                       picked.length === draft.items.length ? [] : draft.items.map((i) => i.dishId),
                     )
                   }
-                  className="rounded-full border border-line bg-card px-4 py-2.5 text-[13px] text-ink-2"
+                  className="h-12 shrink-0 rounded-full border border-line bg-card px-5 text-[14px] text-ink-2"
                 >
                   {picked.length === draft.items.length ? "取消全选" : "全选"}
                 </button>
@@ -554,7 +551,7 @@ function EditContent({
                   type="button"
                   disabled={picked.length === 0}
                   onClick={askRemovePicked}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-chili py-2.5 text-[13px] text-white disabled:opacity-40"
+                  className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-chili text-[15px] text-white disabled:opacity-40"
                 >
                   <Trash size={14} weight="regular" />
                   删除 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
@@ -568,25 +565,13 @@ function EditContent({
                     离线中，联网后才能保存
                   </p>
                 )}
+                {/* 删除在订单卡片上（编辑图标旁），这里只留保存；菜删光时保存即删除 */}
                 <div className="flex gap-3">
-                  {!empty && (
-                    <button
-                      type="button"
-                      disabled={deleteDisabled}
-                      onClick={askDelete}
-                      className="shrink-0 rounded-full border border-chili/30 bg-card px-5 py-3 text-[14px] font-medium tracking-wider text-chili transition active:scale-[0.98] disabled:opacity-40"
-                    >
-                      删除订单
-                    </button>
-                  )}
                   <button
                     type="button"
                     disabled={saveDisabled}
                     onClick={() => void doSave()}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-[14px] font-medium tracking-wider text-white transition active:scale-[0.99] disabled:opacity-40",
-                      empty ? "bg-chili" : "bg-accent",
-                    )}
+                    className={cn(ui.primary, empty && "bg-chili")}
                   >
                     {saving && <SpinnerGap size={15} className="animate-spin" />}
                     {saving ? "处理中…" : empty ? "删除订单" : "保存"}

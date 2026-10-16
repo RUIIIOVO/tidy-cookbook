@@ -11,6 +11,7 @@ import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { spicyLabel } from "@/lib/theme";
 import { useDishSheet } from "@/lib/ui-store";
+import { ui } from "@/lib/ui";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
 import { GroupCard, GroupRow, GroupSection } from "./grouped-list";
@@ -128,8 +129,8 @@ export function PrepView() {
                     setPicked(d);
                   }}
                   className={cn(
-                    "shrink-0 rounded-full px-3 py-1 text-[12px] transition-colors duration-200 active:scale-95",
-                    on ? "bg-accent-soft font-medium text-accent" : "bg-paper-2 text-ink-2",
+                    ui.chip,
+                    on ? ui.chipOn : ui.chipOff,
                   )}
                 >
                   {d === ALL ? "全部" : label(d)}

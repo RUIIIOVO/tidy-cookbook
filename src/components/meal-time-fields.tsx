@@ -10,6 +10,7 @@ import {
   weekdayOf,
   type Slot,
 } from "@/lib/meal-time";
+import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
 
 export type MealTime = { date: string; slot: Slot };
@@ -32,11 +33,11 @@ export function fullDate(date: string, today: string): string {
 /** 行左侧的标签；和原单不一致时前面亮一个焦糖色小圆点 */
 function RowLabel({ changed, children }: { changed: boolean; children: React.ReactNode }) {
   return (
-    <span className="relative w-10 shrink-0 pl-3 text-[13px] text-ink-2">
+    <span className="relative w-9 shrink-0 text-[13px] text-ink-2">
       {changed && (
         <span
           aria-label="已修改"
-          className="absolute top-1/2 left-0 size-1.5 -translate-y-1/2 rounded-full bg-caramel"
+          className="absolute top-1/2 -left-2.5 size-1.5 -translate-y-1/2 rounded-full bg-caramel"
         />
       )}
       {children}
@@ -126,8 +127,9 @@ export function MealTimeFields({
                   onChange({ ...value, slot: id });
                 }}
                 className={cn(
-                  "relative rounded-full border py-1.5 text-[12.5px] font-medium transition active:scale-95 disabled:opacity-50",
-                  on ? "border-accent bg-accent text-white" : "border-line bg-card text-ink-2",
+                  ui.chip,
+                  "relative px-0",
+                  on ? ui.chipOn : ui.chipOff,
                 )}
               >
                 {name}

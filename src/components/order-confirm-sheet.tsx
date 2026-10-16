@@ -91,13 +91,12 @@ function OrderConfirmSheetContent({
   const [loading, setLoading] = useState(false);
 
   const totalLines = snapshot.length;
-  const totalQty = snapshot.reduce((sum, item) => sum + item.qty, 0);
 
   // 摘要行：最多叠 3 张小图 + 前两道菜名；点开看完整清单
   const [expanded, setExpanded] = useState(false);
   const thumbs = snapshot.filter((i) => i.dish).slice(0, 3);
-  const names = snapshot.slice(0, 2).map((i) => i.name).join("、");
-  const summary = totalLines > 2 ? `${names} 等 ${totalLines} 道` : names;
+  // 只列菜名，放不下由 truncate 省略；不写道数份数
+  const summary = snapshot.map((i) => i.name).join("、");
 
   // 按钮上的选择结果：「明天午餐」
   const pickText = `${dayLabel(pick.date, today) ?? shortDate(pick.date)}${slotName(pick.slot)}`;
@@ -232,10 +231,6 @@ function OrderConfirmSheetContent({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-1 flex justify-end pt-2 text-[11px] text-ink-3">
-                    合计 <span className="mx-0.5 tabular-nums text-ink-2">{totalLines}</span> 道 ·{" "}
-                    <span className="mx-0.5 tabular-nums text-ink-2">{totalQty}</span> 份
-                  </div>
                 </div>
               </div>
             </div>
