@@ -175,7 +175,7 @@ export function HistoryView() {
               {currentBucket.loading && currentBucket.meals.length === 0 ? (
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-                  <span>正在整理餐单小票…</span>
+                  <span>正在整理历史小票…</span>
                 </div>
               ) : currentBucket.meals.length > 0 ? (
                 <p className="text-[11px] text-ink-3">
