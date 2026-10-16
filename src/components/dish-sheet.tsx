@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { Minus, Plus, SlidersHorizontal, X } from "@phosphor-icons/react";
+import { Minus, Plus, SlidersHorizontal } from "@phosphor-icons/react";
 import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
@@ -57,16 +57,8 @@ export function DishSheet() {
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[88dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none">
           {dish && t && (
             <>
-              <div className="relative shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing">
+              <div className="shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing">
                 <div className="mx-auto h-1.5 w-12 rounded-full bg-line-2 transition-colors active:bg-ink-3" />
-                <button
-                  type="button"
-                  aria-label="关闭"
-                  onClick={close}
-                  className="absolute right-4 top-2 grid size-7 place-items-center rounded-full bg-paper-2/80 text-ink-3 transition active:scale-90 active:bg-paper-2"
-                >
-                  <X size={14} weight="bold" />
-                </button>
               </div>
 
               <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
