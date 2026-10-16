@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useCart } from "@/lib/store";
+import { useMealsSplit } from "@/lib/use-meals";
 import { tabIcon } from "@/lib/icons";
 import { TabKey, useTabs } from "@/lib/tab-store";
 import { cn, haptic } from "@/lib/utils";
@@ -19,7 +20,7 @@ export function TabBar() {
   const activeTab = useTabs((s) => s.activeTab);
   const setActiveTab = useTabs((s) => s.setActiveTab);
   const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
-  const pendingMealCount = useCart((s) => s.meals.length);
+  const pendingMealCount = useMealsSplit().upcoming.length;
 
   const activeIndex = Math.max(0, TABS.findIndex((t) => t.key === activeTab));
 

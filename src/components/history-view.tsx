@@ -15,6 +15,7 @@ import {
   type RangeData,
 } from "@/lib/history-store";
 import { useCart } from "@/lib/store";
+import { useMealsSplit } from "@/lib/use-meals";
 import { useTabs } from "@/lib/tab-store";
 import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
@@ -30,6 +31,7 @@ export function HistoryView() {
   const setRange = useHistory((s) => s.setRange);
   const ensureRange = useHistory((s) => s.ensureRange);
   const confirm = useConfirm((s) => s.confirm);
+  const { finishedToday } = useMealsSplit();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -174,16 +176,16 @@ export function HistoryView() {
                   <span className="size-1.5 rounded-full bg-accent animate-pulse" />
                   <span>正在加载…</span>
                 </div>
-              ) : currentBucket.meals.length > 0 ? (
+              ) : currentBucket.meals.length + finishedToday.length > 0 ? (
                 <p className="text-[11px] text-ink-3">
                   {range === "all" ? (
                     <>
-                      共 <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length}</span> 餐
+                      共 <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length + finishedToday.length}</span> 餐
                     </>
                   ) : (
                     <>
                       {RANGE_OPTIONS.find((o) => o.key === range)?.label} ·{" "}
-                      <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length}</span> 餐
+                      <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length + finishedToday.length}</span> 餐
                     </>
                   )}
                   {currentBucket.hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
@@ -304,7 +306,10 @@ function HistoryTabPane({
     return () => observer.disconnect();
   }, [data.hasMore, data.loadingMore, rangeKey, loadMoreForRange]);
 
-  const { meals, loading, loadingMore, hasMore, error, initialized } = data;
+  const { meals: fetched, loading, loadingMore, hasMore, error, initialized } = data;
+  // 今天已经过了饭点的那几顿（还在实时快照里），排在最上面
+  const { finishedToday } = useMealsSplit();
+  const meals = finishedToday.length ? [...finishedToday, ...fetched] : fetched;
 
   return (
     <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">

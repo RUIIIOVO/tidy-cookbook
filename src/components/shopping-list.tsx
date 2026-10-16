@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CaretDown, Check, CopySimple, WifiSlash } from "@phosphor-icons/react";
+import { Check, CopySimple, WifiSlash } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { dishById } from "@/data/dishes";
 import { buy } from "@/lib/meal-actions";
-import { mealTitle } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
 import { buildMealShoppingList, isBought, type MealShopItem } from "@/lib/shopping";
 import { useCart } from "@/lib/store";
@@ -33,26 +31,6 @@ export function useShoppingData(meals: Meal[]) {
   }, [groups, bought]);
 }
 
-/** 一项食材用在哪几道菜、哪一餐 */
-function sourcesOf(item: MealShopItem, meals: Meal[], today: string) {
-  const ids = new Set(item.mealIds);
-  const out: { key: string; dish: string; when: string }[] = [];
-  for (const m of meals) {
-    if (!ids.has(m.id)) continue;
-    for (const it of m.items) {
-      const dish = dishById.get(it.dishId);
-      if (!dish) continue;
-      if (!dish.ingredients.some((g) => g.items.some((x) => x.name === item.name))) continue;
-      out.push({
-        key: `${m.id}:${dish.id}`,
-        dish: dish.name,
-        when: mealTitle(m.mealDate, m.slot, today),
-      });
-    }
-  }
-  return out;
-}
-
 /** 分割线缩进：行内左边距 14 + 勾选圈 20 + 间距 10 */
 const ROW_INSET = 44;
 
@@ -65,10 +43,8 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
   // 所有订单加起来只有一道菜时，记下它（行内就不再逐行写菜名）
   const dishIds = new Set(meals.flatMap((m) => m.items.map((i) => i.dishId)));
   const singleDish = dishIds.size === 1 ? [...dishIds][0] : null;
-  const today = useCart((s) => s.today);
   const online = useSyncStatus() === "online";
   const { groups, buyGroups, seasoning, total, bought } = useShoppingData(meals);
-  const [openName, setOpenName] = useState<string | null>(null);
 
   const copy = useGuard(async () => {
     const text = groups
@@ -190,11 +166,7 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
                     item={it}
                     last={idx === ordered.length - 1}
                     on={checked(it)}
-                    open={openName === it.name}
                     onToggle={toggle}
-                    onOpen={() => setOpenName((v) => (v === it.name ? null : it.name))}
-                    meals={meals}
-                    today={today}
                     showSource={singleDish === null}
                   />
                 ))}
@@ -225,43 +197,30 @@ function ShopRow({
   item,
   last,
   on,
-  open,
   onToggle,
-  onOpen,
-  meals,
-  today,
   showSource,
 }: {
   item: MealShopItem;
   last: boolean;
   on: boolean;
-  open: boolean;
   onToggle: (item: MealShopItem, on: boolean) => void;
-  onOpen: () => void;
-  meals: Meal[];
-  today: string;
   /** 清单只来自一道菜时不必每行重复写菜名 */
   showSource: boolean;
 }) {
-  // 展开时才算来源
-  const sources = open ? sourcesOf(item, meals, today) : [];
+  // 食材下面一行小字写用在哪几道菜（参考 iOS 提醒事项的副标题），不用点开
+  const source =
+    item.from.length > 2
+      ? `${item.from.slice(0, 2).join("、")} 等 ${item.from.length} 道`
+      : item.from.join("、");
 
   return (
     <GroupRow last={last} inset={ROW_INSET}>
-      {/* 整行是勾选；「用于 N 道」是行里的小按钮，所以行本身用 div role="button" */}
-      <div
-        role="button"
-        tabIndex={0}
+      {/* 整行就是勾选，行内没有别的可点元素 */}
+      <button
+        type="button"
         aria-pressed={on}
         onClick={() => onToggle(item, on)}
-        onKeyDown={(e) => {
-          if (e.target !== e.currentTarget) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onToggle(item, on);
-          }
-        }}
-        className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left transition active:bg-paper"
+        className="flex min-h-12 w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition active:bg-paper"
       >
         <span
           className={cn(
@@ -271,52 +230,23 @@ function ShopRow({
         >
           {on && <Check size={11} weight="bold" />}
         </span>
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-[14.5px] transition",
-            on ? "text-ink-3 line-through" : "text-ink",
-          )}
-        >
-          {item.name}
-        </span>
-        {item.from.length === 1 ? (
-          // 只用在一道菜：直接写菜名，不必点开
-          showSource && (
-            <span className="max-w-[40%] shrink-0 truncate text-[11px] text-ink-3">{item.from[0]}</span>
-          )
-        ) : (
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-label={`${item.name}用在哪几道菜`}
-            onClick={(e) => {
-              e.stopPropagation();
-              haptic(6);
-              onOpen();
-            }}
-            className="flex shrink-0 items-center gap-0.5 rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-3 transition active:scale-95"
+        <span className="min-w-0 flex-1">
+          <span
+            className={cn(
+              "block truncate text-[14.5px] leading-snug transition",
+              on ? "text-ink-3 line-through" : "text-ink",
+            )}
           >
-            用于 <span className="tabular-nums">{item.from.length}</span> 道
-            <CaretDown size={9} className={cn("transition-transform", open && "rotate-180")} />
-          </button>
-        )}
+            {item.name}
+          </span>
+          {showSource && source && (
+            <span className="mt-0.5 block truncate text-[11.5px] leading-snug text-ink-3">{source}</span>
+          )}
+        </span>
         <span className={cn("shrink-0 text-[12px] tabular-nums", on ? "text-line-2" : "text-ink-2")}>
           {item.amount}
         </span>
-      </div>
-      {open && (
-        <ul
-          className="mr-3.5 mb-3 space-y-1.5 rounded-lg bg-paper px-3 py-2 text-[12px]"
-          style={{ marginLeft: ROW_INSET }}
-        >
-          {sources.map((s) => (
-            <li key={s.key} className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 truncate text-ink-2">{s.dish}</span>
-              <span className="shrink-0 text-[11px] text-ink-3">{s.when}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      </button>
     </GroupRow>
   );
 }

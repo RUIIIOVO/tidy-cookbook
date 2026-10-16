@@ -8,6 +8,7 @@ import { deleteMeal } from "@/lib/meal-actions";
 import { usePrepUi, type PrepSeg } from "@/lib/prep-store";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
+import { useMealsSplit } from "@/lib/use-meals";
 import { useTabs } from "@/lib/tab-store";
 import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
@@ -26,7 +27,8 @@ const SEGS: PrepSeg[] = ["dishes", "shop"];
  * 订单编辑面板由 tabs-host 全局挂一份，这里只管 openMealEdit。
  */
 export function PrepView() {
-  const meals = useCart((s) => s.meals);
+  // 过了饭点的那顿已经挪到订单页
+  const { upcoming: meals } = useMealsSplit();
   const today = useCart((s) => s.today);
   const seg = usePrepUi((s) => s.seg);
   const setSeg = usePrepUi((s) => s.setSeg);
@@ -64,7 +66,6 @@ export function PrepView() {
   }
 
   const dishCount = shown.reduce((n, m) => n + m.items.length, 0);
-  const left = shop.total - shop.done;
   const label = (d: string) => dayLabel(d, today) ?? shortDate(d);
 
   const pick = (i: number) => {
@@ -82,15 +83,6 @@ export function PrepView() {
         <p className="mt-1 text-[12px] text-ink-3">
           <span className="tabular-nums text-ink-2">{shown.length}</span> 餐 ·{" "}
           <span className="tabular-nums text-ink-2">{dishCount}</span> 道菜
-          {shop.total > 0 &&
-            (left > 0 ? (
-              <>
-                {" "}
-                · <span className="tabular-nums text-ink-2">{left}</span> 样没买
-              </>
-            ) : (
-              " · 菜买齐了"
-            ))}
         </p>
       </header>
 

@@ -79,6 +79,21 @@ export const EDIT_MAX_AHEAD_DAYS = 30;
  */
 const SLOT_END_HOUR: Record<Slot, number> = { 1: 10, 2: 14, 3: 21, 4: 28 };
 
+/** 当前是「今天」的第几个小时（4~28，凌晨 0~4 点记作 24~28） */
+function mealHour(now: number): number {
+  return ((now + TZ_OFFSET_MS - DAY_START_MS) % 86400_000) / 3600_000 + 4;
+}
+
+/**
+ * 这一顿是否已经过了饭点（早餐 10 点、午餐 14 点、晚餐 21 点、宵夜次日 4 点）。
+ * 过了饭点的订单从备菜页挪到订单页；只影响显示位置，服务端仍按日期判断能不能改。
+ */
+export function isMealOver(date: string, slot: number, now: number, today: string): boolean {
+  if (date < today) return true;
+  if (date > today) return false;
+  return mealHour(now) >= (SLOT_END_HOUR[slot as Slot] ?? 28);
+}
+
 /**
  * 下单面板的默认选中：从现在往后，第一个还没下过单的餐。
  * - 周一到周五只考虑晚餐，周六日考虑午餐、晚餐；早餐和宵夜从不作默认，只能手选。
@@ -90,8 +105,7 @@ export function defaultPick(
   today: string,
   taken: Set<string>,
 ): { date: string; slot: Slot } {
-  // 当前是「今天」的第几个小时（0~28，凌晨 0~4 点记作 24~28）
-  const hour = ((now + TZ_OFFSET_MS - DAY_START_MS) % 86400_000) / 3600_000 + 4;
+  const hour = mealHour(now);
   for (let n = 0; n <= 2; n++) {
     const date = addDays(today, n);
     const wd = weekdayOf(date);
