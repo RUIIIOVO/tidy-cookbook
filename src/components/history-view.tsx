@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
 import { ArrowCounterClockwise, CaretDown, SpinnerGap, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
-import { RANGE_OPTIONS, useHistory, type Meal } from "@/lib/history-store";
+import {
+  RANGE_OPTIONS,
+  useHistory,
+  type HistoryRange,
+  type Meal,
+  type RangeData,
+} from "@/lib/history-store";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
@@ -20,166 +25,191 @@ import { DishThumb } from "./dish-thumb";
 export function HistoryView() {
   const me = useAuth((s) => s.me);
   const doLogout = useAuth((s) => s.logout);
-  const meals = useHistory((s) => s.meals);
-  const loading = useHistory((s) => s.loading);
-  const loadingMore = useHistory((s) => s.loadingMore);
-  const hasMore = useHistory((s) => s.hasMore);
-  const error = useHistory((s) => s.error);
   const range = useHistory((s) => s.range);
+  const cache = useHistory((s) => s.cache);
   const setRange = useHistory((s) => s.setRange);
-  const load = useHistory((s) => s.load);
-  const loadMore = useHistory((s) => s.loadMore);
+  const ensureRange = useHistory((s) => s.ensureRange);
   const confirm = useConfirm((s) => s.confirm);
   const locked = useCart((s) => s.locked);
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  // 记录切 Tab 的方向（1: 向左翻到更早范围, -1: 向右翻回前面范围），用于驱动页面物理翻页滑动动效
-  const [direction, setDirection] = useState<number>(1);
+  // 当前激活的 tab 索引 (0: all, 1: 7d, 2: 30d, 3: 90d)
+  const activeIndex = RANGE_OPTIONS.findIndex((o) => o.key === range);
 
-  const changeRange = (newKey: typeof range) => {
-    if (newKey === range) return;
-    const curIdx = RANGE_OPTIONS.findIndex((o) => o.key === range);
-    const nextIdx = RANGE_OPTIONS.findIndex((o) => o.key === newKey);
-    const dir = nextIdx > curIdx ? 1 : -1;
-    setDirection(dir);
+  // 跟踪跟手水平拖动的实时像素位移
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [, startTransition] = useTransition();
+
+  const touchStateRef = useRef<{
+    startX: number;
+    startY: number;
+    startTime: number;
+    width: number;
+    isHoriz: boolean | null;
+    currentOffset: number;
+  } | null>(null);
+
+  // 首屏加载激活项
+  useEffect(() => {
+    void ensureRange(range);
+  }, [range, ensureRange]);
+
+  // 锁单重拉当前
+  useEffect(() => {
+    if (locked) void ensureRange(range, true);
+  }, [locked, range, ensureRange]);
+
+  // 点击胶囊切换
+  const handleSelectTab = (newRange: HistoryRange) => {
+    if (newRange === range) return;
     haptic(6);
-    // 切换瞬间立刻发起异步加载与骨架屏，绝不滞后
-    setRange(newKey);
+    setRange(newRange);
   };
 
-  // 页面级横滑手势（Swipe Left / Right）流畅切换时间段 Tab
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const isHorizontalSwipeRef = useRef<boolean | null>(null);
-
+  // ── 跟手拖动核心事件处理 ──────────────────────────────────────────
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
-    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
-    isHorizontalSwipeRef.current = null;
+    const width = containerRef.current?.offsetWidth || window.innerWidth;
+    touchStateRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      startTime: performance.now(),
+      width,
+      isHoriz: null,
+      currentOffset: 0,
+    };
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || isHorizontalSwipeRef.current === false) return;
+    const state = touchStateRef.current;
+    if (!state) return;
 
     const t = e.touches[0];
-    const dx = t.clientX - touchStartRef.current.x;
-    const dy = t.clientY - touchStartRef.current.y;
+    const dx = t.clientX - state.startX;
+    const dy = t.clientY - state.startY;
 
-    // 当位移超过 10px 时立即锁定主方向：防误触保护
-    if (isHorizontalSwipeRef.current === null) {
-      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-        // 如果垂直滚屏位移明显大于水平位移，锁定为正常看订单上下滚屏，彻底放弃横滑触发
-        if (Math.abs(dy) >= Math.abs(dx) * 1.2) {
-          isHorizontalSwipeRef.current = false;
+    // 1. 初步裁决滑动方向（主方向锁定）
+    if (state.isHoriz === null) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        if (Math.abs(dy) >= Math.abs(dx) * 1.15) {
+          state.isHoriz = false; // 正常垂直上下翻看小票
+          return;
         } else {
-          isHorizontalSwipeRef.current = true;
+          state.isHoriz = true; // 水平跟手翻页
+          setIsDragging(true);
         }
+      } else {
+        return;
       }
     }
+
+    if (!state.isHoriz) return;
+
+    // 2. 边缘阻尼弹性计算
+    let effectiveDx = dx;
+    if (
+      (activeIndex === 0 && dx > 0) ||
+      (activeIndex === RANGE_OPTIONS.length - 1 && dx < 0)
+    ) {
+      effectiveDx = dx * 0.32; // 触及两端时的物理阻尼
+    }
+
+    // 3. 即刻预取：当手指发生有效横拖的第一瞬间，立即拉取目标相邻页数据
+    if (dx < -15 && activeIndex < RANGE_OPTIONS.length - 1) {
+      const nextKey = RANGE_OPTIONS[activeIndex + 1].key;
+      void ensureRange(nextKey);
+    } else if (dx > 15 && activeIndex > 0) {
+      const prevKey = RANGE_OPTIONS[activeIndex - 1].key;
+      void ensureRange(prevKey);
+    }
+
+    state.currentOffset = effectiveDx;
+    startTransition(() => {
+      setDragOffset(effectiveDx);
+    });
   };
 
-  const onTouchEnd = (e: React.TouchEvent) => {
-    // 只有在明确被判定为看订单的垂直滚动时才忽略；未锁定时允许通过终点位移综合裁决
-    if (!touchStartRef.current || isHorizontalSwipeRef.current === false) {
-      touchStartRef.current = null;
-      isHorizontalSwipeRef.current = null;
-      return;
-    }
+  const onTouchEnd = () => {
+    const state = touchStateRef.current;
+    if (!state) return;
 
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStartRef.current.x;
-    const dy = t.clientY - touchStartRef.current.y;
-    const dt = Date.now() - touchStartRef.current.time;
+    if (state.isHoriz) {
+      const dt = performance.now() - state.startTime;
+      const dx = state.currentOffset;
+      const vx = dx / Math.max(1, dt); // 瞬时滑动速度
+      const width = state.width;
 
-    touchStartRef.current = null;
-    isHorizontalSwipeRef.current = null;
+      let targetIndex = activeIndex;
 
-    // 滑动有效判定：横向位移超过 35px，横向位移明显大于纵向，且时长在 600ms 内
-    if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.1 && dt < 600) {
-      const curIndex = RANGE_OPTIONS.findIndex((o) => o.key === range);
-      if (dx < 0 && curIndex < RANGE_OPTIONS.length - 1) {
-        // 左滑 -> 向左翻页到下一个时间范围（全部 -> 近7天 -> 近1月 -> 近3月）
-        changeRange(RANGE_OPTIONS[curIndex + 1].key);
-      } else if (dx > 0 && curIndex > 0) {
-        // 右滑 -> 向右翻页到上一个时间范围
-        changeRange(RANGE_OPTIONS[curIndex - 1].key);
+      // 判定切换成立：滑动距离超过视口 20%，或甩动手势速度足够快
+      if (dx < -width * 0.2 || (vx < -0.32 && dx < -20)) {
+        if (activeIndex < RANGE_OPTIONS.length - 1) {
+          targetIndex = activeIndex + 1;
+        }
+      } else if (dx > width * 0.2 || (vx > 0.32 && dx > 20)) {
+        if (activeIndex > 0) {
+          targetIndex = activeIndex - 1;
+        }
+      }
+
+      if (targetIndex !== activeIndex) {
+        haptic(8);
+        setRange(RANGE_OPTIONS[targetIndex].key);
       }
     }
+
+    setIsDragging(false);
+    setDragOffset(0);
+    touchStateRef.current = null;
   };
 
   const onTouchCancel = () => {
-    touchStartRef.current = null;
-    isHorizontalSwipeRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
+    touchStateRef.current = null;
   };
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // 锁单会在服务端归档出一条新记录，此时重拉一次
-  useEffect(() => {
-    if (locked) void load();
-  }, [locked, load]);
-
-  // 触底自动触发下一页流式懒加载
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          void loadMore();
-        }
-      },
-      { rootMargin: "300px" },
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  const currentBucket = cache[range];
 
   return (
     <div
       id="history-view"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchCancel}
-      style={{ touchAction: "pan-y", overscrollBehaviorX: "none" }}
-      className="px-4 pt-4 min-h-[calc(100dvh-3.5rem)]"
+      className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden bg-paper select-none"
     >
-      {/* 顶部吸顶栏：下滑滚动时标题栏与时间筛选 Tab 常驻顶部，毛玻璃穿透 */}
-      <header className="sticky top-0 z-20 -mx-4 -mt-4 bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg hairline-b">
+      {/* ── 固定顶部栏：标题、餐数统计、退出登录、时间跨度筛选 ─────────────── */}
+      <header className="z-20 shrink-0 border-b border-line bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-[22px] tracking-wider text-ink">历史订单</h1>
-            {/* 恒定高度容器，彻底消除切 Tab 时高度塌陷引发的页面抖动跳跃 */}
             <div className="mt-1 min-h-[18px]">
-              {loading && meals.length === 0 ? (
+              {currentBucket.loading && currentBucket.meals.length === 0 ? (
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <span className="size-1.5 rounded-full bg-accent animate-pulse" />
                   <span>正在整理餐单小票…</span>
                 </div>
-              ) : meals.length > 0 ? (
+              ) : currentBucket.meals.length > 0 ? (
                 <p className="text-[11px] text-ink-3">
                   {range === "all" ? (
                     <>
-                      共 <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
+                      共 <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length}</span> 餐
                     </>
                   ) : (
                     <>
                       {RANGE_OPTIONS.find((o) => o.key === range)?.label} ·{" "}
-                      <span className="tabular-nums font-medium text-ink-2">{meals.length}</span> 餐
+                      <span className="tabular-nums font-medium text-ink-2">{currentBucket.meals.length}</span> 餐
                     </>
                   )}
-                  {hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
+                  {currentBucket.hasMore && <span className="ml-1 text-ink-3">（下滑加载更多）</span>}
                 </p>
               ) : (
                 <p className="text-[11px] text-ink-3">暂无记录</p>
               )}
             </div>
           </div>
+
           {me && (
             <button
               type="button"
@@ -204,7 +234,7 @@ export function HistoryView() {
           )}
         </div>
 
-        {/* 顶部时间跨度筛选：与首页抽菜分类一致的 rounded-full 独立胶囊形态 */}
+        {/* 顶部时间跨度胶囊 */}
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
           {RANGE_OPTIONS.map((opt) => {
             const active = range === opt.key;
@@ -212,9 +242,9 @@ export function HistoryView() {
               <button
                 key={opt.key}
                 type="button"
-                onClick={() => changeRange(opt.key)}
+                onClick={() => handleSelectTab(opt.key)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
+                  "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition-all duration-200",
                   active
                     ? "border-accent bg-accent font-medium text-white shadow-2xs"
                     : "border-line bg-card text-ink-2 active:bg-paper",
@@ -227,66 +257,119 @@ export function HistoryView() {
         </div>
       </header>
 
-      {/* 物理翻页滑屏动效容器：横滑或点Tab时，具有明确的左右推入翻动质感；切换瞬间立即派发异步Loading */}
-      <div className="relative overflow-hidden min-h-[420px]">
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-          <motion.div
-            key={range}
-            custom={direction}
-            variants={{
-              enter: (d: number) => ({ x: d > 0 ? 80 : -80, opacity: 0 }),
-              center: { x: 0, opacity: 1 },
-              exit: (d: number) => ({ x: d > 0 ? -80 : 80, opacity: 0 }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ type: "spring", stiffness: 440, damping: 38, mass: 0.8 }}
-            className="w-full"
-          >
-            {/* 优雅的小票骨架屏：首屏加载或切换筛选时呈现拟真小票轮廓与微光微动效 */}
-            {loading && meals.length === 0 && (
-              <div className="mt-4 flex flex-col gap-3 pb-4">
-                <MealCardSkeleton />
-                <MealCardSkeleton />
-              </div>
-            )}
-            {error && !loading && <Placeholder text={error} retry={load} />}
-            {!loading && !error && meals.length === 0 && (
-              <Placeholder
-                text={range === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === range)?.label}暂无记录`}
-                hint={range === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
+      {/* ── 跟手 ViewPager 轨道：支持拖拽到一半实时露出一半相邻页面 ──────────────── */}
+      <div
+        ref={containerRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchCancel}
+        className="relative flex-1 w-full overflow-hidden touch-pan-y"
+      >
+        <div
+          ref={trackRef}
+          style={{
+            transform: `translate3d(calc(${-activeIndex * 100}% + ${dragOffset}px), 0, 0)`,
+            transition: isDragging ? "none" : "transform 320ms cubic-bezier(0.16, 1, 0.3, 1)",
+            width: `${RANGE_OPTIONS.length * 100}%`,
+          }}
+          className="flex h-full will-change-transform"
+        >
+          {RANGE_OPTIONS.map((opt) => (
+            <div key={opt.key} className="h-full w-full flex-1 overflow-hidden">
+              <HistoryTabPane
+                rangeKey={opt.key}
+                data={cache[opt.key]}
+                canDeleteRecord={canDelete(me)}
               />
-            )}
-
-            <div className="mt-4 flex flex-col gap-3 pb-4">
-              {meals.map((m) => (
-                <MealCard key={m.id} meal={m} canDelete={canDelete(me)} />
-              ))}
             </div>
-
-            {/* 底部触底哨兵 & 加载指示器 */}
-            {hasMore && (
-              <div ref={sentinelRef} className="flex items-center justify-center py-4">
-                {loadingMore ? (
-                  <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
-                    <SpinnerGap size={14} className="animate-spin text-accent" />
-                    <span>加载更多历史订单…</span>
-                  </div>
-                ) : (
-                  <span className="h-4 w-full" aria-hidden="true" />
-                )}
-              </div>
-            )}
-
-            {!hasMore && meals.length >= 15 && (
-              <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
-                — 已展示全部历史订单 —
-              </p>
-            )}
-          </motion.div>
-        </AnimatePresence>
+          ))}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** 单个时间段 Tab 的独立滚动页面 */
+function HistoryTabPane({
+  rangeKey,
+  data,
+  canDeleteRecord,
+}: {
+  rangeKey: HistoryRange;
+  data: RangeData;
+  canDeleteRecord: boolean;
+}) {
+  const loadMoreForRange = useHistory((s) => s.loadMoreForRange);
+  const ensureRange = useHistory((s) => s.ensureRange);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // 触底流式翻页加载
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !data.hasMore || data.loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMoreForRange(rangeKey);
+        }
+      },
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [data.hasMore, data.loadingMore, rangeKey, loadMoreForRange]);
+
+  const { meals, loading, loadingMore, hasMore, error, initialized } = data;
+
+  return (
+    <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
+      {/* 正在加载骨架屏 */}
+      {loading && meals.length === 0 && (
+        <div className="flex flex-col gap-3 pb-4">
+          <MealCardSkeleton />
+          <MealCardSkeleton />
+        </div>
+      )}
+
+      {error && !loading && (
+        <Placeholder text={error} retry={() => void ensureRange(rangeKey, true)} />
+      )}
+
+      {initialized && !loading && !error && meals.length === 0 && (
+        <Placeholder
+          text={rangeKey === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === rangeKey)?.label}暂无记录`}
+          hint={rangeKey === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
+        />
+      )}
+
+      <div className="flex flex-col gap-3 pb-4">
+        {meals.map((m) => (
+          <MealCard key={m.id} meal={m} canDelete={canDeleteRecord} />
+        ))}
+      </div>
+
+      {/* 底部触底指示器 */}
+      {hasMore && (
+        <div ref={sentinelRef} className="flex items-center justify-center py-4">
+          {loadingMore ? (
+            <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
+              <SpinnerGap size={14} className="animate-spin text-accent" />
+              <span>加载更多历史订单…</span>
+            </div>
+          ) : (
+            <span className="h-4 w-full" aria-hidden="true" />
+          )}
+        </div>
+      )}
+
+      {!hasMore && meals.length >= 15 && (
+        <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
+          — 已展示全部历史订单 —
+        </p>
+      )}
     </div>
   );
 }
@@ -327,7 +410,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
   const { day, time } = formatDate(meal.orderedAt);
 
   return (
-    <article className="rounded-card border border-line bg-card px-4 pt-4 pb-3">
+    <article className="rounded-card border border-line bg-card px-4 pt-4 pb-3 shadow-2xs">
       {/* 小票抬头 */}
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
@@ -432,7 +515,7 @@ const FOLD_AT = 3;
 
 /**
  * 历史小票骨架屏：首屏或切 Tab 加载时 1:1 模拟真实小票的物理排版
- * 带有纸墨微光（Shimmer）动画，彻底告别粗暴的空框或“读取中”死文字
+ * 带有纸墨微光（Shimmer）动画
  */
 function MealCardSkeleton() {
   return (

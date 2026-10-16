@@ -21,6 +21,8 @@ export function MenuView() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState<SubId>(sections[0].key as SubId);
   const lockRef = useRef(0);
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const animTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searching = q.trim().length > 0;
 
   /** 每个小类点了几「样」菜（去重后的品种数，不是份数）。
@@ -63,27 +65,53 @@ export function MenuView() {
 
   const scrollToSection = useCallback((key: string) => {
     const el = document.getElementById(`sec-${key}`);
+    const container = listContainerRef.current;
     if (!el) return false;
+
     const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 92);
     const startY = window.scrollY;
     const diff = targetY - startY;
 
     if (Math.abs(diff) < 4) return true;
 
-    // 业界顶级双栏点餐架构：两段式硬件缓冲平滑（Jump-Cut + GPU Soft Glide）
-    // 1. 若跨度很大（> 260px），瞬间瞬移至距目标仅 220px 处，避免长距离飞越引发的卡顿与重排掉帧；
-    // 2. 剩下 220px 由 GPU 合成线程在 120ms 内极速平滑推进停靠，视觉极具物理惯性与丝滑感，绝不生硬！
-    const MAX_GLIDE = 160;
-    if (Math.abs(diff) > MAX_GLIDE) {
-      const intermediateY = diff > 0 ? targetY - MAX_GLIDE : targetY + MAX_GLIDE;
-      window.scrollTo({ top: intermediateY, behavior: "instant" });
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: targetY, behavior: "smooth" });
-      });
+    // 清理先前未结束的动画状态
+    if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current);
+
+    if (!container) {
+      window.scrollTo({ top: targetY, behavior: "instant" });
       return true;
     }
 
-    window.scrollTo({ top: targetY, behavior: "smooth" });
+    // 业界顶级连续平滑滑屏：GPU 惯性位移补间（Kinetic Displacement Glide）
+    // 视觉行程约束为大半屏（~0.72vh），既保证极其连续自然的物理减速滑入感，又杜绝数千像素满屏残影与掉帧
+    const maxVisualTravel = Math.min(Math.abs(diff), window.innerHeight * 0.72);
+    const offsetFrom = diff > 0 ? maxVisualTravel : -maxVisualTravel;
+
+    // 1. 瞬间定位真实滚动位置
+    window.scrollTo({ top: targetY, behavior: "instant" });
+
+    // 2. 同一帧施加反向物理偏移，抵消瞬变，画面连贯自然
+    container.style.transition = "none";
+    container.style.transform = `translate3d(0, ${offsetFrom}px, 0)`;
+    container.style.willChange = "transform";
+
+    // 3. 下一帧启动显卡硬件加速的连续减速滑入（320ms EaseOutQuart 物理阻尼）
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!container) return;
+        container.style.transition = "transform 320ms cubic-bezier(0.16, 1, 0.3, 1)";
+        container.style.transform = "translate3d(0, 0, 0)";
+      });
+    });
+
+    animTimeoutRef.current = setTimeout(() => {
+      if (container) {
+        container.style.transition = "";
+        container.style.transform = "";
+        container.style.willChange = "";
+      }
+    }, 360);
+
     return true;
   }, []);
 
@@ -234,9 +262,13 @@ export function MenuView() {
               )}
             </div>
           ) : (
-            <div className="px-3.5 pb-24">
+            <div ref={listContainerRef} className="px-3.5 pb-24">
               {sections.map((s) => (
-                <section key={s.key} id={`sec-${s.key}`} className="scroll-mt-24 pt-5">
+                <section
+                  key={s.key}
+                  id={`sec-${s.key}`}
+                  className="scroll-mt-24 pt-5 [content-visibility:auto] [contain-intrinsic-size:1px_360px]"
+                >
                   <div className="mb-2.5 flex items-baseline gap-2">
                     <h2 className="font-display text-[15px] tracking-[0.2em] text-ink">
                       {s.subName}
