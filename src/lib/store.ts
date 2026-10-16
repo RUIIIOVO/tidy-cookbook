@@ -4,22 +4,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { normalizeDishId } from "@/data/dishes";
 import { useAuth } from "./auth-store";
+import { mealDayOf } from "./meal-time";
+import type { BoughtMark, CartItem, CartOp, Meal, MealItem, Snapshot } from "./protocol";
 
-export type CartItem = {
-  dishId: string;
-  qty: number;
-  addedAt: number;
-  /** 第一个点这道菜的人，服务端快照为准；老数据可能没有 */
-  addedBy?: string | null;
-};
-
-export type Op =
-  | { type: "set"; dishId: string; qty: number; ts: number }
-  | { type: "removeMany"; dishIds: string[]; ts: number }
-  | { type: "clear"; ts: number }
-  | { type: "lock"; ts: number }
-  | { type: "unlock"; ts: number }
-  | { type: "buy"; name: string; done: boolean; ts: number };
+export type { BoughtMark, CartItem, Meal, MealItem, Snapshot };
+/** 点菜单操作（可离线排队），即协议里的 CartOp */
+export type Op = CartOp;
 
 /** sync.ts 注册进来的发送钩子。store 不反向 import sync，避免循环依赖。 */
 let sink: (() => void) | null = null;
@@ -28,10 +18,14 @@ export function setOpSink(fn: (() => void) | null) {
 }
 
 type CartState = {
+  /** 服务端认定的餐饮日；快照到达前用本机时钟估一个 */
+  today: string;
+  /** 点菜单 */
   items: CartItem[];
-  locked: boolean;
-  /** 买菜清单里已勾选（已买）的食材名；和点菜单一样走服务端同步，全员共享 */
-  bought: string[];
+  /** 待吃订单（mealDate >= today），随快照实时同步 */
+  meals: Meal[];
+  /** 买菜清单里已勾选的 (订单, 食材) */
+  bought: BoughtMark[];
   /** 菜品历史累计点单次数：dishId -> count，O(1) 极速读取 */
   stats: Record<string, number>;
   /** 还没送到服务端的操作 */
@@ -45,10 +39,6 @@ type CartState = {
   remove: (dishId: string) => void;
   removeMany: (ids: string[]) => void;
   clear: () => void;
-  lock: () => void;
-  unlock: () => void;
-  /** 勾选 / 取消勾选一项食材。不受锁定限制：下单之后才是买菜的时候 */
-  buy: (name: string, done: boolean) => void;
   qtyOf: (dishId: string) => number;
   count: () => number;
 
@@ -56,12 +46,9 @@ type CartState = {
   enqueue: (op: Op) => void;
   takeOutbox: () => Op[];
   requeueInflight: () => void;
-  applySnapshot: (
-    items: CartItem[],
-    locked: boolean,
-    bought: string[],
-    stats?: Record<string, number>,
-  ) => void;
+  applySnapshot: (snap: Snapshot) => void;
+  /** 订单类操作成功后，乐观地更新买菜勾选（失败时回滚用） */
+  setBought: (bought: BoughtMark[]) => void;
   setOnDenied: (fn: (reason: string) => void) => void;
 };
 
@@ -74,6 +61,16 @@ const fixOp = (op: Op): Op => {
   return op;
 };
 
+/** 只保留点菜单操作；旧版本遗留的 lock / unlock / buy 直接丢弃 */
+const keepCartOps = (ops: unknown): Op[] =>
+  (Array.isArray(ops) ? ops : []).filter(
+    (o): o is Op =>
+      !!o && (o.type === "set" || o.type === "removeMany" || o.type === "clear"),
+  );
+
+const isMark = (m: unknown): m is BoughtMark =>
+  !!m && typeof (m as BoughtMark).mealId === "string" && typeof (m as BoughtMark).name === "string";
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => {
@@ -84,8 +81,9 @@ export const useCart = create<CartState>()(
       };
 
       return {
+        today: mealDayOf(Date.now()),
         items: [],
-        locked: false,
+        meals: [],
         bought: [],
         stats: {},
         outbox: [],
@@ -93,9 +91,9 @@ export const useCart = create<CartState>()(
 
         add: (dishId, qty = 1) => {
           const s = get();
-          if (s.locked) return;
           const cur = s.items.find((i) => i.dishId === dishId)?.qty ?? 0;
           const next = cur + qty;
+          const me = useAuth.getState().me;
           set({
             items: cur
               ? s.items.map((i) => (i.dishId === dishId ? { ...i, qty: next } : i))
@@ -105,7 +103,8 @@ export const useCart = create<CartState>()(
                     dishId,
                     qty: next,
                     addedAt: Date.now(),
-                    addedBy: useAuth.getState().me?.displayName ?? null,
+                    addedById: me?.id ?? null,
+                    addedBy: me?.displayName ?? null,
                   },
                 ],
           });
@@ -134,29 +133,8 @@ export const useCart = create<CartState>()(
         },
 
         clear: () => {
-          set({ items: [], locked: false, bought: [] });
+          set({ items: [] });
           emit({ type: "clear", ts: Date.now() });
-        },
-
-        lock: () => {
-          set({ locked: true });
-          emit({ type: "lock", ts: Date.now() });
-        },
-
-        unlock: () => {
-          set({ locked: false });
-          emit({ type: "unlock", ts: Date.now() });
-        },
-
-        buy: (name, done) => {
-          set((s) => ({
-            bought: done
-              ? s.bought.includes(name)
-                ? s.bought
-                : [...s.bought, name]
-              : s.bought.filter((n) => n !== name),
-          }));
-          emit({ type: "buy", name, done, ts: Date.now() });
         },
 
         qtyOf: (dishId) => get().items.find((i) => i.dishId === dishId)?.qty ?? 0,
@@ -178,33 +156,42 @@ export const useCart = create<CartState>()(
           set((s) => ({ outbox: [...s.inflight, ...s.outbox], inflight: [] })),
 
         /** 服务端为准。inflight 到此确认完成。 */
-        applySnapshot: (items, locked, bought, stats) =>
+        applySnapshot: (snap) =>
           set((s) => ({
-            items: items.map(fixItem),
-            locked,
-            bought,
-            stats: stats ?? s.stats,
+            today: snap.today || s.today,
+            items: (snap.items ?? []).map(fixItem),
+            meals: snap.meals ?? [],
+            bought: snap.bought ?? [],
+            stats: snap.stats ?? s.stats,
             inflight: [],
           })),
+
+        setBought: (bought) => set({ bought }),
 
         setOnDenied: (fn) => set({ onDenied: fn }),
       };
     },
     {
       name: "caipu-cart",
-      version: 2,
+      version: 3,
       // onDenied 是函数，不能进 localStorage
       partialize: (s) => ({
         items: s.items,
-        locked: s.locked,
+        meals: s.meals,
         bought: s.bought,
         stats: s.stats,
         outbox: s.outbox,
         inflight: s.inflight,
       }),
+      // v3：去掉锁单。旧的 bought 是食材名数组、旧 outbox 里有 lock/unlock/buy，都丢掉
       migrate: (old) => {
         const o = (old ?? {}) as Partial<CartState>;
-        return { ...o, outbox: [], inflight: [] } as CartState;
+        return {
+          items: o.items ?? [],
+          stats: o.stats ?? {},
+          outbox: keepCartOps(o.outbox),
+          inflight: keepCartOps(o.inflight),
+        } as CartState;
       },
       // 每次从 localStorage 读出来都规整一遍，不依赖版本号
       merge: (persisted, current) => {
@@ -213,10 +200,11 @@ export const useCart = create<CartState>()(
           ...current,
           ...p,
           items: (p.items ?? current.items).map(fixItem),
-          bought: p.bought ?? [],
+          meals: Array.isArray(p.meals) ? p.meals : [],
+          bought: Array.isArray(p.bought) ? p.bought.filter(isMark) : [],
           stats: p.stats ?? {},
-          outbox: (p.outbox ?? []).map(fixOp),
-          inflight: (p.inflight ?? []).map(fixOp),
+          outbox: keepCartOps(p.outbox).map(fixOp),
+          inflight: keepCartOps(p.inflight).map(fixOp),
         };
       },
     },

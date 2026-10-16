@@ -2,14 +2,12 @@
 
 import { create } from "zustand";
 import { authHeaders } from "./auth-store";
+import { deleteMeal } from "./meal-actions";
+import { addDays } from "./meal-time";
+import type { Meal, MealItem } from "./protocol";
+import { useCart } from "./store";
 
-export type MealItem = { dishId: string; qty: number; addedBy?: string | null };
-export type Meal = {
-  id: string;
-  orderedAt: number;
-  orderedBy: string | null;
-  items: MealItem[];
-};
+export type { Meal, MealItem };
 
 export type HistoryRange = "all" | "7d" | "30d" | "90d";
 
@@ -20,11 +18,10 @@ export const RANGE_OPTIONS: { key: HistoryRange; label: string; days: number | n
   { key: "90d", label: "近 3 个月", days: 90 },
 ];
 
-export function getSinceTimestamp(range: HistoryRange): number | null {
-  if (range === "7d") return Date.now() - 7 * 86400_000;
-  if (range === "30d") return Date.now() - 30 * 86400_000;
-  if (range === "90d") return Date.now() - 90 * 86400_000;
-  return null;
+/** 范围起点（就餐日期，'YYYY-MM-DD'），以服务端认定的「今天」为准；「全部」返回 null */
+export function getSinceDate(range: HistoryRange): string | null {
+  const days = RANGE_OPTIONS.find((o) => o.key === range)?.days;
+  return days ? addDays(useCart.getState().today, -days) : null;
 }
 
 export type RangeData = {
@@ -32,7 +29,7 @@ export type RangeData = {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  nextCursor: number | null;
+  nextCursor: string | null;
   error: string | null;
   initialized: boolean;
 };
@@ -54,6 +51,8 @@ type HistoryState = {
   ensureRange: (range: HistoryRange, force?: boolean) => Promise<void>;
   loadMoreForRange: (range: HistoryRange) => Promise<void>;
   remove: (id: string) => Promise<boolean>;
+  /** 订单有变动（补录、改已吃订单等）后：所有范围标记为未初始化，并强制重拉当前范围 */
+  invalidateAll: () => Promise<void>;
 
   // 兼容老调用方访问当前 range 数据
   meals: Meal[];
@@ -116,9 +115,9 @@ export const useHistory = create<HistoryState>()((set, get) => {
       set(syncConvenience(nextCache, get().range));
 
       try {
-        const since = getSinceTimestamp(range);
+        const since = getSinceDate(range);
         const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        if (since !== null) params.set("since", String(since));
+        if (since !== null) params.set("since", since);
 
         const r = await fetch(`/api/history?${params.toString()}`, {
           credentials: "same-origin",
@@ -127,7 +126,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
         if (!r.ok) throw new Error(String(r.status));
         const data = (await r.json()) as {
           meals: Meal[];
-          nextCursor: number | null;
+          nextCursor: string | null;
           hasMore: boolean;
         };
 
@@ -171,12 +170,13 @@ export const useHistory = create<HistoryState>()((set, get) => {
       set(syncConvenience(nextCache, get().range));
 
       try {
-        const since = getSinceTimestamp(range);
+        const since = getSinceDate(range);
+        // before 是服务端给的不透明游标，原样回传
         const params = new URLSearchParams({
           limit: String(PAGE_SIZE),
-          before: String(bucket.nextCursor),
+          before: bucket.nextCursor,
         });
-        if (since !== null) params.set("since", String(since));
+        if (since !== null) params.set("since", since);
 
         const r = await fetch(`/api/history?${params.toString()}`, {
           credentials: "same-origin",
@@ -185,7 +185,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
         if (!r.ok) throw new Error(String(r.status));
         const data = (await r.json()) as {
           meals: Meal[];
-          nextCursor: number | null;
+          nextCursor: string | null;
           hasMore: boolean;
         };
 
@@ -227,18 +227,28 @@ export const useHistory = create<HistoryState>()((set, get) => {
       };
       set(syncConvenience(updatedCache, get().range));
 
-      try {
-        const r = await fetch(`/api/history?id=${encodeURIComponent(id)}`, {
-          method: "DELETE",
-          credentials: "same-origin",
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(String(r.status));
-        return true;
-      } catch {
-        set(syncConvenience(prevCache, get().range));
-        return false;
-      }
+      const ack = await deleteMeal({ mealId: id });
+      if (ack.ok) return true;
+      set(syncConvenience(prevCache, get().range));
+      return false;
+    },
+
+    invalidateAll: async () => {
+      const cleared = Object.fromEntries(
+        Object.entries(get().cache).map(([k, v]) => [k, { ...v, initialized: false }]),
+      ) as Record<HistoryRange, RangeData>;
+      set(syncConvenience(cleared, get().range));
+      await get().ensureRange(get().range, true);
     },
   };
+});
+
+// 「今天」变了（凌晨 4 点切日）：昨天的待吃订单变成已吃，历史页要重拉
+let lastToday = useCart.getState().today;
+useCart.subscribe((s) => {
+  if (s.today === lastToday) return;
+  lastToday = s.today;
+  // 历史页还没打开过就不用拉
+  if (!Object.values(useHistory.getState().cache).some((b) => b.initialized)) return;
+  void useHistory.getState().invalidateAll();
 });

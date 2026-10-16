@@ -213,7 +213,6 @@ export function DrawView() {
   const isAnimatingRef = useRef(false);
 
   const add = useCart((s) => s.add);
-  const locked = useCart((s) => s.locked);
   const openSheet = useDishSheet((s) => s.open);
 
   const pool = useMemo(
@@ -309,10 +308,6 @@ export function DrawView() {
 
   const onAddAndContinue = useGuard(() => {
     if (!topCard || topCard.type !== "dish") return;
-    if (locked) {
-      toast("这一餐已经定了，想改先点「重新编辑」");
-      return;
-    }
     haptic(25);
     add(topCard.dish.id);
     toast(`已加入 · ${topCard.dish.name}`);

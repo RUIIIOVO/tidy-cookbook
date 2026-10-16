@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, CaretDown, SpinnerGap, Trash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, CaretDown, PencilSimple, SpinnerGap, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -14,6 +14,7 @@ import {
   type Meal,
   type RangeData,
 } from "@/lib/history-store";
+import { mealTitle } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
@@ -21,6 +22,8 @@ import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
 import { DishThumb } from "./dish-thumb";
+import { openMealEdit } from "./meal-edit-sheet";
+import { PendingMeals } from "./pending-meals";
 
 export function HistoryView() {
   const me = useAuth((s) => s.me);
@@ -30,7 +33,6 @@ export function HistoryView() {
   const setRange = useHistory((s) => s.setRange);
   const ensureRange = useHistory((s) => s.ensureRange);
   const confirm = useConfirm((s) => s.confirm);
-  const locked = useCart((s) => s.locked);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -56,11 +58,6 @@ export function HistoryView() {
   useEffect(() => {
     void ensureRange(range);
   }, [range, ensureRange]);
-
-  // 锁单重拉当前
-  useEffect(() => {
-    if (locked) void ensureRange(range, true);
-  }, [locked, range, ensureRange]);
 
   // 点击胶囊切换
   const handleSelectTab = (newRange: HistoryRange) => {
@@ -326,6 +323,9 @@ function HistoryTabPane({
 
   return (
     <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
+      {/* 待吃订单 + 买菜清单：只在「全部」页签里挂一份（含全局唯一的订单编辑面板） */}
+      {rangeKey === "all" && <PendingMeals />}
+
       {/* 正在加载骨架屏 */}
       {loading && meals.length === 0 && (
         <div className="flex flex-col gap-3 pb-4">
@@ -341,7 +341,7 @@ function HistoryTabPane({
       {initialized && !loading && !error && meals.length === 0 && (
         <Placeholder
           text={rangeKey === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === rangeKey)?.label}暂无记录`}
-          hint={rangeKey === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
+          hint={rangeKey === "all" ? "下单后吃过的会归档到这里" : "可以切换到「全部」查看更早的订单"}
         />
       )}
 
@@ -378,7 +378,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
   const removeMeal = useHistory((s) => s.remove);
   const confirm = useConfirm((s) => s.confirm);
   const add = useCart((s) => s.add);
-  const locked = useCart((s) => s.locked);
+  const today = useCart((s) => s.today);
   const openSheet = useDishSheet((s) => s.open);
 
   const rows = meal.items
@@ -388,10 +388,6 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
   const total = meal.items.reduce((n, i) => n + i.qty, 0);
 
   const again = useGuard(() => {
-    if (locked) {
-      toast("当前这一餐已经定了，想改先点「重新编辑」");
-      return;
-    }
     haptic();
     for (const { i } of rows) add(i.dishId, i.qty);
     toast(`已把这 ${rows.length} 道菜加回点菜单`);
@@ -407,7 +403,8 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
   const [open, setOpen] = useState(false);
   const shown = open ? rows : rows.slice(0, FOLD_AT);
   const hidden = rows.length - FOLD_AT;
-  const { day, time } = formatDate(meal.orderedAt);
+  const { time } = formatDate(meal.orderedAt);
+  const title = mealTitle(meal.mealDate, meal.slot, today);
 
   return (
     <article className="rounded-card border border-line bg-card px-4 pt-4 pb-3 shadow-2xs">
@@ -415,8 +412,8 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-2">
-            <span className="font-display text-[17px] tracking-wider text-ink">{day}</span>
-            <span className="text-[11px] text-ink-3 tabular-nums">{time}</span>
+            <span className="font-display text-[17px] tracking-wider text-ink">{title}</span>
+            <span className="text-[11px] text-ink-3 tabular-nums">{time} 下单</span>
           </p>
           <p className="mt-1 truncate text-[10.5px] text-ink-3">
             {meal.orderedBy
@@ -429,10 +426,21 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
         {allowed && (
           <button
             type="button"
+            aria-label="修改这一餐"
+            onClick={() => openMealEdit(meal)}
+            className="-mt-1 flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-[11.5px] text-accent transition active:scale-95"
+          >
+            <PencilSimple size={12} weight="bold" />
+            修改
+          </button>
+        )}
+        {allowed && (
+          <button
+            type="button"
             aria-label="删除这一餐"
             onClick={() =>
               confirm({
-                title: `删除 ${day} ${time}\n这一餐的记录？`,
+                title: `删除 ${title}\n这一餐的记录？`,
                 confirmText: "删除",
                 onConfirm: () => {
                   void removeMeal(meal.id).then((ok) => {

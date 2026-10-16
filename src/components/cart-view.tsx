@@ -4,12 +4,12 @@ import { useState } from "react";
 import {
   BookOpen,
   Check,
+  ClockCounterClockwise,
   PencilSimple,
   SealCheck,
   Sparkle,
   Trash,
 } from "@phosphor-icons/react";
-import { ShoppingList } from "./shopping-list";
 import { useConfirm } from "@/lib/confirm-store";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -28,22 +28,31 @@ import { DishThumb } from "./dish-thumb";
 import { CUSTOM_CONFIGS, formatCustomSummary } from "@/data/custom-options";
 import { useCustomStore } from "@/lib/custom-store";
 import { useCustomModal } from "@/lib/custom-modal-store";
+import { OrderConfirmSheet } from "./order-confirm-sheet";
+import { mealDayOf, mealTitle, type Slot } from "@/lib/meal-time";
+import { canDelete, useAuth } from "@/lib/auth-store";
 
 export function CartView() {
   const items = useCart((s) => s.items);
-  const locked = useCart((s) => s.locked);
-  const lock = useCart((s) => s.lock);
-  const unlock = useCart((s) => s.unlock);
+  const today = useCart((s) => s.today);
   const removeMany = useCart((s) => s.removeMany);
   const clear = useCart((s) => s.clear);
   const openSheet = useDishSheet((s) => s.open);
   const openCustom = useCustomModal((s) => s.open);
   const getChoice = useCustomStore((s) => s.getChoice);
   const confirm = useConfirm((s) => s.confirm);
+  const me = useAuth((s) => s.me);
 
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+  const [lastOrder, setLastOrder] = useState<{
+    date: string;
+    slot: Slot;
+    count: number;
+  } | null>(null);
+
   const removeOne = useCart((s) => s.remove);
   const setActiveTab = useTabs((s) => s.setActiveTab);
 
@@ -61,18 +70,60 @@ export function CartView() {
 
   const total = rows.reduce((n, r) => n + r.item.qty, 0);
 
-  // 下单 / 重新编辑会切换底栏按钮，连点时第二下会落到新出现的按钮上，统一挡 800ms
-  const onLock = useGuard(() => {
-    haptic(25);
-    lock();
-    toast("厨神上线！");
-  }, 800);
-  const onUnlock = useGuard(() => {
-    haptic(15);
-    unlock();
-  }, 800);
+  // 最早的 addedAt 所属餐饮日
+  const addedAts = items.map((i) => i.addedAt).filter((t): t is number => typeof t === "number" && t > 0);
+  const earliestAddedAt = addedAts.length > 0 ? Math.min(...addedAts) : null;
+  const earliestDay = earliestAddedAt ? mealDayOf(earliestAddedAt) : null;
+  const isStale = earliestDay !== null && earliestDay < today;
+  const staleDateText = earliestDay ? earliestDay.slice(5).replace("-", "/") : "";
+
+  const openOrderConfirm = useGuard(() => {
+    haptic(10);
+    setOrderSheetOpen(true);
+  }, 400);
+
+  // 又开始点菜了，上一单的「已下单」提示就不再需要；否则之后手动删空点菜单会误显示它
+  if (rows.length > 0 && lastOrder) setLastOrder(null);
 
   if (rows.length === 0) {
+    if (lastOrder) {
+      const orderTitle = mealTitle(lastOrder.date, lastOrder.slot, today);
+      return (
+        <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
+          <p className="font-display text-[18px] tracking-wider text-ink">
+            已下单：{orderTitle} · {lastOrder.count} 道
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
+            订单已生成，可以在历史订单查看或准备买菜清单
+          </p>
+          <div className="mt-6 flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                haptic(6);
+                setActiveTab("history");
+              }}
+              className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
+            >
+              <ClockCounterClockwise size={15} weight="regular" />
+              查看订单
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                haptic(6);
+                setActiveTab("menu");
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
+            >
+              <BookOpen size={15} weight="regular" />
+              接着点下一餐
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
         <p className="font-display text-[18px] tracking-wider text-ink">还没点菜</p>
@@ -117,38 +168,62 @@ export function CartView() {
             <p className="mt-1 text-[11px] text-ink-3">
               共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
               <span className="tabular-nums text-ink-2">{total}</span> 份
-              {locked && <span className="ml-2 text-accent">已确认</span>}
             </p>
           </div>
-          {!locked && (
-            <button
-              type="button"
-              onClick={() => {
-                haptic(6);
-                setSelecting((v) => !v);
-                setPicked([]);
-              }}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
-                selecting
-                  ? "border-accent bg-accent-soft text-accent font-medium"
-                  : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
-              )}
-            >
-              {selecting ? (
-                <>
-                  <Check size={12} weight="bold" />
-                  <span>完成</span>
-                </>
-              ) : (
-                <>
-                  <PencilSimple size={12} weight="regular" />
-                  <span>管理</span>
-                </>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              haptic(6);
+              setSelecting((v) => !v);
+              setPicked([]);
+            }}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95",
+              selecting
+                ? "border-accent bg-accent-soft text-accent font-medium"
+                : "border-line bg-card/80 text-ink-2 hover:border-line-2 shadow-2xs",
+            )}
+          >
+            {selecting ? (
+              <>
+                <Check size={12} weight="bold" />
+                <span>完成</span>
+              </>
+            ) : (
+              <>
+                <PencilSimple size={12} weight="regular" />
+                <span>管理</span>
+              </>
+            )}
+          </button>
         </div>
+
+        {/* 过去日期残留提示：早于 today 时显示 */}
+        {isStale && (
+          <div className="mt-2.5 flex items-center justify-between rounded-lg bg-paper-2 px-3 py-2 text-[11.5px] text-ink-2">
+            <span>这几道是 {staleDateText} 放的</span>
+            {canDelete(me) && (
+              <button
+                type="button"
+                onClick={() => {
+                  confirm({
+                    title: "清空点菜单？",
+                    desc: "确定清空点菜单中所有已选菜品吗？",
+                    confirmText: "清空",
+                    danger: true,
+                    onConfirm: () => {
+                      clear();
+                      toast("点菜单已清空");
+                    },
+                  });
+                }}
+                className="font-medium text-chili transition active:opacity-70"
+              >
+                清空
+              </button>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="mt-4 space-y-5 pb-36">
@@ -177,7 +252,7 @@ export function CartView() {
                     key={dish.id}
                     open={swipedId === dish.id}
                     onOpenChange={(o) => setSwipedId(o ? dish.id : null)}
-                    disabled={locked || selecting}
+                    disabled={selecting}
                     onDelete={() => {
                       haptic(12);
                       removeOne(dish.id);
@@ -185,80 +260,74 @@ export function CartView() {
                       toast(`已移除 · ${dish.name}`);
                     }}
                   >
-                  <div
-                    onClick={() => {
-                      if (selecting) {
-                        haptic(6);
-                        setPicked((p) =>
-                          p.includes(dish.id)
-                            ? p.filter((x) => x !== dish.id)
-                            : [...p, dish.id],
-                        );
-                      } else if (isCustom && !locked) {
-                        openCustom(dish.id);
-                      } else {
-                        openSheet(dish.id);
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 rounded-card border bg-card p-2.5 transition",
-                      on ? "border-accent/40 bg-accent-soft/40" : "border-line",
-                    )}
-                  >
-                    {selecting && (
-                      <span
-                        className={cn(
-                          "grid size-[18px] shrink-0 place-items-center rounded-full border",
-                          on ? "border-accent bg-accent text-white" : "border-line-2",
+                    <div
+                      onClick={() => {
+                        if (selecting) {
+                          haptic(6);
+                          setPicked((p) =>
+                            p.includes(dish.id)
+                              ? p.filter((x) => x !== dish.id)
+                              : [...p, dish.id],
+                          );
+                        } else if (isCustom) {
+                          openCustom(dish.id);
+                        } else {
+                          openSheet(dish.id);
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 rounded-card border bg-card p-2.5 transition",
+                        on ? "border-accent/40 bg-accent-soft/40" : "border-line",
+                      )}
+                    >
+                      {selecting && (
+                        <span
+                          className={cn(
+                            "grid size-[18px] shrink-0 place-items-center rounded-full border",
+                            on ? "border-accent bg-accent text-white" : "border-line-2",
+                          )}
+                        >
+                          {on && <Check size={11} weight="bold" />}
+                        </span>
+                      )}
+                      <DishThumb dish={dish} className="size-[46px] shrink-0 rounded-lg" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="truncate font-display text-[15px] tracking-wide text-ink">
+                            {dish.name}
+                          </h3>
+                          {isCustom && (
+                            <span className="shrink-0 rounded bg-paper-2 px-1.5 py-0.5 text-[9.5px] text-ink-3">
+                              改规格
+                            </span>
+                          )}
+                        </div>
+                        {customSummary.length > 0 && (
+                          <p className="mt-0.5 line-clamp-1 text-[10.5px] leading-tight text-accent">
+                            {customSummary.join(" · ")}
+                          </p>
                         )}
-                      >
-                        {on && <Check size={11} weight="bold" />}
-                      </span>
-                    )}
-                    <DishThumb dish={dish} className="size-[46px] shrink-0 rounded-lg" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="truncate font-display text-[15px] tracking-wide text-ink">
-                          {dish.name}
-                        </h3>
-                        {isCustom && !locked && (
-                          <span className="shrink-0 rounded bg-paper-2 px-1.5 py-0.5 text-[9.5px] text-ink-3">
-                            改规格
-                          </span>
+                        {item.addedBy && (
+                          <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
+                            <Avatar name={formatPersonName(item.addedBy)} />
+                            <span className="truncate">{formatPersonName(item.addedBy)}</span>
+                          </p>
                         )}
                       </div>
-                      {customSummary.length > 0 && (
-                        <p className="mt-0.5 line-clamp-1 text-[10.5px] leading-tight text-accent">
-                          {customSummary.join(" · ")}
-                        </p>
-                      )}
-                      {item.addedBy && (
-                        <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
-                          <Avatar name={formatPersonName(item.addedBy)} />
-                          <span className="truncate">{formatPersonName(item.addedBy)}</span>
-                        </p>
+                      {selecting ? (
+                        <span className="text-[12px] text-ink-3 tabular-nums">
+                          ×{item.qty}
+                        </span>
+                      ) : (
+                        <AddButton dish={dish} confirmRemove />
                       )}
                     </div>
-                    {selecting ? (
-                      <span className="text-[12px] text-ink-3 tabular-nums">
-                        ×{item.qty}
-                      </span>
-                    ) : locked ? (
-                      <span className="text-[13px] text-ink-2 tabular-nums">
-                        ×{item.qty}
-                      </span>
-                    ) : (
-                      <AddButton dish={dish} confirmRemove />
-                    )}
-                  </div>
                   </SwipeRow>
                 );
               })}
             </div>
           </section>
         ))}
-
-        <ShoppingList rows={rows.map((r) => ({ dish: r.dish, qty: r.item.qty }))} />
       </div>
 
       {/* 底部操作条 */}
@@ -286,9 +355,10 @@ export function CartView() {
                   .filter(Boolean)
                   .join("、");
                 confirm({
-                  title: `从这一餐里删掉 ${picked.length} 道？`,
+                  title: `从点菜单里删掉 ${picked.length} 道？`,
                   desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
                   confirmText: "删除",
+                  danger: true,
                   onConfirm: () => {
                     removeMany(picked);
                     toast(`已删除 ${picked.length} 道`);
@@ -303,38 +373,10 @@ export function CartView() {
               删除 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
             </button>
           </div>
-        ) : locked ? (
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onUnlock}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line-2 bg-card py-3 text-[14px] tracking-wide text-ink"
-            >
-              <PencilSimple size={16} weight="regular" />
-              重新编辑
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                confirm({
-                  title: "开始下一餐？",
-                  desc: "这一餐会被清空，已经确认过的记录不受影响。",
-                  confirmText: "清空",
-                  onConfirm: () => {
-                    clear();
-                    toast("清空了，重新点吧");
-                  },
-                })
-              }
-              className="rounded-full bg-accent px-5 py-3 text-[14px] tracking-wide text-white"
-            >
-              下一餐
-            </button>
-          </div>
         ) : (
           <button
             type="button"
-            onClick={onLock}
+            onClick={openOrderConfirm}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.99]"
           >
             <SealCheck size={16} weight="regular" />
@@ -342,6 +384,16 @@ export function CartView() {
           </button>
         )}
       </div>
+
+      {/* 下单确认抽屉 */}
+      <OrderConfirmSheet
+        open={orderSheetOpen}
+        onOpenChange={setOrderSheetOpen}
+        onPlaced={(order) => {
+          setLastOrder(order);
+        }}
+      />
     </div>
   );
 }
+

@@ -20,7 +20,6 @@ export function DishSheet() {
   const close = useDishSheet((s) => s.close);
   const openCustom = useCustomModal((s) => s.open);
   const add = useCart((s) => s.add);
-  const locked = useCart((s) => s.locked);
   const [n, setN] = useState(1);
 
   const dish = dishId ? getDish(dishId) : undefined;
@@ -30,10 +29,6 @@ export function DishSheet() {
   // 抽屉收起动画期间按钮仍可点，挡住二次加入
   const addToCart = useGuard(() => {
     if (!dish) return;
-    if (locked) {
-      toast("这一餐已经定了，想改先点「重新编辑」");
-      return;
-    }
     haptic();
     add(dish.id, n);
     toast(`已加入 ${n} 份 · ${dish.name}`);

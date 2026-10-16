@@ -39,27 +39,25 @@ CREATE TABLE IF NOT EXISTS cart_item (
   PRIMARY KEY (kitchen_id, dish_id)
 );
 
+-- 已弃用（0006 去掉锁单），表保留不删，代码不再读写
 CREATE TABLE IF NOT EXISTS cart_state (
   kitchen_id  TEXT PRIMARY KEY,
   locked      INTEGER NOT NULL DEFAULT 0,
   updated_at  INTEGER NOT NULL,
-  locked_by   TEXT                 -- 下单人 user.id；定时任务归档时写进 meal.ordered_by
+  locked_by   TEXT
 );
 
--- 买菜清单的勾选，一个厨房一份，所有人共享；随点菜单清空一起清掉
-CREATE TABLE IF NOT EXISTS shopping_done (
-  kitchen_id  TEXT NOT NULL,
-  name        TEXT NOT NULL,
-  updated_at  INTEGER NOT NULL,
-  PRIMARY KEY (kitchen_id, name)
-);
-
--- 下单只锁定；每日定时任务（北京时间 04:00）把点菜单归档成一条历史订单并清空，没确认下单但有菜的也算
+-- 订单：一个「就餐日期 + 餐别」一张，同一餐唯一由 KitchenDO 保证（不建唯一索引，旧数据可能重复）。
+-- meal_date >= 今天（凌晨 4 点切日）叫「待吃」，更早的叫「已吃」。
 CREATE TABLE IF NOT EXISTS meal (
   id          TEXT PRIMARY KEY,
   kitchen_id  TEXT NOT NULL,
   ordered_by  TEXT NOT NULL,
-  ordered_at  INTEGER NOT NULL
+  ordered_at  INTEGER NOT NULL,
+  meal_date   TEXT NOT NULL,              -- 'YYYY-MM-DD'，北京时间
+  slot        INTEGER NOT NULL,           -- 1 早餐 2 午餐 3 晚餐 4 宵夜
+  rev         INTEGER NOT NULL DEFAULT 1, -- 乐观锁版本号，每次改动 +1
+  updated_at  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS meal_item (
@@ -78,8 +76,24 @@ CREATE TABLE IF NOT EXISTS dish_stat (
 );
 
 CREATE INDEX IF NOT EXISTS idx_meal_kitchen ON meal(kitchen_id, ordered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_meal_day ON meal(kitchen_id, meal_date DESC, slot DESC);
+
+-- 买菜清单的勾选：某张订单的某个食材已买，所有人共享；订单删除时一起删
+CREATE TABLE IF NOT EXISTS shopping_done (
+  kitchen_id  TEXT NOT NULL,
+  meal_id     TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (meal_id, name)
+);
+
+-- 订单类操作的幂等记录：reqId 处理过就不再执行；定时任务清掉 3 天前的
+CREATE TABLE IF NOT EXISTS op_seen (
+  op_id       TEXT PRIMARY KEY,
+  kitchen_id  TEXT NOT NULL,
+  meal_id     TEXT,
+  at          INTEGER NOT NULL
+);
 
 INSERT OR IGNORE INTO kitchen (id, name, created_at)
   VALUES ('main', '我家厨房', 0);
-INSERT OR IGNORE INTO cart_state (kitchen_id, locked, updated_at)
-  VALUES ('main', 0, 0);

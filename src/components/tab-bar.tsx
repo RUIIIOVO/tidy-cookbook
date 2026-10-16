@@ -18,6 +18,7 @@ export function TabBar() {
   const activeTab = useTabs((s) => s.activeTab);
   const setActiveTab = useTabs((s) => s.setActiveTab);
   const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
+  const pendingMealCount = useCart((s) => s.meals.length);
 
   const activeIndex = Math.max(0, TABS.findIndex((t) => t.key === activeTab));
 
@@ -63,6 +64,11 @@ export function TabBar() {
                     {key === "cart" && count > 0 && (
                       <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-accent px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
                         {count}
+                      </span>
+                    )}
+                    {key === "history" && pendingMealCount > 0 && (
+                      <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-accent/70 px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
+                        {pendingMealCount}
                       </span>
                     )}
                   </span>

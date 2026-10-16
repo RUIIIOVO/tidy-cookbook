@@ -16,6 +16,9 @@ import {
   type SessionUser,
 } from "./auth";
 
+import { normalizeName } from "./kitchen-do";
+import { isMealDate, mealDayOf } from "../src/lib/meal-time";
+
 export { KitchenDO } from "./kitchen-do";
 
 export interface Env {
@@ -111,50 +114,21 @@ export default {
 
       if (url.pathname === "/api/history" && req.method === "GET") {
         const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 15)));
-        const beforeParam = url.searchParams.get("before");
-        const before = beforeParam ? Number(beforeParam) : null;
-        const sinceParam = url.searchParams.get("since");
-        const since = sinceParam ? Number(sinceParam) : null;
-        return json(await listHistory(env.DB, user.kitchenId, limit, before, since));
+        const before = parseCursor(url.searchParams.get("before"));
+        if (before === "bad") return json({ error: "before 格式不对" }, { status: 400 });
+        const since = url.searchParams.get("since");
+        if (since && !isMealDate(since)) return json({ error: "since 要是 YYYY-MM-DD" }, { status: 400 });
+        return json(await listHistory(env.DB, user.kitchenId, limit, before, since || null));
       }
 
-      if (url.pathname === "/api/history" && req.method === "DELETE") {
-        if (user.role !== "owner")
-          return json({ error: "只有 rui 和 hui 能删历史" }, { status: 403 });
-        const id = url.searchParams.get("id");
-        if (!id) return json({ error: "缺少 id" }, { status: 400 });
-
-        // 查出该订单包含的菜品与数量，同步扣减累计统计表
-        const items = await env.DB.prepare(`SELECT dish_id as dishId, qty FROM meal_item WHERE meal_id = ?`)
-          .bind(id)
-          .all<{ dishId: string; qty: number }>();
-
-        const stmts: D1PreparedStatement[] = [
-          env.DB.prepare(`DELETE FROM meal_item WHERE meal_id = ?`).bind(id),
-          env.DB.prepare(`DELETE FROM meal WHERE id = ? AND kitchen_id = ?`).bind(
-            id,
-            user.kitchenId,
-          ),
-        ];
-
-        for (const it of items.results ?? []) {
-          stmts.push(
-            env.DB.prepare(
-              `UPDATE dish_stat SET order_count = MAX(0, order_count - ?) WHERE kitchen_id = ? AND dish_id = ?`,
-            ).bind(it.qty, user.kitchenId, it.dishId),
-          );
-        }
-
-        await env.DB.batch(stmts);
-        return json({ ok: true });
-      }
+      // 删订单改走 WebSocket 的 deleteMeal（要幂等、要同步 dish_stat 和勾选）
 
       return json({ error: "没有这个接口" }, { status: 404 });
     } catch (e) {
       return json({ error: String(e) }, { status: 500 });
     }
   },
-  /** 每天北京时间凌晨 4 点（UTC 20:00）：点菜单归档进历史并清空（没确认下单但有菜的也算） */
+  /** 每天北京时间凌晨 4 点（UTC 20:00）：清理过期 op_seen、广播新快照，不碰点菜单 */
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
       (async () => {
@@ -179,6 +153,8 @@ function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Resp
   u.searchParams.set("uid", user.id);
   u.searchParams.set("role", user.role);
   u.searchParams.set("name", user.displayName);
+  // 客户端协议版本原样透传，缺失就当旧页面
+  u.searchParams.set("v", u.searchParams.get("v") ?? "0");
   return stub.fetch(new Request(u.toString(), req)).then((res) => {
     // 客户端用子协议带令牌时，握手必须原样回显，否则浏览器会断开
     const proto = wsProtocol(req);
@@ -189,36 +165,56 @@ function connectKitchen(req: Request, env: Env, user: SessionUser): Promise<Resp
   });
 }
 
+/** 游标 'meal_date|slot|id'，前端原样回传 */
+type Cursor = { date: string; slot: number; id: string };
+function parseCursor(raw: string | null): Cursor | null | "bad" {
+  if (!raw) return null;
+  const [date, slot, ...rest] = raw.split("|");
+  const id = rest.join("|");
+  if (!isMealDate(date) || !/^[1-4]$/.test(slot ?? "") || !id) return "bad";
+  return { date, slot: Number(slot), id };
+}
+
+/** 已吃的订单（meal_date < 今天），新的在前。游标翻页，since（YYYY-MM-DD）只看这天及以后 */
 async function listHistory(
   db: D1Database,
   kitchenId: string,
   limit = 15,
-  before: number | null = null,
-  since: number | null = null,
+  before: Cursor | null = null,
+  since: string | null = null,
 ) {
-  let query = `SELECT m.id, m.ordered_at AS orderedAt, u.display_name AS orderedBy
+  const today = mealDayOf(Date.now());
+  let query = `SELECT m.id, m.meal_date AS mealDate, m.slot, m.rev, m.ordered_at AS orderedAt,
+                      m.updated_at AS updatedAt, u.display_name AS orderedBy
          FROM meal m LEFT JOIN user u ON u.id = m.ordered_by
-        WHERE m.kitchen_id = ?`;
-  const binds: unknown[] = [kitchenId];
+        WHERE m.kitchen_id = ? AND m.meal_date < ?`;
+  const binds: unknown[] = [kitchenId, today];
 
-  if (since !== null && Number.isFinite(since)) {
-    query += ` AND m.ordered_at >= ?`;
+  if (since) {
+    query += ` AND m.meal_date >= ?`;
     binds.push(since);
   }
-
-  if (before !== null && Number.isFinite(before)) {
-    query += ` AND m.ordered_at < ?`;
-    binds.push(before);
+  if (before) {
+    query += ` AND (m.meal_date < ? OR (m.meal_date = ? AND (m.slot < ? OR (m.slot = ? AND m.id < ?))))`;
+    binds.push(before.date, before.date, before.slot, before.slot, before.id);
   }
 
   // 多查 1 条用以判断是否还有后续页
-  query += ` ORDER BY m.ordered_at DESC LIMIT ?`;
+  query += ` ORDER BY m.meal_date DESC, m.slot DESC, m.id DESC LIMIT ?`;
   binds.push(limit + 1);
 
   const meals = await db
     .prepare(query)
     .bind(...binds)
-    .all<{ id: string; orderedAt: number; orderedBy: string | null }>();
+    .all<{
+      id: string;
+      mealDate: string;
+      slot: number;
+      rev: number;
+      orderedAt: number;
+      updatedAt: number | null;
+      orderedBy: string | null;
+    }>();
 
   const rawRows = meals.results ?? [];
   const hasMore = rawRows.length > limit;
@@ -231,37 +227,35 @@ async function listHistory(
   const marks = rows.map(() => "?").join(",");
   const items = await db
     .prepare(
-      `SELECT i.meal_id AS mealId, i.dish_id AS dishId, i.qty, u.display_name AS addedBy
+      `SELECT i.meal_id AS mealId, i.dish_id AS dishId, i.qty,
+              i.added_by AS addedById, u.display_name AS addedBy
          FROM meal_item i LEFT JOIN user u ON u.id = i.added_by
-        WHERE i.meal_id IN (${marks})`,
+        WHERE i.meal_id IN (${marks}) ORDER BY i.rowid`,
     )
     .bind(...rows.map((m) => m.id))
-    .all<{ mealId: string; dishId: string; qty: number; addedBy: string | null }>();
+    .all<{ mealId: string; dishId: string; qty: number; addedById: string | null; addedBy: string | null }>();
 
-  const normalize = (n?: string | null) => {
-    if (!n) return null;
-    return n === "小客" || n.toLowerCase() === "guest" ? "食客" : n;
-  };
-
-  type Item = { dishId: string; qty: number; addedBy: string | null };
+  type Item = { dishId: string; qty: number; addedById: string | null; addedBy: string | null };
   const byMeal = new Map<string, Item[]>();
   for (const it of items.results ?? []) {
     const arr = byMeal.get(it.mealId) ?? [];
-    arr.push({ dishId: it.dishId, qty: it.qty, addedBy: normalize(it.addedBy) });
+    arr.push({ dishId: it.dishId, qty: it.qty, addedById: it.addedById, addedBy: normalizeName(it.addedBy) });
     byMeal.set(it.mealId, arr);
   }
 
   const resultMeals = rows.map((m) => ({
-    ...m,
-    orderedBy: normalize(m.orderedBy),
+    id: m.id,
+    mealDate: m.mealDate,
+    slot: m.slot,
+    rev: m.rev,
+    orderedAt: m.orderedAt,
+    orderedBy: normalizeName(m.orderedBy),
+    updatedAt: m.updatedAt ?? m.orderedAt,
     items: byMeal.get(m.id) ?? [],
   }));
 
-  const nextCursor = hasMore && rows.length > 0 ? rows[rows.length - 1].orderedAt : null;
+  const last = rows[rows.length - 1];
+  const nextCursor = hasMore ? `${last.mealDate}|${last.slot}|${last.id}` : null;
 
-  return {
-    meals: resultMeals,
-    nextCursor,
-    hasMore,
-  };
+  return { meals: resultMeals, nextCursor, hasMore };
 }

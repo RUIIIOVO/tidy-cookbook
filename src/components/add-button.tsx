@@ -21,7 +21,6 @@ export function AddButton({
 }) {
   const confirm = useConfirm((s) => s.confirm);
   const qty = useCart((s) => s.items.find((i) => i.dishId === dish.id)?.qty ?? 0);
-  const locked = useCart((s) => s.locked);
   const add = useCart((s) => s.add);
   const setQty = useCart((s) => s.setQty);
 
@@ -29,10 +28,6 @@ export function AddButton({
   const onAdd = useGuard((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (locked) {
-      toast("这一餐已经定了，想改先点「重新编辑」");
-      return;
-    }
     haptic();
     add(dish.id);
     if (qty === 0) toast(`已加入 · ${dish.name}`);
@@ -41,7 +36,6 @@ export function AddButton({
   const onSub = useGuard((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (locked) return;
     if (confirmRemove && qty === 1) {
       confirm({
         title: `从点菜单移除\n「${dish.name}」？`,
