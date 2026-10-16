@@ -208,6 +208,7 @@ function DishGroups({ meals }: { meals: Meal[] }) {
         <MealTicket
           key={meal.id}
           meal={meal}
+          dishFocus="ingredients"
           onDelete={async () => (await deleteMeal({ mealId: meal.id, date: meal.mealDate })).ok}
         />
       ))}

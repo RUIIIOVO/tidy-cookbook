@@ -30,8 +30,11 @@ export function MealTicket({
   meal,
   onDelete,
   footerAction,
+  dishFocus,
 }: {
   meal: Meal;
+  /** 点菜品打开详情时直接定位到哪一段（备菜页传 "ingredients"） */
+  dishFocus?: "ingredients";
   /** 不传则不显示右上角编辑 / 删除图标 */
   onDelete?: () => Promise<boolean>;
   /** 底部合计行右侧的动作（如「再点一次」） */
@@ -87,7 +90,7 @@ export function MealTicket({
           <li key={i.dishId}>
             <button
               type="button"
-              onClick={() => openSheet(dish.id)}
+              onClick={() => openSheet(dish.id, dishFocus ? { focus: dishFocus } : undefined)}
               className="flex w-full items-center gap-3 py-2 text-left transition active:opacity-60"
             >
               <DishThumb dish={dish} className="size-10 shrink-0 rounded-md" sizes="40px" />

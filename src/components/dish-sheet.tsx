@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
 import { Minus, Plus, SlidersHorizontal } from "@phosphor-icons/react";
 import { metaIcon } from "@/lib/icons";
@@ -18,6 +18,20 @@ import { DishThumb } from "./dish-thumb";
 export function DishSheet() {
   const dishId = useDishSheet((s) => s.dishId);
   const close = useDishSheet((s) => s.close);
+  const focus = useDishSheet((s) => s.focus);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const ingredientsRef = useRef<HTMLDivElement>(null);
+
+  // 从备菜页打开：直接滚到「食材」，做饭时不用再往下翻
+  useEffect(() => {
+    if (!dishId || focus !== "ingredients") return;
+    const id = requestAnimationFrame(() => {
+      const sc = scrollRef.current;
+      const el = ingredientsRef.current;
+      if (sc && el) sc.scrollTop = el.offsetTop - 8; // 滚动容器是 relative，offsetTop 就是相对它的位置
+    });
+    return () => cancelAnimationFrame(id);
+  }, [dishId, focus]);
   const openCustom = useCustomModal((s) => s.open);
   const add = useCart((s) => s.add);
   const [n, setN] = useState(1);
@@ -59,7 +73,7 @@ export function DishSheet() {
                 <div className="mx-auto h-1.5 w-12 rounded-full bg-line-2 transition-colors active:bg-ink-3" />
               </div>
 
-              <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
+              <div ref={scrollRef} className="no-scrollbar relative flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
                 <Drawer.Title className="sr-only">{dish.name}</Drawer.Title>
 
                 <DishThumb
@@ -109,7 +123,9 @@ export function DishSheet() {
                   </div>
                 </div>
 
-                <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>
+                <div ref={ingredientsRef}>
+                  <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>
+                </div>
                 <div className="space-y-3">
                   {dish.ingredients.map((g) => (
                     <div key={g.group}>
