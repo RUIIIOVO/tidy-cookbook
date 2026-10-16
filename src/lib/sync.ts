@@ -123,7 +123,7 @@ function resendPending() {
 function handleReload() {
   try {
     if (sessionStorage.getItem(RELOAD_FLAG)) {
-      useCart.getState().onDenied?.("页面版本过旧，请手动刷新");
+      useCart.getState().onDenied?.("页面已更新，请刷新");
       return;
     }
     sessionStorage.setItem(RELOAD_FLAG, "1");

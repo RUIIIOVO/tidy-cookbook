@@ -78,7 +78,7 @@ type Item = { dishId: string; qty: number };
 /** 订单类操作的处理结果，原样变成 ack */
 type Result = { ok: true; mealId?: string } | { ok: false; code?: "conflict" | "forbidden" | "invalid" | "not_found"; reason: string };
 
-const OLD_VERSION = "页面版本太旧，请刷新";
+const OLD_VERSION = "页面已更新，请刷新";
 const BUSY = "服务器出错了，请重试";
 
 /** 校验并合并 items：dishId 必须存在，qty 必须是正整数；重复的菜份数相加。非法返回 null */
