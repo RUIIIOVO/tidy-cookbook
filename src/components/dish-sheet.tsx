@@ -49,7 +49,10 @@ export function DishSheet() {
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-ink/35" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[88dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none">
+        <Drawer.Content
+          // 打开时不要自动聚焦：默认会聚焦第一个可点元素并把它滚进视野，详情直接跳到底部的食材和做法
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[88dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none">
           {dish && t && (
             <>
               <div className="shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing">

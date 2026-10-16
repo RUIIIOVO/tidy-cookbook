@@ -9,7 +9,7 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import { haptic } from "@/lib/utils";
+import { cn, haptic } from "@/lib/utils";
 
 /**
  * 横向并排的多页面板：跟手拖动、松手按位移 / 速度吸附。
@@ -19,6 +19,7 @@ import { haptic } from "@/lib/utils";
  * - 进度 pos 是「当前在第几页」的连续值（0~count-1），顶部 tab 的下划线直接订阅它，
  *   所以下划线和页面是同一个手势、同一帧在动，不触发 React 重渲染。
  * - 容器高度跟着 pos 在相邻两页高度之间插值，短面板下面不会留大片空白。
+ * - 触摸监听挂在外层容器上；调用方让它 flex-1 铺满剩余高度，面板下方的空白也能滑。
  */
 
 const SPRING = { type: "spring", stiffness: 420, damping: 42, mass: 0.9 } as const;
@@ -64,12 +65,15 @@ export function SwipePanels({
   index,
   onIndexChange,
   panels,
+  className,
 }: {
   pager: Pager;
   /** 当前页（受控） */
   index: number;
   onIndexChange: (i: number) => void;
   panels: ReactNode[];
+  /** 外层容器的额外样式；放进 flex 列里写 flex-1，面板短时手势区也能铺到底 */
+  className?: string;
 }) {
   const { pos, snapTo } = pager;
   const count = panels.length;
@@ -207,7 +211,7 @@ export function SwipePanels({
       onTouchEnd={() => finish(false)}
       onTouchCancel={() => finish(true)}
       style={{ height }}
-      className="touch-pan-y overflow-hidden"
+      className={cn("touch-pan-y overflow-hidden", className)}
     >
       <motion.div
         style={{ x: trackX, width: `${count * 100}%` }}

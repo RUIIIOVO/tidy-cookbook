@@ -1,22 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClipboardText, Flame } from "@phosphor-icons/react";
+import { ClipboardText } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
-import { getDish } from "@/data/dishes";
-import { dayLabel, mealTitle, shortDate } from "@/lib/meal-time";
+import { dayLabel, shortDate } from "@/lib/meal-time";
+import { deleteMeal } from "@/lib/meal-actions";
 import { usePrepUi, type PrepSeg } from "@/lib/prep-store";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
-import { spicyLabel } from "@/lib/theme";
-import { useDishSheet } from "@/lib/ui-store";
 import { ui } from "@/lib/ui";
-import { cn, formatPersonName, haptic } from "@/lib/utils";
-import { DishThumb } from "./dish-thumb";
-import { GroupCard, GroupRow, GroupSection } from "./grouped-list";
-import { MealCardActions } from "./meal-card-actions";
-import { deleteMeal } from "@/lib/meal-actions";
+import { cn, haptic } from "@/lib/utils";
+import { MealTicket } from "./meal-ticket";
 import { ShoppingList, useShoppingData } from "./shopping-list";
 import { SwipePanels, usePager, type Pager } from "./swipe-panels";
 
@@ -27,7 +22,7 @@ const SEGS: PrepSeg[] = ["dishes", "shop"];
 
 /**
  * 备菜页：就餐日期 >= 今天的订单。两个并排的视图——菜品（一餐一组）和买菜清单，
- * 顶部文字标签 + 下划线切换，也可以左右滑动。
+ * 顶部 iOS 分段控件切换，也可以左右滑动。
  * 订单编辑面板由 tabs-host 全局挂一份，这里只管 openMealEdit。
  */
 export function PrepView() {
@@ -80,7 +75,8 @@ export function PrepView() {
   };
 
   return (
-    <div className="pb-8">
+    // 至少铺满到底栏上方，面板内容短时下面的空白也在滑动区里
+    <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col">
       <header className="px-4 pt-4 pb-1">
         <h1 className="font-display text-[22px] tracking-wider text-ink">备菜</h1>
         <p className="mt-1 text-[12px] text-ink-3">
@@ -98,9 +94,9 @@ export function PrepView() {
         </p>
       </header>
 
-      {/* 吸顶：文字标签 + 日期筛选，同时作用于两个视图 */}
+      {/* 吸顶：分段控件 + 日期筛选，同时作用于两个视图 */}
       <div className="sticky top-0 z-20 bg-paper/90 backdrop-blur-lg hairline-b">
-        <PrepTabs
+        <PrepSegmented
           pager={pager}
           index={index}
           onPick={pick}
@@ -142,14 +138,15 @@ export function PrepView() {
       </div>
 
       <SwipePanels
+        className="flex-1"
         pager={pager}
         index={index}
         onIndexChange={(i) => setSeg(SEGS[i])}
         panels={[
-          <div key="dishes" className="px-4 pt-3 pb-4">
-            <DishGroups meals={shown} today={today} />
+          <div key="dishes" className="px-4 pt-3 pb-8">
+            <DishGroups meals={shown} />
           </div>,
-          <div key="shop" className="px-4 pt-3 pb-4">
+          <div key="shop" className="px-4 pt-3 pb-8">
             <ShoppingList meals={shown} />
           </div>,
         ]}
@@ -158,8 +155,8 @@ export function PrepView() {
   );
 }
 
-/** 文字标签 + 下划线；下划线直接订阅手势进度，跟手平移 */
-function PrepTabs({
+/** iOS 分段控件：整宽轨道 + 白色滑块；滑块直接订阅手势进度，跟手平移 */
+function PrepSegmented({
   pager,
   index,
   onPick,
@@ -173,101 +170,55 @@ function PrepTabs({
   // 手势拖过一半时文字就切到新页的强调态，不必等松手
   const [near, setNear] = useState(index);
   useMotionValueEvent(pager.pos, "change", (v) => setNear(v >= 0.5 ? 1 : 0));
-  const underlineX = useTransform(pager.pos, (p) => `${p * 100}%`);
+  // 滑块宽度 = 一格宽，平移 pos × 自身宽度
+  const thumbX = useTransform(pager.pos, (p) => `${p * 100}%`);
 
   return (
-    <div role="tablist" aria-label="备菜视图" className="relative grid grid-cols-2">
-      {items.map((it, i) => (
-        <button
-          key={it.text}
-          type="button"
-          role="tab"
-          aria-selected={i === index}
-          onClick={() => onPick(i)}
-          className={cn(
-            "py-3 text-[15px] font-medium transition-colors active:opacity-60",
-            i === near ? "text-ink" : "text-ink-3",
-          )}
-        >
-          {it.text}
-          {it.badge && (
-            <span className="ml-1 text-[12px] font-normal tabular-nums">{it.badge}</span>
-          )}
-        </button>
-      ))}
-      <motion.div
-        aria-hidden
-        style={{ x: underlineX }}
-        className="pointer-events-none absolute bottom-0 left-0 flex w-1/2 justify-center"
+    <div className="px-4 pt-2 pb-2.5">
+      <div
+        role="tablist"
+        aria-label="备菜视图"
+        className="relative grid h-9 grid-cols-2 rounded-[10px] bg-paper-2 p-0.5"
       >
-        <span className="h-[3px] w-6 rounded-full bg-accent" />
-      </motion.div>
+        <motion.div
+          aria-hidden
+          style={{ x: thumbX }}
+          className="pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-card shadow-2xs"
+        />
+        {items.map((it, i) => (
+          <button
+            key={it.text}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            onClick={() => onPick(i)}
+            className={cn(
+              "relative z-10 text-[13px] transition-colors active:opacity-60",
+              i === near ? "font-medium text-ink" : "text-ink-3",
+            )}
+          >
+            {it.text}
+            {it.badge && (
+              <span className="ml-1 font-normal tabular-nums text-ink-3">{it.badge}</span>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-/** 菜品视图：每餐一组，标题在卡片外 */
-function DishGroups({ meals, today }: { meals: Meal[]; today: string }) {
-  const openSheet = useDishSheet((s) => s.open);
-
+/** 菜品视图：一餐一张订单卡，和订单页同一套小票 */
+function DishGroups({ meals }: { meals: Meal[] }) {
   return (
-    <div className="flex flex-col gap-5">
-      {meals.map((meal) => {
-        const title = mealTitle(meal.mealDate, meal.slot, today);
-        const by = meal.orderedBy ? formatPersonName(meal.orderedBy) : null;
-        const rows = meal.items
-          .map((i) => ({ i, dish: getDish(i.dishId) }))
-          .filter((r): r is { i: typeof r.i; dish: NonNullable<typeof r.dish> } => !!r.dish);
-
-        return (
-          <GroupSection
-            key={meal.id}
-            title={title}
-            aside={
-              <>
-                {by && <span>{by} 点的</span>}
-                <MealCardActions
-                  meal={meal}
-                  title={title}
-                  onDelete={async () => (await deleteMeal({ mealId: meal.id, date: meal.mealDate })).ok}
-                />
-              </>
-            }
-          >
-            <GroupCard>
-              {rows.map(({ i, dish }, idx) => (
-                <GroupRow key={i.dishId} last={idx === rows.length - 1} inset={66}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic(6);
-                      openSheet(dish.id);
-                    }}
-                    className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition active:bg-paper"
-                  >
-                    <DishThumb dish={dish} className="size-10 shrink-0 rounded-lg" sizes="40px" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-[15px] tracking-wide text-ink">
-                        {dish.name}
-                      </span>
-                      {dish.spicy > 0 && (
-                        <span className="mt-0.5 flex items-center gap-0.5 text-[11px] text-chili">
-                          <Flame size={11} weight="fill" />
-                          {spicyLabel[dish.spicy]}
-                        </span>
-                      )}
-                    </span>
-                    <span className="shrink-0 text-[13px] text-ink-2 tabular-nums">×{i.qty}</span>
-                  </button>
-                </GroupRow>
-              ))}
-              {rows.length === 0 && (
-                <li className="py-5 text-center text-[12px] text-ink-3">这一餐还没有菜</li>
-              )}
-            </GroupCard>
-          </GroupSection>
-        );
-      })}
+    <div className="flex flex-col gap-3">
+      {meals.map((meal) => (
+        <MealTicket
+          key={meal.id}
+          meal={meal}
+          onDelete={async () => (await deleteMeal({ mealId: meal.id, date: meal.mealDate })).ok}
+        />
+      ))}
     </div>
   );
 }

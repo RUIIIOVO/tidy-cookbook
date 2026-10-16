@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, CaretDown, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -14,17 +14,13 @@ import {
   type Meal,
   type RangeData,
 } from "@/lib/history-store";
-import { mealTitle } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
 import { useTabs } from "@/lib/tab-store";
-import { useDishSheet } from "@/lib/ui-store";
 import { ui } from "@/lib/ui";
-import { cn, formatPersonName, haptic } from "@/lib/utils";
+import { cn, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
-import { DishThumb } from "./dish-thumb";
-import { MealCardActions } from "./meal-card-actions";
-import { PrepHint } from "./prep-hint";
+import { MealTicket } from "./meal-ticket";
 
 export function HistoryView() {
   const me = useAuth((s) => s.me);
@@ -222,8 +218,6 @@ export function HistoryView() {
           )}
         </div>
 
-        <PrepHint />
-
         {/* 顶部时间跨度胶囊 */}
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
           {RANGE_OPTIONS.map((opt) => {
@@ -365,120 +359,27 @@ function HistoryTabPane({
 function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean }) {
   const removeMeal = useHistory((s) => s.remove);
   const add = useCart((s) => s.add);
-  const today = useCart((s) => s.today);
-  const openSheet = useDishSheet((s) => s.open);
-
-  const rows = meal.items
-    .map((i) => ({ i, dish: getDish(i.dishId) }))
-    .filter((r): r is { i: typeof r.i; dish: NonNullable<typeof r.dish> } => !!r.dish);
-
-  const total = meal.items.reduce((n, i) => n + i.qty, 0);
 
   const again = useGuard(() => {
     haptic();
-    for (const { i } of rows) add(i.dishId, i.qty);
+    const rows = meal.items.filter((i) => getDish(i.dishId));
+    for (const i of rows) add(i.dishId, i.qty);
     toast(`已把这 ${rows.length} 道菜加回点菜单`);
   }, 1500);
 
-  const people = [
-    ...new Set(
-      meal.items
-        .map((i) => (i.addedBy ? formatPersonName(i.addedBy) : null))
-        .filter((n): n is string => !!n),
-    ),
-  ];
-  const [open, setOpen] = useState(false);
-  const shown = open ? rows : rows.slice(0, FOLD_AT);
-  const hidden = rows.length - FOLD_AT;
-  const { time } = formatDate(meal.orderedAt);
-  const title = mealTitle(meal.mealDate, meal.slot, today);
-
   return (
-    <article className="rounded-card border border-line bg-card px-4 pt-4 pb-3 shadow-2xs">
-      {/* 小票抬头 */}
-      <header className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[17px] tracking-wider text-ink">{title}</p>
-          <p className="mt-1 truncate text-[10.5px] text-ink-3">
-            {meal.orderedBy
-              ? `${formatPersonName(meal.orderedBy)} 下单`
-              : people.length > 0
-                ? `${people.join("、")} 下单`
-                : "已归档"}
-            <span className="ml-1.5 tabular-nums">{time}</span>
-          </p>
-        </div>
-        {allowed && (
-          <span className="-mt-1.5">
-            <MealCardActions meal={meal} title={title} onDelete={() => removeMeal(meal.id)} />
-          </span>
-        )}
-      </header>
-
-      <div className="mt-3 border-t border-dashed border-line-2" />
-
-      {/* 明细：一行一道菜 */}
-      <ul>
-        {shown.map(({ i, dish }) => (
-          <li key={i.dishId}>
-            <button
-              type="button"
-              onClick={() => openSheet(dish.id)}
-              className="flex w-full items-center gap-3 py-2 text-left transition active:opacity-60"
-            >
-              <DishThumb dish={dish} className="size-10 shrink-0 rounded-md" sizes="40px" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-[14px] tracking-wide text-ink">
-                  {dish.name}
-                </p>
-                {i.addedBy && (
-                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-ink-3">
-                    <Avatar
-                      name={formatPersonName(i.addedBy)}
-                      className="size-[12px] text-[7.5px]"
-                    />
-                    <span className="truncate">{formatPersonName(i.addedBy)}</span>
-                  </p>
-                )}
-              </div>
-              <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">×{i.qty}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {hidden > 0 && (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="flex w-full items-center justify-center gap-1 py-1.5 text-[11px] text-ink-3 transition active:opacity-60"
-        >
-          {open ? "收起" : `展开其余 ${hidden} 道`}
-          <CaretDown size={11} className={cn("transition-transform", open && "rotate-180")} />
-        </button>
-      )}
-
-      {/* 小票合计 */}
-      <div className="mt-1 flex items-center justify-between border-t border-dashed border-line-2 pt-3">
-        <span className="text-[11px] text-ink-3">
-          合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
-          <span className="tabular-nums text-ink-2">{total}</span> 份
-        </span>
-        <button
-          type="button"
-          onClick={again}
-          className={cn(ui.chip, ui.chipSoft)}
-        >
+    <MealTicket
+      meal={meal}
+      onDelete={allowed ? () => removeMeal(meal.id) : undefined}
+      footerAction={
+        <button type="button" onClick={again} className={cn(ui.chip, ui.chipSoft)}>
           <ArrowCounterClockwise size={12} weight="bold" />
           再点一次
         </button>
-      </div>
-    </article>
+      }
+    />
   );
 }
-
-const FOLD_AT = 3;
 
 /**
  * 历史小票骨架屏：首屏或切 Tab 加载时 1:1 模拟真实小票的物理排版
@@ -563,29 +464,4 @@ function Placeholder({
       )}
     </div>
   );
-}
-
-const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
-
-function formatDate(ts: number) {
-  const d = new Date(ts);
-  const now = new Date();
-  const sameDay =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const time = `${hh}:${mm}`;
-  if (sameDay) return { day: "今天", time };
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (
-    d.getFullYear() === yesterday.getFullYear() &&
-    d.getMonth() === yesterday.getMonth() &&
-    d.getDate() === yesterday.getDate()
-  )
-    return { day: "昨天", time };
-  const y = d.getFullYear() === now.getFullYear() ? "" : `${d.getFullYear()}/`;
-  return { day: `${y}${d.getMonth() + 1}月${d.getDate()}日 周${WEEK[d.getDay()]}`, time };
 }
