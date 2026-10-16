@@ -53,7 +53,7 @@ export function MenuView() {
       let current = sections[0].key;
       for (const s of sections) {
         const el = document.getElementById(`sec-${s.key}`);
-        if (el && el.getBoundingClientRect().top <= 108) current = s.key;
+        if (el && el.getBoundingClientRect().top <= 75) current = s.key;
       }
       setActive(current as SubId);
     };
@@ -66,7 +66,8 @@ export function MenuView() {
     const el = document.getElementById(`sec-${key}`);
     if (!el) return false;
 
-    const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 92);
+    // 吸顶搜索栏高度约 58px，偏移设置为 62px，让分类标题紧凑优雅地上移对齐，消灭顶部冗余空隙
+    const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 62);
     const startY = window.scrollY;
     const diff = targetY - startY;
 
@@ -244,7 +245,7 @@ export function MenuView() {
                 <section
                   key={s.key}
                   id={`sec-${s.key}`}
-                  className="scroll-mt-24 pt-5 [content-visibility:auto] [contain-intrinsic-size:1px_360px]"
+                  className="scroll-mt-16 pt-3.5 [content-visibility:auto] [contain-intrinsic-size:1px_360px]"
                 >
                   <div className="mb-2.5 flex items-baseline gap-2">
                     <h2 className="font-display text-[15px] tracking-[0.2em] text-ink">
