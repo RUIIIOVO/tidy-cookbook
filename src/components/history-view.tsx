@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowCounterClockwise, CaretDown, SpinnerGap, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
@@ -32,6 +33,20 @@ export function HistoryView() {
   const locked = useCart((s) => s.locked);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // 记录切 Tab 的方向（1: 向左翻到更早范围, -1: 向右翻回前面范围），用于驱动页面物理翻页滑动动效
+  const [direction, setDirection] = useState<number>(1);
+
+  const changeRange = (newKey: typeof range) => {
+    if (newKey === range) return;
+    const curIdx = RANGE_OPTIONS.findIndex((o) => o.key === range);
+    const nextIdx = RANGE_OPTIONS.findIndex((o) => o.key === newKey);
+    const dir = nextIdx > curIdx ? 1 : -1;
+    setDirection(dir);
+    haptic(6);
+    // 切换瞬间立刻发起异步加载与骨架屏，绝不滞后
+    setRange(newKey);
+  };
 
   // 页面级横滑手势（Swipe Left / Right）流畅切换时间段 Tab
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -83,14 +98,11 @@ export function HistoryView() {
     if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.1 && dt < 600) {
       const curIndex = RANGE_OPTIONS.findIndex((o) => o.key === range);
       if (dx < 0 && curIndex < RANGE_OPTIONS.length - 1) {
-        // 左滑 -> 切换到下一个时间范围（全部 -> 近7天 -> 近1月 -> 近3月）
-        haptic(6);
-        haptic(6);
-        setRange(RANGE_OPTIONS[curIndex + 1].key);
+        // 左滑 -> 向左翻页到下一个时间范围（全部 -> 近7天 -> 近1月 -> 近3月）
+        changeRange(RANGE_OPTIONS[curIndex + 1].key);
       } else if (dx > 0 && curIndex > 0) {
-        // 右滑 -> 切换到上一个时间范围
-        haptic(6);
-        setRange(RANGE_OPTIONS[curIndex - 1].key);
+        // 右滑 -> 向右翻页到上一个时间范围
+        changeRange(RANGE_OPTIONS[curIndex - 1].key);
       }
     }
   };
@@ -200,10 +212,7 @@ export function HistoryView() {
               <button
                 key={opt.key}
                 type="button"
-                onClick={() => {
-                  haptic(6);
-                  setRange(opt.key);
-                }}
+                onClick={() => changeRange(opt.key)}
                 className={cn(
                   "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
                   active
@@ -218,46 +227,66 @@ export function HistoryView() {
         </div>
       </header>
 
-      {/* 优雅的小票骨架屏：首屏加载或切换筛选时呈现拟真小票轮廓与微光微动效 */}
-      {loading && meals.length === 0 && (
-        <div className="mt-4 flex flex-col gap-3 pb-4">
-          <MealCardSkeleton />
-          <MealCardSkeleton />
-        </div>
-      )}
-      {error && !loading && <Placeholder text={error} retry={load} />}
-      {!loading && !error && meals.length === 0 && (
-        <Placeholder
-          text={range === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === range)?.label}暂无记录`}
-          hint={range === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
-        />
-      )}
+      {/* 物理翻页滑屏动效容器：横滑或点Tab时，具有明确的左右推入翻动质感；切换瞬间立即派发异步Loading */}
+      <div className="relative overflow-hidden min-h-[420px]">
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+          <motion.div
+            key={range}
+            custom={direction}
+            variants={{
+              enter: (d: number) => ({ x: d > 0 ? 80 : -80, opacity: 0 }),
+              center: { x: 0, opacity: 1 },
+              exit: (d: number) => ({ x: d > 0 ? -80 : 80, opacity: 0 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 440, damping: 38, mass: 0.8 }}
+            className="w-full"
+          >
+            {/* 优雅的小票骨架屏：首屏加载或切换筛选时呈现拟真小票轮廓与微光微动效 */}
+            {loading && meals.length === 0 && (
+              <div className="mt-4 flex flex-col gap-3 pb-4">
+                <MealCardSkeleton />
+                <MealCardSkeleton />
+              </div>
+            )}
+            {error && !loading && <Placeholder text={error} retry={load} />}
+            {!loading && !error && meals.length === 0 && (
+              <Placeholder
+                text={range === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === range)?.label}暂无记录`}
+                hint={range === "all" ? "锁单后会自动归档到这里" : "可以切换到「全部」查看更早的订单"}
+              />
+            )}
 
-      <div className="mt-4 flex flex-col gap-3 pb-4">
-        {meals.map((m) => (
-          <MealCard key={m.id} meal={m} canDelete={canDelete(me)} />
-        ))}
-      </div>
-
-      {/* 底部触底哨兵 & 加载指示器 */}
-      {hasMore && (
-        <div ref={sentinelRef} className="flex items-center justify-center py-4">
-          {loadingMore ? (
-            <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
-              <SpinnerGap size={14} className="animate-spin text-accent" />
-              <span>加载更多历史订单…</span>
+            <div className="mt-4 flex flex-col gap-3 pb-4">
+              {meals.map((m) => (
+                <MealCard key={m.id} meal={m} canDelete={canDelete(me)} />
+              ))}
             </div>
-          ) : (
-            <span className="h-4 w-full" aria-hidden="true" />
-          )}
-        </div>
-      )}
 
-      {!hasMore && meals.length >= 15 && (
-        <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
-          — 已展示全部历史订单 —
-        </p>
-      )}
+            {/* 底部触底哨兵 & 加载指示器 */}
+            {hasMore && (
+              <div ref={sentinelRef} className="flex items-center justify-center py-4">
+                {loadingMore ? (
+                  <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
+                    <SpinnerGap size={14} className="animate-spin text-accent" />
+                    <span>加载更多历史订单…</span>
+                  </div>
+                ) : (
+                  <span className="h-4 w-full" aria-hidden="true" />
+                )}
+              </div>
+            )}
+
+            {!hasMore && meals.length >= 15 && (
+              <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
+                — 已展示全部历史订单 —
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
