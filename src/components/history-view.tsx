@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, CaretDown, PencilSimple, SpinnerGap, Trash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, CaretDown, PencilSimple, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -364,8 +364,6 @@ function HistoryTabPane({
 }
 
 function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean }) {
-  const removeMeal = useHistory((s) => s.remove);
-  const confirm = useConfirm((s) => s.confirm);
   const add = useCart((s) => s.add);
   const today = useCart((s) => s.today);
   const openSheet = useDishSheet((s) => s.open);
@@ -410,35 +408,15 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
             <span className="ml-1.5 tabular-nums">{time}</span>
           </p>
         </div>
+        {/* 只留一个编辑图标；删除在修改订单面板里 */}
         {allowed && (
           <button
             type="button"
-            aria-label="修改这一餐"
+            aria-label={`修改 ${title}`}
             onClick={() => openMealEdit(meal)}
-            className="-mt-1 flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-[11.5px] text-accent transition active:scale-95"
+            className="-mt-1.5 -mr-2 grid size-8 shrink-0 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
           >
-            <PencilSimple size={12} weight="bold" />
-            修改
-          </button>
-        )}
-        {allowed && (
-          <button
-            type="button"
-            aria-label="删除这一餐"
-            onClick={() =>
-              confirm({
-                title: `删除 ${title}\n这一餐的记录？`,
-                confirmText: "删除",
-                onConfirm: () => {
-                  void removeMeal(meal.id).then((ok) => {
-                    if (!ok) toast("删除失败，请稍后再试");
-                  });
-                },
-              })
-            }
-            className="-mt-1 -mr-2 grid size-8 shrink-0 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
-          >
-            <Trash size={15} />
+            <PencilSimple size={16} />
           </button>
         )}
       </header>

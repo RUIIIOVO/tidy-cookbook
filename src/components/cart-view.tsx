@@ -68,7 +68,6 @@ export function CartView() {
     }))
     .filter((g) => g.rows.length > 0);
 
-  const total = rows.reduce((n, r) => n + r.item.qty, 0);
 
   // 最早的 addedAt 所属餐饮日
   const addedAts = items.map((i) => i.addedAt).filter((t): t is number => typeof t === "number" && t > 0);
@@ -166,8 +165,7 @@ export function CartView() {
           <div>
             <h1 className="font-display text-[22px] tracking-wider text-ink">点菜单</h1>
             <p className="mt-1 text-[11px] text-ink-3">
-              共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
-              <span className="tabular-nums text-ink-2">{total}</span> 份
+              共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
             </p>
           </div>
           <button

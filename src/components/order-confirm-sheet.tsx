@@ -2,9 +2,11 @@
 
 import { useId, useState } from "react";
 import { Drawer } from "vaul";
-import { Sparkle, X } from "@phosphor-icons/react";
+import { CaretDown, GitMerge, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
+import { cn } from "@/lib/utils";
+import { DishThumb } from "./dish-thumb";
 import { defaultPick, mealKey, mealTitle, type Slot } from "@/lib/meal-time";
 import { newReqId, placeOrder } from "@/lib/meal-actions";
 import { useCart } from "@/lib/store";
@@ -64,6 +66,7 @@ function OrderConfirmSheetContent({
         dishId: i.dishId,
         qty: i.qty,
         name: getDish(i.dishId)?.name ?? i.dishId,
+        dish: getDish(i.dishId),
       }));
   });
 
@@ -90,8 +93,10 @@ function OrderConfirmSheetContent({
   const existingCount =
     existingMeal?.items.reduce((sum, item) => sum + item.qty, 0) ?? 0;
 
-  // 是否早于 today（补录）
-  const isPast = pick.date < today;
+  // 超过 FOLD_AT 道先折叠，点「还有 N 道」展开
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? snapshot : snapshot.slice(0, FOLD_AT);
+  const hidden = snapshot.length - shown.length;
 
   const isOnline = syncStatus === "online";
 
@@ -154,10 +159,10 @@ function OrderConfirmSheetContent({
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <div>
               <Drawer.Title className="font-display text-[18px] tracking-wide text-ink">
-                这一餐什么时候吃？
+                确认用餐时间
               </Drawer.Title>
               <Drawer.Description className="mt-0.5 text-[11px] text-ink-3">
-                选好就餐时间，把点好的菜入单
+                选好哪天哪顿，菜就排进备菜里
               </Drawer.Description>
             </div>
             <button
@@ -172,21 +177,43 @@ function OrderConfirmSheetContent({
 
           {/* 内容区 */}
           <div className="no-scrollbar flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 pt-4 pb-6">
-            {/* 菜名摘要卡片：菜名×份数，最多两行，超出省略 + 合计道数份数 */}
-            <div className="rounded-card border border-line bg-card p-3.5">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[11px] font-medium text-ink-3">菜品清单</span>
-                <span className="text-[11px] text-ink-3">
-                  共 <span className="tabular-nums text-ink-2">{totalLines}</span> 道 ·{" "}
-                  <span className="tabular-nums text-ink-2">{totalQty}</span> 份
-                </span>
+            {/* 小票：一行一道菜，和订单卡片同一套样式 */}
+            <div className="rounded-card border border-line bg-card px-3.5 pt-1 pb-2.5">
+              <ul>
+                {shown.map((it) => (
+                  <li key={it.dishId} className="flex items-center gap-2.5 py-1.5">
+                    {it.dish ? (
+                      <DishThumb dish={it.dish} className="size-8 shrink-0 rounded-md" sizes="32px" />
+                    ) : (
+                      <span className="size-8 shrink-0 rounded-md bg-paper-2" />
+                    )}
+                    <span className="min-w-0 truncate font-display text-[14px] tracking-wide text-ink">
+                      {it.name}
+                    </span>
+                    {/* 点线引导到份数，小票的样子 */}
+                    <span aria-hidden className="mx-1 h-px min-w-4 flex-1 border-b border-dotted border-line-2" />
+                    <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">×{it.qty}</span>
+                  </li>
+                ))}
+              </ul>
+              {snapshot.length > FOLD_AT && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  aria-expanded={expanded}
+                  className="flex w-full items-center justify-center gap-1 py-1 text-[11px] text-ink-3 active:opacity-60"
+                >
+                  {expanded ? "收起" : `还有 ${hidden} 道`}
+                  <CaretDown size={11} className={cn("transition-transform", expanded && "rotate-180")} />
+                </button>
+              )}
+              <div className="mt-1 flex justify-end border-t border-dashed border-line-2 pt-2 text-[11px] text-ink-3">
+                合计 <span className="mx-0.5 tabular-nums text-ink-2">{totalLines}</span> 道 ·{" "}
+                <span className="mx-0.5 tabular-nums text-ink-2">{totalQty}</span> 份
               </div>
-              <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-ink-2">
-                {snapshot.map((item) => `${item.name} × ${item.qty}`).join("、")}
-              </p>
             </div>
 
-            {/* 日期与餐别选择 */}
+            {/* 日期与用餐选择 */}
             <div>
               <MealPicker
                 today={today}
@@ -200,14 +227,11 @@ function OrderConfirmSheetContent({
             <div className="min-h-[20px] text-[12px] leading-tight">
               {existingMeal && (
                 <p className="flex items-center gap-1.5 text-caramel">
-                  <Sparkle size={13} weight="fill" />
+                  <GitMerge size={13} weight="bold" />
                   <span>
                     {mealTitle(pick.date, pick.slot, today)} 已有 {existingCount} 道，会合并进去
                   </span>
                 </p>
-              )}
-              {isPast && !existingMeal && (
-                <p className="text-ink-3">会补进订单记录</p>
               )}
             </div>
           </div>
@@ -235,3 +259,5 @@ function OrderConfirmSheetContent({
     </Drawer.Root>
   );
 }
+
+const FOLD_AT = 4;

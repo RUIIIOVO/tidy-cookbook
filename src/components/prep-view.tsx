@@ -205,10 +205,9 @@ function OrderTicket({ meal, today }: { meal: Meal; today: string }) {
             haptic(6);
             openMealEdit(meal);
           }}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-[11.5px] text-accent transition active:scale-95"
+          className="-mr-2 grid size-8 shrink-0 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
         >
-          <PencilSimple size={12} weight="bold" />
-          修改
+          <PencilSimple size={16} />
         </button>
       </header>
 

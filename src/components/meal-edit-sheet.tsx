@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Drawer } from "vaul";
 import {
   ArrowClockwise,
   ArrowsMerge,
-  CalendarBlank,
-  CaretDown,
+  Check,
+  PencilSimple,
   Plus,
   SpinnerGap,
+  Trash,
   Warning,
   WifiSlash,
   X,
@@ -20,14 +21,15 @@ import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
 import { useHistory } from "@/lib/history-store";
 import { deleteMeal, newReqId, saveMeal } from "@/lib/meal-actions";
-import { mealKey, mealTitle, pickableDays, type Slot } from "@/lib/meal-time";
+import { dayLabel, mealKey, mealTitle, shortDate, slotName, type Slot } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
 import { useSyncStatus } from "@/lib/sync";
-import { cn, formatPersonName, haptic } from "@/lib/utils";
+import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
 import { DishPickerSheet, QtyStepper, useBackClose, type DraftItem } from "./dish-picker-sheet";
-import { MealPicker, type MealPick } from "./meal-picker";
+import { MealTimeFields, type MealTime } from "./meal-time-fields";
+import { SwipeRow } from "./swipe-row";
 
 // ── 全局开关：任何地方 openMealEdit(meal) 就能打开编辑面板 ──────────────────
 type EditStore = {
@@ -120,6 +122,8 @@ function EditContent({
   const confirm = useConfirm((s) => s.confirm);
   const confirmOpen = useConfirm((s) => !!s.opts);
   const online = useSyncStatus() === "online";
+  // 过去的日期只有 owner 能选
+  const isOwner = useAuth((s) => canDelete(s.me));
 
   const [base, setBase] = useState<Base>(() => toBase(meal));
   const [draft, setDraft] = useState<Draft>(() => toDraft(toBase(meal)));
@@ -127,17 +131,22 @@ function EditContent({
   const [reqId, setReqId] = useState(newReqId);
   const [openToday] = useState(() => useCart.getState().today);
   const [saving, setSaving] = useState(false);
-  const [timeOpen, setTimeOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // 菜品列表：左滑打开的那一行 / 批量管理（多选）
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
   const maxDrag = useRef(0);
 
-  const edit = (fn: (d: Draft) => Draft) => {
+  const edit = useCallback((fn: (d: Draft) => Draft) => {
     setDraft(fn);
     setReqId(newReqId());
-  };
+  }, []);
 
   const dirty = useMemo(() => isChanged(base, draft), [base, draft]);
   const empty = draft.items.length === 0;
+  // 菜删光了就没有可管理的了
+  const selecting = managing && !empty;
 
   // ── 编辑期间订单在服务端被别人改了 / 删了 ──
   const live = meals.find((m) => m.id === base.id);
@@ -151,6 +160,8 @@ function EditContent({
     setBase(b);
     setDraft(toDraft(b));
     setReqId(newReqId());
+    setPicked([]);
+    setSwipedId(null);
   };
 
   // ── 目标餐是否已有另一张订单（待吃的 + 历史页已加载的已吃订单） ──
@@ -162,12 +173,12 @@ function EditContent({
     return byKey;
   }, [history7d, historyAll, meals, base.id]);
   const taken = useMemo(() => new Set(mergeTarget.keys()), [mergeTarget]);
-  const target = mergeTarget.get(mealKey(draft.date, draft.slot));
+  // 只有改了日期或用餐才会合并（服务端同样规则）；旧数据同一天可能本来就有两条晚餐，原地保存不提示
+  const moved = draft.date !== base.date || draft.slot !== base.slot;
+  const target = moved ? mergeTarget.get(mealKey(draft.date, draft.slot)) : undefined;
 
-  const days = useMemo(
-    () => [...new Set([...pickableDays(today), base.date])].sort(),
-    [today, base.date],
-  );
+  // 合并提示：「明天晚餐已经有一单，保存后会合并」
+  const mergeHint = `${dayLabel(draft.date, today) ?? shortDate(draft.date)}${slotName(draft.slot)}已经有一单，保存后会合并`;
 
   const title = mealTitle(draft.date, draft.slot, today);
   const originTitle = mealTitle(base.date, base.slot, today);
@@ -194,19 +205,65 @@ function EditContent({
   const dismissible = !dirty && !saving && !confirmOpen;
 
   // ── 草稿操作 ──
-  const setQty = (dishId: string, qty: number) =>
-    edit((d) => {
-      if (qty <= 0) return { ...d, items: d.items.filter((i) => i.dishId !== dishId) };
-      const has = d.items.some((i) => i.dishId === dishId);
-      return {
-        ...d,
-        items: has
-          ? d.items.map((i) => (i.dishId === dishId ? { ...i, qty } : i))
-          : [...d.items, { dishId, qty }],
-      };
-    });
+  const setQty = useCallback(
+    (dishId: string, qty: number) =>
+      edit((d) => {
+        if (qty <= 0) return { ...d, items: d.items.filter((i) => i.dishId !== dishId) };
+        const has = d.items.some((i) => i.dishId === dishId);
+        return {
+          ...d,
+          items: has
+            ? d.items.map((i) => (i.dishId === dishId ? { ...i, qty } : i))
+            : [...d.items, { dishId, qty }],
+        };
+      }),
+    [edit],
+  );
 
-  const pickTime = (v: MealPick) => edit((d) => ({ ...d, date: v.date, slot: v.slot }));
+  const removeMany = (ids: string[]) => {
+    const gone = new Set(ids);
+    edit((d) => ({ ...d, items: d.items.filter((i) => !gone.has(i.dishId)) }));
+  };
+
+  // 步进器减到 0 要确认；其余直接改
+  const stepTo = (dishId: string, name: string, n: number) => {
+    if (n > 0) {
+      setQty(dishId, n);
+      return;
+    }
+    confirm({
+      title: `从这单里去掉\n「${name}」？`,
+      confirmText: "去掉",
+      onConfirm: () => setQty(dishId, 0),
+    });
+  };
+
+  const toggleManage = () => {
+    haptic(6);
+    setManaging((v) => !v);
+    setPicked([]);
+    setSwipedId(null);
+  };
+
+  const askRemovePicked = () => {
+    if (picked.length === 0) return;
+    const names = picked
+      .map((id) => getDish(id)?.name ?? "已下架的菜")
+      .join("、");
+    confirm({
+      title: `从这单里去掉 ${picked.length} 道？`,
+      desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
+      confirmText: "删除",
+      danger: true,
+      onConfirm: () => {
+        removeMany(picked);
+        setPicked([]);
+        setManaging(false);
+      },
+    });
+  };
+
+  const pickTime = (v: MealTime) => edit((d) => ({ ...d, date: v.date, slot: v.slot }));
 
   // ── 保存 / 删除 ──
   const doDelete = async () => {
@@ -303,8 +360,8 @@ function EditContent({
               <Drawer.Title className="font-display text-[18px] tracking-wide text-ink">
                 修改订单
               </Drawer.Title>
-              <Drawer.Description className="mt-0.5 truncate text-[11px] text-ink-3">
-                {meal.orderedBy ? `${meal.orderedBy} 下的单` : "改完记得点保存"}
+              <Drawer.Description className="sr-only">
+                {meal.orderedBy ? `${meal.orderedBy} 下的单，改完记得点保存` : "改完记得点保存"}
               </Drawer.Description>
             </div>
             <button
@@ -341,61 +398,58 @@ function EditContent({
               )
             )}
 
-            {/* 时间 */}
-            <section>
-              <button
-                type="button"
-                aria-expanded={timeOpen}
-                onClick={() => {
-                  haptic(6);
-                  setTimeOpen((v) => !v);
-                }}
-                className="flex w-full items-center gap-2.5 rounded-card border border-line bg-card px-3.5 py-3 text-left transition active:bg-paper"
-              >
-                <CalendarBlank size={17} className="shrink-0 text-ink-2" />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-display text-[16px] tracking-wide text-ink">
-                    {title}
-                  </span>
-                  {title !== originTitle && (
-                    <span className="mt-0.5 block text-[10.5px] text-ink-3">原来是 {originTitle}</span>
-                  )}
-                </span>
-                <span className="shrink-0 text-[11.5px] text-ink-3">改时间</span>
-                <CaretDown
-                  size={12}
-                  className={cn("shrink-0 text-ink-3 transition-transform", timeOpen && "rotate-180")}
-                />
-              </button>
-              {timeOpen && (
-                <MealPicker
-                  today={today}
-                  days={days}
-                  taken={taken}
-                  value={{ date: draft.date, slot: draft.slot }}
-                  onChange={pickTime}
-                  className="mt-3"
-                />
-              )}
+            {/* 日期 / 用餐 */}
+            <div>
+              <MealTimeFields
+                today={today}
+                isOwner={isOwner}
+                value={{ date: draft.date, slot: draft.slot }}
+                base={{ date: base.date, slot: base.slot }}
+                taken={taken}
+                onChange={pickTime}
+                disabled={saving}
+              />
               {target && (
-                <p className="mt-2.5 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-brine">
+                <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] leading-relaxed text-brine">
                   <ArrowsMerge size={14} weight="bold" className="mt-0.5 shrink-0" />
-                  <span>
-                    这一餐已经有一单（{target.items.length} 道菜
-                    {target.orderedBy && `，${formatPersonName(target.orderedBy)} 下的单`}），保存后会合并成一单
-                  </span>
+                  <span>{mergeHint}</span>
                 </p>
               )}
-            </section>
+            </div>
 
             {/* 菜 */}
             <section>
-              <div className="mb-2.5 flex items-baseline gap-2">
+              <div className="mb-2.5 flex items-center gap-2">
                 <h3 className="font-display text-[15px] tracking-[0.2em] text-ink">菜品</h3>
-                <span className="text-[10px] text-ink-3 tabular-nums">
-                  {draft.items.length} 道 · {total} 份
+                <span className="text-[11px] text-ink-3 tabular-nums">
+                  · {draft.items.length} 道 {total} 份
                 </span>
                 <span className="h-px flex-1 bg-line" />
+                {!empty && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={toggleManage}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] transition active:scale-95 disabled:opacity-50",
+                      selecting
+                        ? "border-accent bg-accent-soft font-medium text-accent"
+                        : "border-line bg-card/80 text-ink-2 shadow-2xs hover:border-line-2",
+                    )}
+                  >
+                    {selecting ? (
+                      <>
+                        <Check size={12} weight="bold" />
+                        <span>完成</span>
+                      </>
+                    ) : (
+                      <>
+                        <PencilSimple size={12} weight="regular" />
+                        <span>管理</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               {empty ? (
@@ -403,33 +457,75 @@ function EditContent({
                   菜都删光了，保存就会删掉这一单
                 </p>
               ) : (
-                <ul className="space-y-2">
+                <div data-vaul-no-drag className="space-y-2">
                   {draft.items.map((it) => {
                     const dish = getDish(it.dishId);
                     const name = dish?.name ?? "这道菜已下架";
+                    const on = picked.includes(it.dishId);
                     return (
-                      <li
+                      <SwipeRow
                         key={it.dishId}
-                        className="flex items-center gap-3 rounded-card border border-line bg-card p-2"
+                        open={swipedId === it.dishId}
+                        onOpenChange={(o) => setSwipedId(o ? it.dishId : null)}
+                        disabled={selecting || saving}
+                        onDelete={() => {
+                          haptic(12);
+                          setSwipedId(null);
+                          setQty(it.dishId, 0);
+                        }}
                       >
-                        {dish ? (
-                          <DishThumb dish={dish} className="size-11 shrink-0 rounded-[10px]" sizes="44px" />
-                        ) : (
-                          <span className="size-11 shrink-0 rounded-[10px] bg-paper-2" />
-                        )}
-                        <p className="min-w-0 flex-1 truncate font-display text-[15px] tracking-wide text-ink">
-                          {name}
-                        </p>
-                        <QtyStepper
-                          qty={it.qty}
-                          name={name}
-                          disabled={saving}
-                          onChange={(n) => setQty(it.dishId, n)}
-                        />
-                      </li>
+                        <div
+                          onClick={() => {
+                            if (!selecting) return;
+                            haptic(6);
+                            setPicked((p) =>
+                              p.includes(it.dishId)
+                                ? p.filter((x) => x !== it.dishId)
+                                : [...p, it.dishId],
+                            );
+                          }}
+                          className={cn(
+                            "flex items-center gap-3 rounded-card border bg-card p-2.5 transition",
+                            on ? "border-accent/40 bg-accent-soft/40" : "border-line",
+                          )}
+                        >
+                          {selecting && (
+                            <span
+                              className={cn(
+                                "grid size-[18px] shrink-0 place-items-center rounded-full border",
+                                on ? "border-accent bg-accent text-white" : "border-line-2",
+                              )}
+                            >
+                              {on && <Check size={11} weight="bold" />}
+                            </span>
+                          )}
+                          {dish ? (
+                            <DishThumb
+                              dish={dish}
+                              className="size-[46px] shrink-0 rounded-lg"
+                              sizes="46px"
+                            />
+                          ) : (
+                            <span className="size-[46px] shrink-0 rounded-lg bg-paper-2" />
+                          )}
+                          <h4 className="min-w-0 flex-1 truncate font-display text-[15px] tracking-wide text-ink">
+                            {name}
+                          </h4>
+                          {selecting ? (
+                            <span className="text-[12px] text-ink-3 tabular-nums">×{it.qty}</span>
+                          ) : (
+                            <QtyStepper
+                              qty={it.qty}
+                              name={name}
+                              disabled={saving}
+                              onChange={(n) => stepTo(it.dishId, name, n)}
+                            />
+                          )}
+                        </div>
+                      </SwipeRow>
                     );
                   })}
-                </ul>
+                </div>
               )}
 
               <button
@@ -437,6 +533,7 @@ function EditContent({
                 disabled={saving}
                 onClick={() => {
                   haptic(6);
+                  setSwipedId(null);
                   setPickerOpen(true);
                 }}
                 className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-card border border-dashed border-line-2 py-3 text-[13px] text-ink-2 transition active:bg-paper disabled:opacity-50"
@@ -449,36 +546,63 @@ function EditContent({
 
           {/* 底栏 */}
           <div className="shrink-0 border-t border-line bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            {!online && (
-              <p className="mb-2 flex items-center justify-center gap-1.5 text-[11.5px] text-chili">
-                <WifiSlash size={13} />
-                离线中，联网后才能保存
-              </p>
-            )}
-            <div className="flex gap-3">
-              {!empty && (
+            {selecting ? (
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  disabled={deleteDisabled}
-                  onClick={askDelete}
-                  className="shrink-0 rounded-full border border-chili/30 bg-card px-5 py-3 text-[14px] font-medium tracking-wider text-chili transition active:scale-[0.98] disabled:opacity-40"
+                  onClick={() =>
+                    setPicked(
+                      picked.length === draft.items.length ? [] : draft.items.map((i) => i.dishId),
+                    )
+                  }
+                  className="rounded-full border border-line bg-card px-4 py-2.5 text-[13px] text-ink-2"
                 >
-                  删除订单
+                  {picked.length === draft.items.length ? "取消全选" : "全选"}
                 </button>
-              )}
-              <button
-                type="button"
-                disabled={saveDisabled}
-                onClick={() => void doSave()}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-[14px] font-medium tracking-wider text-white transition active:scale-[0.99] disabled:opacity-40",
-                  empty ? "bg-chili" : "bg-accent",
+                <button
+                  type="button"
+                  disabled={picked.length === 0}
+                  onClick={askRemovePicked}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-chili py-2.5 text-[13px] text-white disabled:opacity-40"
+                >
+                  <Trash size={14} weight="regular" />
+                  删除 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
+                </button>
+              </div>
+            ) : (
+              <>
+                {!online && (
+                  <p className="mb-2 flex items-center justify-center gap-1.5 text-[11.5px] text-chili">
+                    <WifiSlash size={13} />
+                    离线中，联网后才能保存
+                  </p>
                 )}
-              >
-                {saving && <SpinnerGap size={15} className="animate-spin" />}
-                {saving ? "处理中…" : empty ? "删除订单" : "保存修改"}
-              </button>
-            </div>
+                <div className="flex gap-3">
+                  {!empty && (
+                    <button
+                      type="button"
+                      disabled={deleteDisabled}
+                      onClick={askDelete}
+                      className="shrink-0 rounded-full border border-chili/30 bg-card px-5 py-3 text-[14px] font-medium tracking-wider text-chili transition active:scale-[0.98] disabled:opacity-40"
+                    >
+                      删除订单
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={saveDisabled}
+                    onClick={() => void doSave()}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-[14px] font-medium tracking-wider text-white transition active:scale-[0.99] disabled:opacity-40",
+                      empty ? "bg-chili" : "bg-accent",
+                    )}
+                  >
+                    {saving && <SpinnerGap size={15} className="animate-spin" />}
+                    {saving ? "处理中…" : empty ? "删除订单" : "保存"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <DishPickerSheet

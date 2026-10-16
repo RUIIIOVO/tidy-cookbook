@@ -65,10 +65,13 @@ export function mealTitle(date: string, slot: number, today: string): string {
   return `${dayLabel(date, today) ?? shortDate(date)} · ${slotName(slot)}`;
 }
 
-/** 下单面板里可选的日期：昨天（补录）/ 今天 / 明天 / 后天 */
+/** 下单面板里可选的日期：今天 / 明天 / 后天 */
 export function pickableDays(today: string): string[] {
-  return [-1, 0, 1, 2].map((n) => addDays(today, n));
+  return [0, 1, 2].map((n) => addDays(today, n));
 }
+
+/** 修改订单时日期最远能改到几天以后 */
+export const EDIT_MAX_AHEAD_DAYS = 30;
 
 /**
  * 每餐「算过了」的北京时间钟点（相对当天 0 点，小时）。宵夜到次日凌晨 4 点。

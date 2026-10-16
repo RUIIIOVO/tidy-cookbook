@@ -27,7 +27,7 @@ export function MealPicker({
   today: string;
   value: MealPick;
   onChange: (v: MealPick) => void;
-  /** 可选日期，默认 昨天~后天（pickableDays）；编辑订单时传 pickableDays ∪ 原日期 */
+  /** 可选日期，默认 今天~后天（pickableDays） */
   days?: string[];
   taken?: Set<string>;
   className?: string;
@@ -79,7 +79,7 @@ export function MealPicker({
         })}
       </div>
 
-      <div role="radiogroup" aria-label="餐别" className="grid grid-cols-4 gap-2">
+      <div role="radiogroup" aria-label="用餐" className="grid grid-cols-4 gap-2">
         {SLOTS.map(({ id, name }) => {
           const on = id === value.slot;
           const has = taken?.has(mealKey(value.date, id));
