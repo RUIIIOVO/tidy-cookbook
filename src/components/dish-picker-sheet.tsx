@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { MagnifyingGlass, Minus, Plus, X } from "@phosphor-icons/react";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { Dish, SubId } from "@/data/types";
@@ -182,7 +181,7 @@ export function DishPickerSheet({
     };
   }, [open]);
 
-  if (!mounted || typeof document === "undefined") return null;
+  if (!mounted) return null;
 
   // 顶部把手 / 标题区下滑关闭；列表区只负责滚动
   const onPointerDown = (e: React.PointerEvent) => {
@@ -204,11 +203,12 @@ export function DishPickerSheet({
     setDragY(0);
   };
 
-  return createPortal(
-    // 弹窗在编辑面板的 React 树里渲染，事件会冒泡到外层 vaul 抽屉并被它当成拖拽 / 阻止滚动。
-    // 在根上拦住，加菜页的滚动和手势完全自己管
+  // 铺在修改订单抽屉的内部，而不是挂到 body 上：抽屉是 Radix 模态框，
+  // 会把它外面的区域设成不可点、并拦掉触摸滚动，挂到外面就会滚不动、点不了，像卡死。
+  // React 事件仍要在根上拦住，免得冒泡到抽屉被当成下拉拖拽。
+  return (
     <div
-      className="fixed inset-0 z-[55]"
+      className="absolute inset-0 z-20 overflow-hidden rounded-t-2xl"
       onPointerDown={(e) => e.stopPropagation()}
       onPointerMove={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
@@ -218,17 +218,9 @@ export function DishPickerSheet({
       onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className={cn(
-          "absolute inset-0 bg-ink/35 transition-opacity duration-300",
-          shown ? "opacity-100" : "opacity-0",
-        )}
-        onClick={onClose}
-      />
-      <div
         role="dialog"
-        aria-modal="true"
         aria-label="添加菜品"
-        className="absolute inset-x-0 bottom-0 mx-auto flex h-[calc(100dvh-env(safe-area-inset-top)-12px)] max-w-[520px] flex-col overflow-hidden rounded-t-2xl bg-paper"
+        className="absolute inset-0 flex flex-col bg-paper"
         style={{
           transform: shown ? `translateY(${dragY}px)` : "translateY(100%)",
           transition: dragging ? "none" : "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)",
@@ -246,8 +238,7 @@ export function DishPickerSheet({
         </div>
         <PickerBody items={items} onSetQty={onSetQty} onClose={onClose} />
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 

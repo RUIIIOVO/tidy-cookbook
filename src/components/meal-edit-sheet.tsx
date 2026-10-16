@@ -346,7 +346,11 @@ function EditContent({
             e.preventDefault();
             requestClose();
           }}
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none"
+          // 加菜页铺在抽屉内部（见 DishPickerSheet），打开时把抽屉撑到最高
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] max-w-[520px] flex-col rounded-t-2xl border-t border-line bg-paper outline-none",
+            pickerOpen && "h-[92dvh]",
+          )}
         >
           <div className="shrink-0 cursor-grab pt-3 pb-2 active:cursor-grabbing">
             <div className="mx-auto h-1 w-10 rounded-full bg-line-2" />
