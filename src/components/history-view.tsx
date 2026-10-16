@@ -269,7 +269,7 @@ export function HistoryView() {
         <div
           ref={trackRef}
           style={{
-            transform: `translate3d(calc(${-activeIndex * 100}% + ${dragOffset}px), 0, 0)`,
+            transform: `translate3d(calc(${-activeIndex * (100 / RANGE_OPTIONS.length)}% + ${dragOffset}px), 0, 0)`,
             transition: isDragging ? "none" : "transform 320ms cubic-bezier(0.16, 1, 0.3, 1)",
             width: `${RANGE_OPTIONS.length * 100}%`,
           }}
