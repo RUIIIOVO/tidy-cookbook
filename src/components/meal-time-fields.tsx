@@ -118,7 +118,7 @@ export function MealTimeFields({
                 type="button"
                 role="radio"
                 aria-checked={on}
-                aria-label={has ? `${name}（已有一单）` : name}
+                aria-label={has ? `${name}，已有订单` : name}
                 disabled={disabled}
                 onClick={() => {
                   if (on) return;

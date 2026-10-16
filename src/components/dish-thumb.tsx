@@ -106,7 +106,7 @@ export function DishThumb({
         className="relative text-[9.5px] tracking-[0.36em]"
         style={{ color: t.hex, opacity: 0.45 }}
       >
-        配图生成中
+        暂无配图
       </span>
     </div>
   );

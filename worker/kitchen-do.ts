@@ -487,9 +487,9 @@ export class KitchenDO implements DurableObject {
   ): Promise<Result> {
     const items = normItems(op.items);
     if (!items || !items.length) return { ok: false, code: "invalid", reason: "没有可下单的菜" };
-    if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不对" };
+    if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不正确" };
     if (!isMealDate(op.date) || !pickableDays(snap.today).includes(op.date))
-      return { ok: false, code: "invalid", reason: "这个日期不能下单，请刷新" };
+      return { ok: false, code: "invalid", reason: "该日期无法下单，请刷新" };
 
     const K = this.kitchenId;
     const db = this.env.DB;
@@ -542,26 +542,26 @@ export class KitchenDO implements DurableObject {
     who: Attachment,
     snap: Snapshot,
   ): Promise<Result> {
-    if (typeof op.mealId !== "string") return { ok: false, code: "invalid", reason: "参数不对" };
+    if (typeof op.mealId !== "string") return { ok: false, code: "invalid", reason: "参数错误" };
     const orig = await this.readMeal(op.mealId);
-    if (!orig) return { ok: false, code: "not_found", reason: "这单已经不在了" };
+    if (!orig) return { ok: false, code: "not_found", reason: "订单不存在" };
     const today = snap.today;
     const owner = who.role === "owner";
     const origPast = orig.row.mealDate < today;
     if (origPast && !owner) return { ok: false, code: "forbidden", reason: "以前的订单只有 rui 和 hui 能改" };
-    if (orig.row.rev !== op.rev) return { ok: false, code: "conflict", reason: "刚被改过，已刷新" };
+    if (orig.row.rev !== op.rev) return { ok: false, code: "conflict", reason: "订单已被修改，已刷新" };
 
     const items = normItems(op.items);
-    if (!items) return { ok: false, code: "invalid", reason: "菜品数据不对" };
+    if (!items) return { ok: false, code: "invalid", reason: "菜品数据有误" };
     // 空单 = 删除
     if (!items.length) return this.removeMeal(op.reqId, orig, who, today);
 
-    if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不对" };
+    if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不正确" };
     // 修改订单可以改到任意日期（久远的订单也能改），往后最多 EDIT_MAX_AHEAD_DAYS 天
     if (!isMealDate(op.date) || op.date > addDays(today, EDIT_MAX_AHEAD_DAYS))
-      return { ok: false, code: "invalid", reason: "这个日期不能选，请刷新" };
+      return { ok: false, code: "invalid", reason: "该日期不可选，请刷新" };
     if (op.date < today && !owner)
-      return { ok: false, code: "forbidden", reason: "已过去的日子只有 rui 和 hui 能改" };
+      return { ok: false, code: "forbidden", reason: "已过去的日期只有 rui 和 hui 能改" };
 
     const db = this.env.DB;
     const now = Date.now();
@@ -655,9 +655,9 @@ export class KitchenDO implements DurableObject {
     who: Attachment,
     snap: Snapshot,
   ): Promise<Result> {
-    if (typeof op.mealId !== "string") return { ok: false, code: "invalid", reason: "参数不对" };
+    if (typeof op.mealId !== "string") return { ok: false, code: "invalid", reason: "参数错误" };
     const orig = await this.readMeal(op.mealId);
-    if (!orig) return { ok: false, code: "not_found", reason: "这单已经不在了" };
+    if (!orig) return { ok: false, code: "not_found", reason: "订单不存在" };
     if (orig.row.mealDate < snap.today && who.role !== "owner")
       return { ok: false, code: "forbidden", reason: "以前的订单只有 rui 和 hui 能删" };
     return this.removeMeal(op.reqId, orig, who, snap.today);
@@ -688,7 +688,7 @@ export class KitchenDO implements DurableObject {
   private async buy(op: Extract<RequestOp, { type: "buy" }>, snap: Snapshot): Promise<Result> {
     const ids = Array.isArray(op.mealIds) ? [...new Set(op.mealIds.filter((x): x is string => typeof x === "string"))] : [];
     if (!ids.length || ids.length > 80 || typeof op.name !== "string" || !op.name || typeof op.done !== "boolean")
-      return { ok: false, code: "invalid", reason: "参数不对" };
+      return { ok: false, code: "invalid", reason: "参数错误" };
 
     const db = this.env.DB;
     const marks = ids.map(() => "?").join(",");
@@ -698,7 +698,7 @@ export class KitchenDO implements DurableObject {
       .bind(this.kitchenId, snap.today, ...ids)
       .all<{ id: string }>();
     if ((pending.results ?? []).length !== ids.length)
-      return { ok: false, code: "not_found", reason: "订单已经变了，已刷新" };
+      return { ok: false, code: "not_found", reason: "订单已变更，已刷新" };
 
     // 只记真正用到这个食材的订单
     const rows = await db
@@ -707,7 +707,7 @@ export class KitchenDO implements DurableObject {
       .all<{ mealId: string; dishId: string }>();
     const using = new Set<string>();
     for (const r of rows.results ?? []) if (DISH_INGREDIENTS.get(r.dishId)?.includes(op.name)) using.add(r.mealId);
-    if (!using.size) return { ok: false, code: "invalid", reason: "清单里没有这个食材，已刷新" };
+    if (!using.size) return { ok: false, code: "invalid", reason: "清单中没有该食材，已刷新" };
 
     const now = Date.now();
     const stmts: D1PreparedStatement[] = op.done

@@ -20,7 +20,7 @@ export function PrepHint() {
       }}
       className="mt-2.5 flex items-center gap-1 text-[12px] text-accent transition active:opacity-60"
     >
-      还有 <span className="tabular-nums">{n}</span> 餐没做，去备菜看看
+      还有 <span className="tabular-nums">{n}</span> 餐没做，去备菜
       <CaretRight size={12} weight="bold" />
     </button>
   );

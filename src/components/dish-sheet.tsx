@@ -101,7 +101,7 @@ export function DishSheet() {
                       做过
                     </div>
                     <div className="mt-0.5 text-[13px] tabular-nums font-medium text-caramel">
-                      {orderCount > 0 ? `${orderCount} 次` : <span className="text-ink-3 font-normal">未做过</span>}
+                      {orderCount > 0 ? `${orderCount} 次` : <span className="text-ink-3 font-normal">还没做过</span>}
                     </div>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ export function DishSheet() {
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent py-3 text-[14px] font-medium tracking-wide text-white transition active:scale-[0.98]"
                     >
                       <SlidersHorizontal size={16} weight="bold" />
-                      <span>选规格并定制</span>
+                      <span>选规格</span>
                     </button>
                   ) : (
                     <button

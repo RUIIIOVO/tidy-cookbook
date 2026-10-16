@@ -93,7 +93,7 @@ export function CartView() {
             已下单：{orderTitle} · {lastOrder.count} 道
           </p>
           <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-            菜都挂到备菜里了，去看看要买什么、做哪几道
+            菜品已加入备菜，可查看买菜清单和做法
           </p>
           <div className="mt-6 flex items-center gap-2.5">
             <button
@@ -127,7 +127,7 @@ export function CartView() {
       <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
         <p className="font-display text-[18px] tracking-wider text-ink">还没点菜</p>
         <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-          自己挑几道，或者让它替你决定
+          自己挑几道，或者随机抽一道
         </p>
         <div className="mt-6 flex items-center gap-2.5">
           <Link
@@ -139,7 +139,7 @@ export function CartView() {
             className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
           >
             <BookOpen size={15} weight="regular" />
-            翻菜单
+            去点菜
           </Link>
           <Link
             href="/"
@@ -199,14 +199,14 @@ export function CartView() {
         {/* 过去日期残留提示：早于 today 时显示 */}
         {isStale && (
           <div className="mt-2.5 flex items-center justify-between rounded-lg bg-paper-2 px-3 py-2 text-[11.5px] text-ink-2">
-            <span>这几道是 {staleDateText} 放的</span>
+            <span>这些菜是 {staleDateText} 加的</span>
             {canDelete(me) && (
               <button
                 type="button"
                 onClick={() => {
                   confirm({
                     title: "清空点菜单？",
-                    desc: "确定清空点菜单中所有已选菜品吗？",
+                    desc: "清空后需要重新添加。",
                     confirmText: "清空",
                     danger: true,
                     onConfirm: () => {
@@ -353,7 +353,7 @@ export function CartView() {
                   .filter(Boolean)
                   .join("、");
                 confirm({
-                  title: `从点菜单里删掉 ${picked.length} 道？`,
+                  title: `删除选中的 ${picked.length} 道菜？`,
                   desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
                   confirmText: "删除",
                   danger: true,

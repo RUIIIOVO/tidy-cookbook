@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Drawer } from "vaul";
+import { createPortal } from "react-dom";
 import { MagnifyingGlass, Minus, Plus, X } from "@phosphor-icons/react";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { Dish, SubId } from "@/data/types";
@@ -160,33 +160,112 @@ export function DishPickerSheet({
 }) {
   useBackClose(open, onClose);
 
-  return (
-    <Drawer.NestedRoot
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-      // 全屏里满是可滚动列表，不做下拉关闭，只能点 ✕ / 好了 / Esc / 系统返回
-      handleOnly
-      repositionInputs={false}
-      scrollLockTimeout={0}
+  // 打开后先挂载、下一帧再滑入；关闭时先滑出、动画结束再卸载
+  const [mounted, setMounted] = useState(open);
+  const [shown, setShown] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ y0: number; t0: number } | null>(null);
+  // 打开时立即挂载（渲染期派生，不走 effect）
+  if (open && !mounted) setMounted(true);
+
+  useEffect(() => {
+    if (open) {
+      const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
+      return () => cancelAnimationFrame(id);
+    }
+    const id = requestAnimationFrame(() => setShown(false));
+    const t = setTimeout(() => setMounted(false), 300);
+    return () => {
+      cancelAnimationFrame(id);
+      clearTimeout(t);
+    };
+  }, [open]);
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  // 顶部把手 / 标题区下滑关闭；列表区只负责滚动
+  const onPointerDown = (e: React.PointerEvent) => {
+    drag.current = { y0: e.clientY, t0: Date.now() };
+    setDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current) return;
+    setDragY(Math.max(0, e.clientY - drag.current.y0));
+  };
+  const onPointerUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    setDragging(false);
+    if (!d) return;
+    const speed = dragY / Math.max(1, Date.now() - d.t0);
+    if (dragY > 120 || speed > 0.6) onClose();
+    setDragY(0);
+  };
+
+  return createPortal(
+    // 弹窗在编辑面板的 React 树里渲染，事件会冒泡到外层 vaul 抽屉并被它当成拖拽 / 阻止滚动。
+    // 在根上拦住，加菜页的滚动和手势完全自己管
+    <div
+      className="fixed inset-0 z-[55]"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
     >
-      <Drawer.Portal>
-        <Drawer.Content className="fixed inset-x-0 top-0 z-[55] mx-auto flex h-dvh max-w-[520px] flex-col bg-paper outline-none">
-          <PickerBody title={title} items={items} onSetQty={onSetQty} onClose={onClose} />
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.NestedRoot>
+      <div
+        className={cn(
+          "absolute inset-0 bg-ink/35 transition-opacity duration-300",
+          shown ? "opacity-100" : "opacity-0",
+        )}
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="添加菜品"
+        className="absolute inset-x-0 bottom-0 mx-auto flex h-[calc(100dvh-env(safe-area-inset-top)-12px)] max-w-[520px] flex-col overflow-hidden rounded-t-2xl bg-paper"
+        style={{
+          transform: shown ? `translateY(${dragY}px)` : "translateY(100%)",
+          transition: dragging ? "none" : "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        <div
+          className="shrink-0 cursor-grab touch-none pt-2.5 active:cursor-grabbing"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <div className="mx-auto h-1 w-10 rounded-full bg-line-2" />
+          <PickerHeader title={title} />
+        </div>
+        <PickerBody items={items} onSetQty={onSetQty} onClose={onClose} />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** 标题区：整块都能按住下滑关闭 */
+function PickerHeader({ title }: { title: string }) {
+  return (
+    <div className="flex items-baseline gap-2 px-5 pt-3 pb-3">
+      <h2 className="font-display text-[22px] leading-tight tracking-wider text-ink">添加菜品</h2>
+      <span className="truncate text-[12px] text-ink-3">{title}</span>
+    </div>
   );
 }
 
 function PickerBody({
-  title,
   items,
   onSetQty,
   onClose,
 }: {
-  title: string;
   items: DraftItem[];
   onSetQty: (dishId: string, qty: number) => void;
   onClose: () => void;
@@ -352,26 +431,6 @@ function PickerBody({
 
   return (
     <>
-      {/* 顶栏：大标题 + 给哪一餐加 + 关闭 */}
-      <div className="flex shrink-0 items-start justify-between gap-3 px-5 pt-[calc(1rem+env(safe-area-inset-top))] pb-3">
-        <div className="min-w-0">
-          <Drawer.Title className="font-display text-[24px] leading-tight tracking-wider text-ink">
-            加菜
-          </Drawer.Title>
-          <Drawer.Description className="mt-1 truncate text-[12px] text-ink-3">
-            给 {title} 加
-          </Drawer.Description>
-        </div>
-        <button
-          type="button"
-          aria-label="关闭"
-          onClick={onClose}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-paper-2 text-ink-2 transition active:scale-90"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
       {/* 搜索 */}
       <div className="shrink-0 px-4 pb-2.5">
         <div className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2">
@@ -530,7 +589,7 @@ function PickerBody({
           onClick={onClose}
           className="flex w-full items-center justify-center rounded-full bg-accent py-3.5 text-[14px] font-medium tracking-wider text-white transition active:scale-[0.99]"
         >
-          {added > 0 ? `新加 ${added} 道 · 好了` : "好了"}
+          {added > 0 ? `新加 ${added} 道 · 完成` : "完成"}
         </button>
       </div>
     </>

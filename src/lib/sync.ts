@@ -88,7 +88,7 @@ function settle(reqId: string, ack: Ack) {
 
 const armTimer = (reqId: string) =>
   setTimeout(
-    () => settle(reqId, { ok: false, reason: "网络不稳，稍后刷新看看是否已生效" }),
+    () => settle(reqId, { ok: false, reason: "网络异常，请稍后重试" }),
     REQUEST_TIMEOUT_MS,
   );
 

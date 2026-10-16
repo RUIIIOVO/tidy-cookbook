@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "@phosphor-icons/react";
 import {
   dayLabel,
   mealKey,
@@ -13,8 +14,11 @@ import { cn, haptic } from "@/lib/utils";
 export type MealPick = { date: string; slot: Slot };
 
 /**
- * 就餐日期 + 餐别的两行单选：第一行日期，第二行餐别。
- * 受控组件；taken 是已有订单的 mealKey 集合，当前所选日期下已有订单的餐别角上会有一个小圆点。
+ * 「选择用餐时间」两列选择器（参考外卖 App 的送达时间）：
+ * 左列日期，右列时段，一次点选完成。受控组件。
+ * - 左列灰底，选中项与右列同色，视觉上连成一片。
+ * - 右列只有选中行用强调色 + 对勾；该时段已有订单时在名字下写一行小字。
+ * - taken：已有订单的 mealKey → 该订单的菜数。
  */
 export function MealPicker({
   today,
@@ -29,18 +33,26 @@ export function MealPicker({
   onChange: (v: MealPick) => void;
   /** 可选日期，默认 今天~后天（pickableDays） */
   days?: string[];
-  taken?: Set<string>;
+  taken?: Map<string, number>;
   className?: string;
 }) {
   const dayList = days ?? pickableDays(today);
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div role="radiogroup" aria-label="日期" className="flex gap-2 overflow-x-auto">
+    <div
+      className={cn(
+        "flex overflow-hidden rounded-card border border-line bg-card",
+        className,
+      )}
+    >
+      {/* 日期列 */}
+      <div
+        role="radiogroup"
+        aria-label="日期"
+        className="w-[104px] shrink-0 bg-paper-2"
+      >
         {dayList.map((date) => {
           const on = date === value.date;
-          // 昨天是补录，用更淡的样式提示
-          const past = date < today;
           return (
             <button
               key={date}
@@ -50,28 +62,29 @@ export function MealPicker({
               onClick={() => {
                 if (on) return;
                 haptic(6);
+                // 只换日期，已选的用餐保留
                 onChange({ ...value, date });
               }}
               className={cn(
-                "flex min-w-0 flex-1 shrink-0 basis-0 flex-col items-center rounded-full border px-2 py-1.5 leading-tight transition active:scale-95",
-                on
-                  ? past
-                    ? "border-accent/60 bg-accent/70 text-white"
-                    : "border-accent bg-accent text-white"
-                  : past
-                    ? "border-line bg-card text-ink-3"
-                    : "border-line bg-card text-ink-2",
+                "relative flex min-h-14 w-full flex-col justify-center px-4 text-left transition-colors",
+                on ? "bg-card" : "active:bg-line/60",
               )}
             >
-              <span className="text-[13px] font-medium whitespace-nowrap">
-                {dayLabel(date, today) ?? shortDate(date)}
-              </span>
+              {on && (
+                <span
+                  aria-hidden
+                  className="absolute top-1/2 left-0 h-[18px] w-[3px] -translate-y-1/2 rounded-r-full bg-accent"
+                />
+              )}
               <span
                 className={cn(
-                  "text-[10px] whitespace-nowrap",
-                  on ? "text-white/75" : "text-ink-3",
+                  "text-[15px] leading-tight",
+                  on ? "font-medium text-ink" : "text-ink-2",
                 )}
               >
+                {dayLabel(date, today) ?? shortDate(date)}
+              </span>
+              <span className="mt-0.5 text-[10.5px] leading-tight text-ink-3">
                 {shortDate(date)}
               </span>
             </button>
@@ -79,39 +92,40 @@ export function MealPicker({
         })}
       </div>
 
-      <div role="radiogroup" aria-label="用餐" className="grid grid-cols-4 gap-2">
+      {/* 时段列 */}
+      <div role="radiogroup" aria-label="用餐" className="min-w-0 flex-1 bg-card">
         {SLOTS.map(({ id, name }) => {
           const on = id === value.slot;
-          const has = taken?.has(mealKey(value.date, id));
+          const exist = taken?.get(mealKey(value.date, id));
           return (
             <button
               key={id}
               type="button"
               role="radio"
               aria-checked={on}
-              aria-label={has ? `${name}（已有一单）` : name}
               onClick={() => {
                 if (on) return;
                 haptic(6);
                 onChange({ ...value, slot: id });
               }}
-              className={cn(
-                "relative rounded-full border py-2 text-[13px] font-medium transition active:scale-95",
-                on
-                  ? "border-accent bg-accent text-white"
-                  : "border-line bg-card text-ink-2",
-              )}
+              className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left transition-colors active:bg-paper"
             >
-              {name}
-              {has && (
+              <span className="min-w-0 flex-1">
                 <span
-                  aria-hidden
                   className={cn(
-                    "absolute top-1.5 right-3 size-1.5 rounded-full",
-                    on ? "bg-white" : "bg-caramel",
+                    "block text-[15px] leading-tight transition-colors",
+                    on ? "font-medium text-accent" : "text-ink",
                   )}
-                />
-              )}
+                >
+                  {name}
+                </span>
+                {exist !== undefined && (
+                  <span className="mt-0.5 block truncate text-[11px] leading-tight text-ink-3">
+                    已有 {exist} 道菜，下单后合并
+                  </span>
+                )}
+              </span>
+              {on && <Check size={17} weight="bold" className="shrink-0 text-accent" />}
             </button>
           );
         })}

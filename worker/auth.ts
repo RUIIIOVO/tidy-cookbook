@@ -111,7 +111,7 @@ export async function register(
     .prepare(`SELECT 1 FROM user WHERE username = ?`)
     .bind(username)
     .first();
-  if (dup) return { error: "这个用户名已经有人用了" };
+  if (dup) return { error: "该用户名已被使用" };
 
   const salt = randomHex(16);
   const pwHash = await derive(password, salt);

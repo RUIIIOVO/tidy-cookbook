@@ -66,7 +66,7 @@ export default {
         };
         if (!username || !password) return json({ error: "请填用户名和密码" }, { status: 400 });
         const r = await login(env.DB, username.trim(), password);
-        if (!r) return json({ error: "用户名或密码不对" }, { status: 401 });
+        if (!r) return json({ error: "用户名或密码错误" }, { status: 401 });
         return json(
           { user: r.user, token: r.token },
           { headers: { "Set-Cookie": sessionCookie(r.token) } },

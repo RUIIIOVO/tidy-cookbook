@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Drawer } from "vaul";
-import { BowlFood, Check, X } from "@phosphor-icons/react";
+import { BowlFood, Check } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
 import { INGREDIENT_IMAGES } from "@/data/ingredient-images";
@@ -71,7 +71,7 @@ function CustomOptionDrawerContent({
       const cur = (prev[groupId] as string[]) || [];
       if (cur.includes(opt)) {
         if (cur.length <= min) {
-          toast(`至少需要保留 ${min} 项`);
+          toast(`至少选择 ${min} 项`);
           return prev;
         }
         return { ...prev, [groupId]: cur.filter((x) => x !== opt) };
@@ -89,7 +89,7 @@ function CustomOptionDrawerContent({
       const val = form[g.id];
       if (g.required) {
         if (!val || (Array.isArray(val) && val.length === 0)) {
-          toast(`请选择【${g.name}】`);
+          toast(`请选择「${g.name}」`);
           return;
         }
       }
@@ -100,7 +100,7 @@ function CustomOptionDrawerContent({
       add(dishId, 1);
       toast(`已加入 · ${dish.name}`);
     } else {
-      toast(`已更新 · ${dish.name} 的定制搭配`);
+      toast(`已更新 · ${dish.name} 的规格`);
     }
     haptic(15);
     close();
@@ -138,13 +138,6 @@ function CustomOptionDrawerContent({
                 {cfg.subtitle}
               </Drawer.Description>
             </div>
-            <button
-              type="button"
-              onClick={close}
-              className="grid size-7 place-items-center rounded-full bg-paper-2 text-ink-2"
-            >
-              <X size={15} />
-            </button>
           </div>
 
           {/* 选项主体 */}
@@ -272,7 +265,7 @@ function CustomOptionDrawerContent({
               onClick={onConfirm}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-[14px] font-medium tracking-wider text-white transition active:scale-[0.99]"
             >
-              <span>{inCart ? "确认修改" : "选好了，加入点菜单"}</span>
+              <span>{inCart ? "确认修改" : "加入点菜单"}</span>
             </button>
           </div>
         </Drawer.Content>

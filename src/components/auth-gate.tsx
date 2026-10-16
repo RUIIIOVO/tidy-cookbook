@@ -50,7 +50,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="grid min-h-dvh place-items-center bg-paper">
         <p className="font-display text-[13px] tracking-[0.3em] text-ink-3">
-          载入中
+          加载中
         </p>
       </div>
     );

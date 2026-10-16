@@ -150,7 +150,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
           [range]: {
             ...bucket,
             loading: false,
-            error: "没读到订单，重试一下",
+            error: "加载订单失败，请重试",
             initialized: true,
           },
         };

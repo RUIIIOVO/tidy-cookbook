@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, CaretDown, PencilSimple, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, CaretDown, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -22,7 +22,7 @@ import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
 import { DishThumb } from "./dish-thumb";
-import { openMealEdit } from "./meal-edit-sheet";
+import { MealCardActions } from "./meal-card-actions";
 import { PrepHint } from "./prep-hint";
 
 export function HistoryView() {
@@ -175,7 +175,7 @@ export function HistoryView() {
               {currentBucket.loading && currentBucket.meals.length === 0 ? (
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-                  <span>正在整理历史小票…</span>
+                  <span>正在加载…</span>
                 </div>
               ) : currentBucket.meals.length > 0 ? (
                 <p className="text-[11px] text-ink-3">
@@ -364,6 +364,7 @@ function HistoryTabPane({
 }
 
 function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean }) {
+  const removeMeal = useHistory((s) => s.remove);
   const add = useCart((s) => s.add);
   const today = useCart((s) => s.today);
   const openSheet = useDishSheet((s) => s.open);
@@ -408,16 +409,10 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
             <span className="ml-1.5 tabular-nums">{time}</span>
           </p>
         </div>
-        {/* 只留一个编辑图标；删除在修改订单面板里 */}
         {allowed && (
-          <button
-            type="button"
-            aria-label={`修改 ${title}`}
-            onClick={() => openMealEdit(meal)}
-            className="-mt-1.5 -mr-2 grid size-8 shrink-0 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
-          >
-            <PencilSimple size={16} />
-          </button>
+          <span className="-mt-1.5">
+            <MealCardActions meal={meal} title={title} onDelete={() => removeMeal(meal.id)} />
+          </span>
         )}
       </header>
 
@@ -564,7 +559,7 @@ function Placeholder({
           }}
           className="mt-5 rounded-full bg-accent px-5 py-2 text-[12px] text-white"
         >
-          去翻菜单
+          去点菜
         </Link>
       )}
     </div>

@@ -33,13 +33,13 @@ export function LoginCard() {
       });
       const data = (await r.json()) as { user?: Me; token?: string; error?: string };
       if (!r.ok || !data.user) {
-        setErr(data.error ?? "出错了，再试一次");
+        setErr(data.error ?? "出错了，请重试");
         return;
       }
       setToken(data.token ?? null);
       setMe(data.user);
     } catch {
-      setErr("连不上服务器");
+      setErr("无法连接服务器");
     } finally {
       setBusy(false);
     }
@@ -86,7 +86,7 @@ export function LoginCard() {
               "active:scale-[0.98] disabled:opacity-40",
             )}
           >
-            {busy ? "稍等…" : mode === "login" ? "进厨房" : "注册并进厨房"}
+            {busy ? "请稍候…" : mode === "login" ? "登录" : "注册并登录"}
           </button>
         </form>
 

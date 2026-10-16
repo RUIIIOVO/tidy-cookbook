@@ -12,7 +12,6 @@ import {
   Trash,
   Warning,
   WifiSlash,
-  X,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { create } from "zustand";
@@ -232,7 +231,7 @@ function EditContent({
       return;
     }
     confirm({
-      title: `从这单里去掉\n「${name}」？`,
+      title: `从订单中移除\n「${name}」？`,
       confirmText: "去掉",
       onConfirm: () => setQty(dishId, 0),
     });
@@ -251,7 +250,7 @@ function EditContent({
       .map((id) => getDish(id)?.name ?? "已下架的菜")
       .join("、");
     confirm({
-      title: `从这单里去掉 ${picked.length} 道？`,
+      title: `移除选中的 ${picked.length} 道菜？`,
       desc: names.length > 40 ? `${names.slice(0, 40)}…` : names,
       confirmText: "删除",
       danger: true,
@@ -271,18 +270,18 @@ function EditContent({
     const ack = await deleteMeal({ mealId: base.id, date: base.date });
     setSaving(false);
     if (ack.ok || ack.code === "not_found") {
-      toast(ack.ok ? "订单删掉了" : "这单已经没了");
+      toast(ack.ok ? "订单已删除" : "订单已不存在");
       close();
     } else {
-      toast(ack.reason ?? "没删成，稍后再试");
+      toast(ack.reason ?? "删除失败，请稍后重试");
     }
   };
 
   const askDelete = () => {
     if (saving || !online) return;
     confirm({
-      title: `删除 ${originTitle}\n这一单？`,
-      desc: "删掉后不能恢复",
+      title: `删除\n${originTitle}？`,
+      desc: "删除后无法恢复",
       confirmText: "删除",
       onConfirm: () => void doDelete(),
     });
@@ -306,13 +305,13 @@ function EditContent({
     });
     setSaving(false);
     if (ack.ok) {
-      toast("改好了");
+      toast("已保存");
       close();
     } else if (ack.code === "conflict") {
-      toast("刚被改过，已刷新");
+      toast("订单已被修改，已刷新");
       close();
     } else {
-      toast(ack.reason ?? "没保存成，稍后再试");
+      toast(ack.reason ?? "保存失败，请稍后重试");
     }
   };
 
@@ -361,17 +360,9 @@ function EditContent({
                 修改订单
               </Drawer.Title>
               <Drawer.Description className="sr-only">
-                {meal.orderedBy ? `${meal.orderedBy} 下的单，改完记得点保存` : "改完记得点保存"}
+                {meal.orderedBy ? `${meal.orderedBy} 下单，修改后请保存` : "修改后请保存"}
               </Drawer.Description>
             </div>
-            <button
-              type="button"
-              aria-label="关闭"
-              onClick={requestClose}
-              className="grid size-7 shrink-0 place-items-center rounded-full bg-paper-2 text-ink-2"
-            >
-              <X size={15} />
-            </button>
           </div>
 
           <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pt-4 pb-5">
@@ -379,20 +370,20 @@ function EditContent({
             {gone ? (
               <div className="flex items-start gap-2 rounded-card border border-chili/25 bg-chili-soft px-3 py-2.5 text-[12px] leading-relaxed text-chili">
                 <Warning size={15} weight="bold" className="mt-0.5 shrink-0" />
-                <span>这单刚被删掉了，不能再保存</span>
+                <span>订单已被删除，无法保存</span>
               </div>
             ) : (
               stale && (
                 <div className="flex items-center gap-2 rounded-card border border-caramel/25 bg-caramel-soft px-3 py-2.5 text-[12px] text-caramel">
                   <Warning size={15} weight="bold" className="shrink-0" />
-                  <span className="flex-1">这单刚被改过</span>
+                  <span className="flex-1">订单已被修改</span>
                   <button
                     type="button"
                     onClick={reload}
                     className="flex shrink-0 items-center gap-1 rounded-full bg-caramel px-2.5 py-1 text-[11.5px] font-medium text-white transition active:scale-95"
                   >
                     <ArrowClockwise size={12} weight="bold" />
-                    重新载入
+                    刷新
                   </button>
                 </div>
               )
@@ -454,7 +445,7 @@ function EditContent({
 
               {empty ? (
                 <p className="rounded-card border border-dashed border-line-2 py-6 text-center text-[12px] text-ink-3">
-                  菜都删光了，保存就会删掉这一单
+                  菜品已全部移除，保存后将删除订单
                 </p>
               ) : (
                 <div data-vaul-no-drag className="space-y-2">
