@@ -10,19 +10,24 @@ import { useCart } from "@/lib/store";
 import { catTheme } from "@/lib/theme";
 import { cn, haptic } from "@/lib/utils";
 import {
-  cancelIdlePreload,
   hasImage,
   preloadPriorityImages,
   scheduleIdlePreload,
 } from "@/lib/images";
 import { DishCard } from "./dish-card";
 
+/** 长距离跳转时只平滑滑完最后这一段，前面直接定位 */
+const GLIDE_PX = 320;
+
 export function MenuView() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState<SubId>(sections[0].key as SubId);
-  const lockRef = useRef(0);
-  const animTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searching = q.trim().length > 0;
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  /** 点击跳转期间锁住滚动高亮，滚到目标位置（或超时、用户触屏）才解锁 */
+  const lockRef = useRef<{ y: number; until: number } | null>(null);
+  const glideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** 每个小类点了几「样」菜（去重后的品种数，不是份数）。
    *  份数已由底部购物车角标承担，这里显示品种数才不重复。 */
@@ -38,99 +43,119 @@ export function MenuView() {
 
   const results = useMemo(() => (searching ? searchDishes(dishes, q) : []), [q, searching]);
 
-  // scroll-spy
+  /** 吸顶搜索栏高度：跳转落点和滚动高亮共用同一条基准线 */
+  const headerH = () => headerRef.current?.offsetHeight ?? 0;
+
+  /** 让该小类顶端贴住搜索栏底边所需的 scrollY；不超过页面可滚范围 */
+  const sectionY = useCallback((key: string) => {
+    const el = document.getElementById(`sec-${key}`);
+    if (!el) return null;
+    const maxY = document.documentElement.scrollHeight - window.innerHeight;
+    const y = el.getBoundingClientRect().top + window.scrollY - headerH();
+    return Math.max(0, Math.min(y, maxY));
+  }, []);
+
+  const cancelGlide = useCallback(() => {
+    if (glideTimer.current) clearTimeout(glideTimer.current);
+    glideTimer.current = null;
+    lockRef.current = null;
+  }, []);
+
+  // 滚动高亮：顶端越过搜索栏底边的最后一个小类即当前小类
   useEffect(() => {
     if (searching) return;
     const onScroll = () => {
-      if (Date.now() < lockRef.current) return;
-      // 滚到底了：最后一节永远到不了顶，直接认定为最后一个分类
-      const atBottom =
-        window.innerHeight + window.scrollY >= document.body.scrollHeight - 4;
-      if (atBottom) {
+      const lock = lockRef.current;
+      if (lock) {
+        if (Math.abs(window.scrollY - lock.y) > 2 && Date.now() < lock.until) return;
+        lockRef.current = null;
+      }
+      // 滚到底时最后一节到不了顶，直接认定为最后一个
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
         setActive(sections[sections.length - 1].key as SubId);
         return;
       }
+      const line = headerH() + 8;
       let current = sections[0].key;
       for (const s of sections) {
         const el = document.getElementById(`sec-${s.key}`);
-        if (el && el.getBoundingClientRect().top <= 75) current = s.key;
+        if (el && el.getBoundingClientRect().top <= line) current = s.key;
       }
       setActive(current as SubId);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [searching]);
+    // 用户手指/滚轮介入时立刻放弃自动跳转，避免和手势抢
+    window.addEventListener("touchstart", cancelGlide, { passive: true });
+    window.addEventListener("wheel", cancelGlide, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("touchstart", cancelGlide);
+      window.removeEventListener("wheel", cancelGlide);
+    };
+  }, [searching, cancelGlide]);
 
-  const scrollToSection = useCallback((key: string) => {
-    const el = document.getElementById(`sec-${key}`);
-    if (!el) return false;
+  useEffect(() => cancelGlide, [cancelGlide]);
 
-    // 吸顶搜索栏高度约 58px，偏移设置为 62px，让分类标题紧凑优雅地上移对齐，消灭顶部冗余空隙
-    const targetY = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 62);
-    const startY = window.scrollY;
-    const diff = targetY - startY;
+  /** 跳到小类：近处直接平滑滚；远处先定位到目标前 GLIDE_PX，再平滑滚完这一段 */
+  const glideTo = useCallback(
+    (key: string) => {
+      const y = sectionY(key);
+      if (y === null) return false;
+      cancelGlide();
+      const dy = y - window.scrollY;
+      if (Math.abs(dy) < 2) return true;
 
-    if (Math.abs(diff) < 4) return true;
-
-    // 清理先前未执行完的滑动任务
-    if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current);
-
-    // 业界最佳硬件平滑方案：大跨度时先瞬间定位至目标前 320px，在下一事件循环中由 GPU 原生 smooth 极速平滑停靠
-    // 1. 彻底消灭超长距离滚动的慢速等待（恒定 ~300ms 完成）；
-    // 2. 完全走原生渲染流水线，没有任何 DOM transform 样式污染，跳转结束彻底杜绝图层重构与文字抖动！
-    const MAX_GLIDE = 320;
-    if (Math.abs(diff) > MAX_GLIDE) {
-      const intermediateY = diff > 0 ? targetY - MAX_GLIDE : targetY + MAX_GLIDE;
-      window.scrollTo({ top: intermediateY, behavior: "instant" });
-      animTimeoutRef.current = setTimeout(() => {
-        window.scrollTo({ top: targetY, behavior: "smooth" });
+      lockRef.current = { y, until: Date.now() + 1000 };
+      if (Math.abs(dy) <= GLIDE_PX) {
+        window.scrollTo({ top: y, behavior: "smooth" });
+        return true;
+      }
+      window.scrollTo({ top: y - Math.sign(dy) * GLIDE_PX, behavior: "instant" });
+      // 必须隔一个事件循环再 smooth，否则浏览器会把两次合并成一次长距离滚动。
+      // 第二段重新取坐标，防止期间布局有变化
+      glideTimer.current = setTimeout(() => {
+        const y2 = sectionY(key) ?? y;
+        lockRef.current = { y: y2, until: Date.now() + 1000 };
+        window.scrollTo({ top: y2, behavior: "smooth" });
       }, 25);
       return true;
-    }
-
-    window.scrollTo({ top: targetY, behavior: "smooth" });
-    return true;
-  }, []);
-
-  const jump = useCallback(
-    (key: string) => {
-      haptic(8);
-      setActive(key as SubId);
-      lockRef.current = Date.now() + 600;
-
-      // 1. 立即清除先前后台排队的所有低优先级空闲预热
-      cancelIdlePreload();
-
-      // 2. 靶向高优先级预热：立即将目标小类前 6 道菜提升为 P0 发起解码
-      const targetSec = sections.find((s) => s.key === key);
-      if (targetSec) {
-        const prioritySrcs = targetSec.dishes
-          .filter((d) => hasImage(d.id))
-          .map((d) => d.image);
-        preloadPriorityImages(prioritySrcs, 6);
-      }
-
-      // 3. 瞬时直达目标位置
-      if (scrollToSection(key)) return;
-      setQ("");
-      requestAnimationFrame(() => requestAnimationFrame(() => scrollToSection(key)));
     },
-    [scrollToSection],
+    [sectionY, cancelGlide],
   );
 
-  // 用户停留后空闲调度：轻量预热下一个紧邻小类（只预热 1 个，不再是 3 个）
+  const jump = useCallback(
+    (key: SubId) => {
+      haptic(8);
+      setActive(key);
+
+      // 目标小类前几张图优先解码（内部会取消空闲预热队列）
+      const sec = sections.find((s) => s.key === key);
+      if (sec) {
+        preloadPriorityImages(
+          sec.dishes.filter((d) => hasImage(d.id)).map((d) => d.image),
+          6,
+        );
+      }
+
+      // 搜索状态下分类列表没渲染：先清空搜索，等列表出来再跳
+      if (glideTo(key)) return;
+      setQ("");
+      requestAnimationFrame(() => requestAnimationFrame(() => glideTo(key)));
+    },
+    [glideTo],
+  );
+
+  // 停留后空闲预热下一个小类的图片
   useEffect(() => {
     if (searching) return;
     const i = sections.findIndex((s) => s.key === active);
-    if (i < 0) return;
-    const nextSec = sections[i + 1];
-    if (!nextSec) return;
-
-    const srcs = nextSec.dishes
-      .filter((d) => hasImage(d.id))
-      .map((d) => d.image);
-    scheduleIdlePreload(srcs, 2);
+    const next = sections[i + 1];
+    if (i < 0 || !next) return;
+    scheduleIdlePreload(
+      next.dishes.filter((d) => hasImage(d.id)).map((d) => d.image),
+      2,
+    );
   }, [active, searching]);
 
   return (
@@ -206,7 +231,7 @@ export function MenuView() {
 
         {/* ── 右侧列表 ───────────────────────── */}
         <div className="min-w-0 flex-1">
-          <div className="sticky top-0 z-10 bg-paper/90 px-3.5 pt-3 pb-2.5 backdrop-blur-lg hairline-b">
+          <div ref={headerRef} className="sticky top-0 z-10 bg-paper/90 px-3.5 pt-3 pb-2.5 backdrop-blur-lg hairline-b">
             <div className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2">
               <MagnifyingGlass size={15} className="shrink-0 text-ink-3" />
               <input
@@ -245,7 +270,7 @@ export function MenuView() {
                 <section
                   key={s.key}
                   id={`sec-${s.key}`}
-                  className="scroll-mt-16 pt-3.5 [content-visibility:auto] [contain-intrinsic-size:1px_360px]"
+                  className="pt-3.5"
                 >
                   <div className="mb-2.5 flex items-baseline gap-2">
                     <h2 className="font-display text-[15px] tracking-[0.2em] text-ink">
