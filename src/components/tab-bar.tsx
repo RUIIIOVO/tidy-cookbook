@@ -11,7 +11,8 @@ const TABS: { key: TabKey; href: string; label: string; Icon: (typeof tabIcon)[k
   { key: "draw", href: "/", label: "抽菜", Icon: tabIcon.draw },
   { key: "menu", href: "/menu/", label: "菜单", Icon: tabIcon.menu },
   { key: "cart", href: "/cart/", label: "点菜单", Icon: tabIcon.cart },
-  { key: "history", href: "/history/", label: "历史", Icon: tabIcon.history },
+  { key: "prep", href: "/prep/", label: "备菜", Icon: tabIcon.prep },
+  { key: "history", href: "/history/", label: "订单", Icon: tabIcon.history },
 ];
 
 export function TabBar() {
@@ -33,7 +34,7 @@ export function TabBar() {
           initial={false}
           animate={{ x: `${activeIndex * 100}%` }}
           transition={{ type: "spring", stiffness: 480, damping: 38 }}
-          className="pointer-events-none absolute inset-y-0 left-0 w-1/4 p-1.5"
+          className="pointer-events-none absolute inset-y-0 left-0 w-1/5 p-1.5"
         >
           <div className="h-full w-full rounded-xl bg-accent-soft" />
         </motion.div>
@@ -66,7 +67,7 @@ export function TabBar() {
                         {count}
                       </span>
                     )}
-                    {key === "history" && pendingMealCount > 0 && (
+                    {key === "prep" && pendingMealCount > 0 && (
                       <span className="absolute -top-1 -right-2 min-w-[15px] rounded-full bg-accent/70 px-1 text-center text-[10px] leading-[15px] font-medium text-white tabular-nums">
                         {pendingMealCount}
                       </span>

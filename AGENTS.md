@@ -21,7 +21,7 @@ node scripts/build-pinyin.mjs  # 改过 src/data/raw.ts 后必须重跑
 | `src/data/dishes.ts` | 解析出 `dishes` / `sections` / 分类 |
 | `src/lib/` | search · store · ui-store · shopping · theme · icons · utils |
 | `src/components/` | 视图与交互组件 |
-| `src/app/(tabs)/` | 四个 tab：`/` `/menu` `/cart` `/history` |
+| `src/app/(tabs)/` | 五个 tab：`/` `/menu` `/cart` `/prep` `/history` |
 | `scripts/gen-dish-images.py` | 菜品配图生成（风格锁在 `scripts/style_lock.txt`） |
 
 ## 约定

@@ -2,12 +2,13 @@
 
 import { create } from "zustand";
 
-export type TabKey = "draw" | "menu" | "cart" | "history";
+export type TabKey = "draw" | "menu" | "cart" | "prep" | "history";
 
 export const TAB_PATH_MAP: Record<TabKey, string> = {
   draw: "/",
   menu: "/menu/",
   cart: "/cart/",
+  prep: "/prep/",
   history: "/history/",
 };
 
@@ -15,6 +16,7 @@ export function getTabFromPath(path: string): TabKey {
   const clean = path.replace(/\/$/, "") || "/";
   if (clean === "/menu") return "menu";
   if (clean === "/cart") return "cart";
+  if (clean === "/prep") return "prep";
   if (clean === "/history") return "history";
   return "draw";
 }
@@ -36,12 +38,14 @@ export const useTabs = create<TabState>()((set, get) => ({
     draw: false,
     menu: false,
     cart: false,
+    prep: false,
     history: false,
   },
   scrollPositions: {
     draw: 0,
     menu: 0,
     cart: 0,
+    prep: 0,
     history: 0,
   },
   setActiveTab: (nextTab, updateUrl = true) => {
@@ -89,6 +93,7 @@ export const useTabs = create<TabState>()((set, get) => ({
         draw: true,
         menu: true,
         cart: true,
+        prep: true,
         history: true,
       },
     });

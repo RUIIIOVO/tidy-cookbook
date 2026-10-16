@@ -7,7 +7,6 @@ import {
   BowlFood,
   BowlSteam,
   Cake,
-  ClockCounterClockwise,
   Cookie,
   CookingPot,
   Cow,
@@ -19,7 +18,9 @@ import {
   ForkKnife,
   Grains,
   Heartbeat,
+  Knife,
   Plant,
+  Receipt,
   Sparkle,
   Shrimp,
   type Icon,
@@ -59,7 +60,8 @@ export const tabIcon = {
   draw: Sparkle,
   menu: BookOpen,
   cart: ForkKnife,
-  history: ClockCounterClockwise,
+  prep: Knife,
+  history: Receipt,
 } satisfies Record<string, Icon>;
 
 export const metaIcon = {

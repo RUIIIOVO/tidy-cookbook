@@ -6,6 +6,7 @@ import { deleteMeal } from "./meal-actions";
 import { addDays } from "./meal-time";
 import type { Meal, MealItem } from "./protocol";
 import { useCart } from "./store";
+import { useTabs } from "./tab-store";
 
 export type { Meal, MealItem };
 
@@ -149,7 +150,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
           [range]: {
             ...bucket,
             loading: false,
-            error: "暂无历史记录",
+            error: "没读到订单，重试一下",
             initialized: true,
           },
         };
@@ -251,4 +252,18 @@ useCart.subscribe((s) => {
   // 历史页还没打开过就不用拉
   if (!Object.values(useHistory.getState().cache).some((b) => b.initialized)) return;
   void useHistory.getState().invalidateAll();
+});
+
+// 订单可能在别的设备上被补录、修改、删除，这些不走实时同步。
+// 每次切到订单页，把已加载的数据静默重拉一次（列表先照旧显示，拉到再替换）
+useTabs.subscribe((s, prev) => {
+  if (s.activeTab !== "history" || prev.activeTab === "history") return;
+  const { range, cache } = useHistory.getState();
+  if (!cache[range]?.initialized) return;
+  // 其它时间段标记为过期，切过去时再拉
+  const stale = Object.fromEntries(
+    Object.entries(cache).map(([k, v]) => [k, k === range ? v : { ...v, initialized: false }]),
+  ) as Record<HistoryRange, RangeData>;
+  useHistory.setState({ cache: stale });
+  void useHistory.getState().ensureRange(range, true);
 });

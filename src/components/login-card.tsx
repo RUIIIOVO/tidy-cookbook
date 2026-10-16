@@ -55,7 +55,7 @@ export function LoginCard() {
         <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-3">
           {mode === "login"
             ? "登录后点菜单会在所有设备同步"
-            : "注册的账号可以点菜，但不能清空和删历史"}
+            : "注册的账号可以点菜，但不能清空点菜单，也不能改以前的订单"}
         </p>
 
         <form onSubmit={submit} className="mt-7 flex flex-col gap-2.5">

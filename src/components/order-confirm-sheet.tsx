@@ -207,7 +207,7 @@ function OrderConfirmSheetContent({
                 </p>
               )}
               {isPast && !existingMeal && (
-                <p className="text-ink-3">补录到历史订单</p>
+                <p className="text-ink-3">会补进订单记录</p>
               )}
             </div>
           </div>

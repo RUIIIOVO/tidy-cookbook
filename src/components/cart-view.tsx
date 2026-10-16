@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   BookOpen,
   Check,
-  ClockCounterClockwise,
+  Knife,
   PencilSimple,
   SealCheck,
   Sparkle,
@@ -94,19 +94,19 @@ export function CartView() {
             已下单：{orderTitle} · {lastOrder.count} 道
           </p>
           <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-            订单已生成，可以在历史订单查看或准备买菜清单
+            菜都挂到备菜里了，去看看要买什么、做哪几道
           </p>
           <div className="mt-6 flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => {
                 haptic(6);
-                setActiveTab("history");
+                setActiveTab("prep");
               }}
               className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
             >
-              <ClockCounterClockwise size={15} weight="regular" />
-              查看订单
+              <Knife size={15} weight="regular" />
+              去备菜
             </button>
             <button
               type="button"

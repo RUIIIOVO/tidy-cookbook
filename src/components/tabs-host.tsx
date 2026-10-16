@@ -6,9 +6,11 @@ import { getTabFromPath, useTabs } from "@/lib/tab-store";
 import { DrawView } from "./draw-view";
 import { MenuView } from "./menu-view";
 import { CartView } from "./cart-view";
+import { PrepView } from "./prep-view";
 import { HistoryView } from "./history-view";
 import { DishSheet } from "./dish-sheet";
 import { CustomOptionDrawer } from "./custom-option-drawer";
+import { MealEditSheet } from "./meal-edit-sheet";
 
 export function TabsHost() {
   const pathname = usePathname();
@@ -76,7 +78,14 @@ export function TabsHost() {
         </div>
       )}
 
-      {/* 历史 (history) */}
+      {/* 备菜 (prep) */}
+      {(mountedTabs.prep || activeTab === "prep" || initialTab === "prep") && (
+        <div className={activeTab === "prep" ? "block" : "hidden"}>
+          <PrepView />
+        </div>
+      )}
+
+      {/* 订单 (history) */}
       {(mountedTabs.history || activeTab === "history" || initialTab === "history") && (
         <div className={activeTab === "history" ? "block" : "hidden"}>
           <HistoryView />
@@ -86,6 +95,8 @@ export function TabsHost() {
       {/* 全局唯一详情抽屉与自选定制抽屉单例，杜绝多 Tab 视图保活时重叠渲染双层弹窗 */}
       <DishSheet />
       <CustomOptionDrawer />
+      {/* 订单编辑面板：备菜页和订单页的「修改」共用这一个 */}
+      <MealEditSheet />
     </>
   );
 }

@@ -57,14 +57,14 @@ export const useMealEdit = create<EditStore>((set) => ({
 export function openMealEdit(meal: Meal): boolean {
   const today = useCart.getState().today;
   if (meal.mealDate < today && !canDelete(useAuth.getState().me)) {
-    toast("已吃的订单只有厨神能改");
+    toast("以前的订单只有 rui 和 hui 能改");
     return false;
   }
   useMealEdit.getState().open(meal);
   return true;
 }
 
-/** 全局只需要挂一个（PendingMeals 里已经带了） */
+/** 全局只需要挂一个（挂在 tabs-host，备菜页和订单页的「修改」共用） */
 export function MealEditSheet() {
   const meal = useMealEdit((s) => s.meal);
   const visible = useMealEdit((s) => s.visible);

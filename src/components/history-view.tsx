@@ -23,7 +23,7 @@ import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
 import { DishThumb } from "./dish-thumb";
 import { openMealEdit } from "./meal-edit-sheet";
-import { PendingMeals } from "./pending-meals";
+import { PrepHint } from "./prep-hint";
 
 export function HistoryView() {
   const me = useAuth((s) => s.me);
@@ -180,7 +180,7 @@ export function HistoryView() {
       <header className="z-20 shrink-0 border-b border-line bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-[22px] tracking-wider text-ink">历史订单</h1>
+            <h1 className="font-display text-[22px] tracking-wider text-ink">订单</h1>
             <div className="mt-1 min-h-[18px]">
               {currentBucket.loading && currentBucket.meals.length === 0 ? (
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
@@ -230,6 +230,8 @@ export function HistoryView() {
             </button>
           )}
         </div>
+
+        <PrepHint />
 
         {/* 顶部时间跨度胶囊 */}
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
@@ -323,9 +325,6 @@ function HistoryTabPane({
 
   return (
     <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
-      {/* 待吃订单 + 买菜清单：只在「全部」页签里挂一份（含全局唯一的订单编辑面板） */}
-      {rangeKey === "all" && <PendingMeals />}
-
       {/* 正在加载骨架屏 */}
       {loading && meals.length === 0 && (
         <div className="flex flex-col gap-3 pb-4">
@@ -341,7 +340,7 @@ function HistoryTabPane({
       {initialized && !loading && !error && meals.length === 0 && (
         <Placeholder
           text={rangeKey === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === rangeKey)?.label}暂无记录`}
-          hint={rangeKey === "all" ? "下单后吃过的会归档到这里" : "可以切换到「全部」查看更早的订单"}
+          hint={rangeKey === "all" ? "吃过的订单会出现在这里" : "可以切换到「全部」查看更早的订单"}
         />
       )}
 
@@ -357,7 +356,7 @@ function HistoryTabPane({
           {loadingMore ? (
             <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
               <SpinnerGap size={14} className="animate-spin text-accent" />
-              <span>加载更多历史订单…</span>
+              <span>加载更多订单…</span>
             </div>
           ) : (
             <span className="h-4 w-full" aria-hidden="true" />
@@ -367,7 +366,7 @@ function HistoryTabPane({
 
       {!hasMore && meals.length >= 15 && (
         <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
-          — 已展示全部历史订单 —
+          — 没有更早的订单了 —
         </p>
       )}
     </div>
@@ -411,16 +410,14 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
       {/* 小票抬头 */}
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="flex items-baseline gap-2">
-            <span className="font-display text-[17px] tracking-wider text-ink">{title}</span>
-            <span className="text-[11px] text-ink-3 tabular-nums">{time} 下单</span>
-          </p>
+          <p className="truncate font-display text-[17px] tracking-wider text-ink">{title}</p>
           <p className="mt-1 truncate text-[10.5px] text-ink-3">
             {meal.orderedBy
               ? `${formatPersonName(meal.orderedBy)} 下单`
               : people.length > 0
                 ? `${people.join("、")} 下单`
                 : "已归档"}
+            <span className="ml-1.5 tabular-nums">{time}</span>
           </p>
         </div>
         {allowed && (
