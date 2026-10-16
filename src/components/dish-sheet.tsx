@@ -31,7 +31,7 @@ export function DishSheet() {
     if (!dish) return;
     haptic();
     add(dish.id, n);
-    toast(`已加入 ${n} 份 · ${dish.name}`);
+    toast(n > 1 ? `已加入 ${n} 份 · ${dish.name}` : `已加入 · ${dish.name}`);
     close();
   }, 800);
   const t = dish ? catTheme[dish.category] : null;

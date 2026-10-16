@@ -220,14 +220,18 @@ function OrderConfirmSheetContent({
                         <span className="min-w-0 truncate font-display text-[14px] tracking-wide text-ink">
                           {it.name}
                         </span>
-                        {/* 点线引导到份数 */}
-                        <span
-                          aria-hidden
-                          className="mx-1 h-px min-w-4 flex-1 border-b border-dotted border-line-2"
-                        />
-                        <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">
-                          ×{it.qty}
-                        </span>
+                        {/* 只有 2 份及以上才写份数 */}
+                        {it.qty > 1 && (
+                          <>
+                            <span
+                              aria-hidden
+                              className="mx-1 h-px min-w-4 flex-1 border-b border-dotted border-line-2"
+                            />
+                            <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">
+                              ×{it.qty}
+                            </span>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>

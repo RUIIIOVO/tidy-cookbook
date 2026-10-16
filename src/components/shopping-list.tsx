@@ -1,33 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, CopySimple, WifiSlash } from "@phosphor-icons/react";
+import { Check, CopySimple } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { buy } from "@/lib/meal-actions";
 import type { Meal } from "@/lib/protocol";
 import { buildMealShoppingList, isBought, type MealShopItem } from "@/lib/shopping";
 import { useCart } from "@/lib/store";
-import { useSyncStatus } from "@/lib/sync";
 import { useGuard } from "@/lib/use-guard";
 import { cn, haptic } from "@/lib/utils";
 import { GroupCard, GroupRow, GroupSection } from "./grouped-list";
 
 /**
- * 买菜清单的数据：主料 / 辅料算「要买」，调料只提醒，不计进度。
+ * 买菜清单的数据：主料 / 辅料 / 调料一视同仁，都能勾选、都计进度。
  * 备菜页的概要、分段标签和清单本身共用这一份算法。
  */
 export function useShoppingData(meals: Meal[]) {
   const bought = useCart((s) => s.bought);
   const groups = useMemo(() => buildMealShoppingList(meals), [meals]);
   return useMemo(() => {
-    const buyGroups = groups.filter((g) => g.group !== "调料");
-    const seasoning = groups.find((g) => g.group === "调料");
+    const buyGroups = groups;
     const total = buyGroups.reduce((n, g) => n + g.items.length, 0);
     const done = buyGroups.reduce(
       (n, g) => n + g.items.filter((i) => isBought(i, bought)).length,
       0,
     );
-    return { groups, buyGroups, seasoning, total, done, bought };
+    return { groups, buyGroups, total, done, bought };
   }, [groups, bought]);
 }
 
@@ -43,8 +41,7 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
   // 所有订单加起来只有一道菜时，记下它（行内就不再逐行写菜名）
   const dishIds = new Set(meals.flatMap((m) => m.items.map((i) => i.dishId)));
   const singleDish = dishIds.size === 1 ? [...dishIds][0] : null;
-  const online = useSyncStatus() === "online";
-  const { groups, buyGroups, seasoning, total, bought } = useShoppingData(meals);
+  const { groups, buyGroups, total, bought } = useShoppingData(meals);
 
   const copy = useGuard(async () => {
     const text = groups
@@ -63,10 +60,6 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
   const toggle = (item: MealShopItem, on: boolean) => {
-    if (!online) {
-      toast("离线中，联网后才能勾选");
-      return;
-    }
     haptic(6);
     const name = item.name;
     const next = !on;
@@ -135,12 +128,6 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
               style={{ width: `${(done / total) * 100}%` }}
             />
           </div>
-          {!online && (
-            <p className="mt-2 flex items-center gap-1.5 text-[11px] text-chili">
-              <WifiSlash size={12} />
-              离线中，联网后才能勾选
-            </p>
-          )}
         </div>
       )}
 
@@ -175,19 +162,6 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
           );
         })}
 
-        {seasoning && (
-          <GroupSection title="调料" aside={<span className="tabular-nums">{seasoning.items.length} 样</span>}>
-            <GroupCard>
-              <div className="flex flex-wrap gap-1.5 px-3.5 py-3">
-                {seasoning.items.map((it) => (
-                  <span key={it.name} className="rounded-full bg-paper-2 px-2.5 py-1 text-[12px] text-ink-2">
-                    {it.name}
-                  </span>
-                ))}
-              </div>
-            </GroupCard>
-          </GroupSection>
-        )}
       </div>
     </div>
   );

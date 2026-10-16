@@ -44,7 +44,6 @@ export function MealTicket({
   const rows = meal.items
     .map((i) => ({ i, dish: getDish(i.dishId) }))
     .filter((r): r is { i: typeof r.i; dish: NonNullable<typeof r.dish> } => !!r.dish);
-  const total = meal.items.reduce((n, i) => n + i.qty, 0);
 
   const people = [
     ...new Set(
@@ -106,7 +105,10 @@ export function MealTicket({
                   </p>
                 )}
               </div>
-              <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">×{i.qty}</span>
+              {/* 只有 2 份及以上才写份数，1 份不写 */}
+              {i.qty > 1 && (
+                <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">×{i.qty}</span>
+              )}
             </button>
           </li>
         ))}
@@ -127,8 +129,7 @@ export function MealTicket({
       {/* 小票合计 */}
       <div className="mt-1 flex min-h-11 items-center justify-between border-t border-dashed border-line-2 pt-3">
         <span className="text-[11px] text-ink-3">
-          合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道 ·{" "}
-          <span className="tabular-nums text-ink-2">{total}</span> 份
+          合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
         </span>
         {footerAction}
       </div>

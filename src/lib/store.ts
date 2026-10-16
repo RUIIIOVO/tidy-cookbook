@@ -5,11 +5,15 @@ import { persist } from "zustand/middleware";
 import { normalizeDishId } from "@/data/dishes";
 import { useAuth } from "./auth-store";
 import { mealDayOf } from "./meal-time";
-import type { BoughtMark, CartItem, CartOp, Meal, MealItem, Snapshot } from "./protocol";
+import type { BoughtMark, CartItem, CartOp, Meal, MealItem, RequestOp, Snapshot } from "./protocol";
 
 export type { BoughtMark, CartItem, Meal, MealItem, Snapshot };
 /** 点菜单操作（可离线排队），即协议里的 CartOp */
-export type Op = CartOp;
+/**
+ * 能进离线队列的操作：点菜单的增删，以及买菜勾选（离线时先记下，联网后自动补发；
+ * 勾选带 reqId，服务端去重，重放不会出错）
+ */
+export type Op = CartOp | Extract<RequestOp, { type: "buy" }>;
 
 /** sync.ts 注册进来的发送钩子。store 不反向 import sync，避免循环依赖。 */
 let sink: (() => void) | null = null;
@@ -61,11 +65,15 @@ const fixOp = (op: Op): Op => {
   return op;
 };
 
-/** 只保留点菜单操作；旧版本遗留的 lock / unlock / buy 直接丢弃 */
+/** 只保留能重放的操作；旧版本遗留的 lock / unlock / 不带 reqId 的 buy 直接丢弃 */
 const keepCartOps = (ops: unknown): Op[] =>
   (Array.isArray(ops) ? ops : []).filter(
     (o): o is Op =>
-      !!o && (o.type === "set" || o.type === "removeMany" || o.type === "clear"),
+      !!o &&
+      (o.type === "set" ||
+        o.type === "removeMany" ||
+        o.type === "clear" ||
+        (o.type === "buy" && typeof o.reqId === "string")),
   );
 
 const isMark = (m: unknown): m is BoughtMark =>

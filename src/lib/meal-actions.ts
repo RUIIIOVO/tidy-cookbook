@@ -10,7 +10,7 @@ import { useHistory } from "./history-store";
 import type { Slot } from "./meal-time";
 import type { BoughtMark } from "./protocol";
 import { useCart } from "./store";
-import { request, type Ack } from "./sync";
+import { getSyncStatus, request, type Ack } from "./sync";
 
 type Lines = { dishId: string; qty: number }[];
 
@@ -93,7 +93,13 @@ function applyMarks(
 export async function buy(mealIds: string[], name: string, done: boolean): Promise<Ack> {
   const { setBought } = useCart.getState();
   setBought(applyMarks(useCart.getState().bought, mealIds, name, done));
-  const ack = await request({ type: "buy", reqId: newReqId(), mealIds, name, done });
+  const op = { type: "buy" as const, reqId: newReqId(), mealIds, name, done };
+  // 离线：和点菜单一样先记进队列，联网后自动补发（reqId 去重）
+  if (getSyncStatus() !== "online") {
+    useCart.getState().enqueue(op);
+    return { ok: true };
+  }
+  const ack = await request(op);
   if (!ack.ok) {
     // 反向恢复而不是还原旧快照：等待期间可能已经来了新的服务端快照
     setBought(applyMarks(useCart.getState().bought, mealIds, name, !done));
