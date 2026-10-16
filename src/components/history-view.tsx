@@ -108,21 +108,15 @@ export function HistoryView() {
 
     if (!state.isHoriz) return;
 
-    // 2. 边缘阻尼弹性计算
-    let effectiveDx = dx;
-    if (
-      (activeIndex === 0 && dx > 0) ||
-      (activeIndex === RANGE_OPTIONS.length - 1 && dx < 0)
-    ) {
-      effectiveDx = dx * 0.32; // 触及两端时的物理阻尼
-    }
+    // 2. 边缘阻尼弹性计算（非循环端位移施加阻尼，首尾相通）
+    const effectiveDx = dx;
 
     // 3. 即刻预取：当手指发生有效横拖的第一瞬间，立即拉取目标相邻页数据
-    if (dx < -15 && activeIndex < RANGE_OPTIONS.length - 1) {
-      const nextKey = RANGE_OPTIONS[activeIndex + 1].key;
+    if (dx < -15) {
+      const nextKey = RANGE_OPTIONS[(activeIndex + 1) % RANGE_OPTIONS.length].key;
       void ensureRange(nextKey);
-    } else if (dx > 15 && activeIndex > 0) {
-      const prevKey = RANGE_OPTIONS[activeIndex - 1].key;
+    } else if (dx > 15) {
+      const prevKey = RANGE_OPTIONS[(activeIndex - 1 + RANGE_OPTIONS.length) % RANGE_OPTIONS.length].key;
       void ensureRange(prevKey);
     }
 
@@ -144,15 +138,11 @@ export function HistoryView() {
 
       let targetIndex = activeIndex;
 
-      // 判定切换成立：滑动距离超过视口 20%，或甩动手势速度足够快
+      // 判定切换成立：滑动距离超过视口 20%，或甩动手势速度足够快（支持首尾循环穿梭）
       if (dx < -width * 0.2 || (vx < -0.32 && dx < -20)) {
-        if (activeIndex < RANGE_OPTIONS.length - 1) {
-          targetIndex = activeIndex + 1;
-        }
+        targetIndex = (activeIndex + 1) % RANGE_OPTIONS.length;
       } else if (dx > width * 0.2 || (vx > 0.32 && dx > 20)) {
-        if (activeIndex > 0) {
-          targetIndex = activeIndex - 1;
-        }
+        targetIndex = (activeIndex - 1 + RANGE_OPTIONS.length) % RANGE_OPTIONS.length;
       }
 
       if (targetIndex !== activeIndex) {

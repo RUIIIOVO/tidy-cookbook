@@ -15,9 +15,9 @@ export type HistoryRange = "all" | "7d" | "30d" | "90d";
 
 export const RANGE_OPTIONS: { key: HistoryRange; label: string; days: number | null }[] = [
   { key: "all", label: "全部", days: null },
-  { key: "7d", label: "近 7 天", days: 7 },
-  { key: "30d", label: "近 1 个月", days: 30 },
   { key: "90d", label: "近 3 个月", days: 90 },
+  { key: "30d", label: "近 1 个月", days: 30 },
+  { key: "7d", label: "近 7 天", days: 7 },
 ];
 
 export function getSinceTimestamp(range: HistoryRange): number | null {
