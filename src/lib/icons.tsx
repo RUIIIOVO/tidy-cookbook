@@ -64,6 +64,12 @@ export const tabIcon = {
   history: Receipt,
 } satisfies Record<string, Icon>;
 
+/** 备菜页顶部分段控件：菜品 / 买菜清单 */
+export const prepTabIcon = {
+  dishes: BowlFood,
+  shopping: Basket,
+} satisfies Record<string, Icon>;
+
 export const metaIcon = {
   spicy: Flame,
   tags: Tag,

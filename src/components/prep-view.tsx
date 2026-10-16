@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClipboardText } from "@phosphor-icons/react";
+import { ClipboardText, type Icon } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
+import { prepTabIcon } from "@/lib/icons";
 import { dayLabel, shortDate } from "@/lib/meal-time";
 import { deleteMeal } from "@/lib/meal-actions";
 import { usePrepUi, type PrepSeg } from "@/lib/prep-store";
@@ -93,8 +94,12 @@ export function PrepView() {
           index={index}
           onPick={pick}
           items={[
-            { text: "菜品", badge: String(dishCount) },
-            { text: "买菜清单", badge: shop.total > 0 ? `${shop.done}/${shop.total}` : undefined },
+            { text: "菜品", Icon: prepTabIcon.dishes, badge: String(dishCount) },
+            {
+              text: "买菜清单",
+              Icon: prepTabIcon.shopping,
+              badge: shop.total > 0 ? `${shop.done}/${shop.total}` : undefined,
+            },
           ]}
         />
         {days.length > 1 && (
@@ -157,7 +162,7 @@ function PrepSegmented({
   pager: Pager;
   index: number;
   onPick: (i: number) => void;
-  items: { text: string; badge?: string }[];
+  items: { text: string; Icon: Icon; badge?: string }[];
 }) {
   // 手势拖过一半时文字就切到新页的强调态，不必等松手
   const [near, setNear] = useState(index);
@@ -185,10 +190,11 @@ function PrepSegmented({
             aria-selected={i === index}
             onClick={() => onPick(i)}
             className={cn(
-              "relative z-10 text-[13px] transition-colors active:opacity-60",
+              "relative z-10 inline-flex items-center justify-center gap-1.5 text-[13px] transition-colors active:opacity-60",
               i === near ? "font-medium text-ink" : "text-ink-3",
             )}
           >
+            <it.Icon size={15} weight={i === near ? "fill" : "regular"} className="shrink-0" />
             {it.text}
             {it.badge && (
               <span className="ml-1 font-normal tabular-nums text-ink-3">{it.badge}</span>

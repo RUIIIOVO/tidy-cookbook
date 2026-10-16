@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, CopySimple } from "@phosphor-icons/react";
+import { Check, CopySimple, Minus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { buy } from "@/lib/meal-actions";
 import type { Meal } from "@/lib/protocol";
@@ -9,7 +9,7 @@ import { buildMealShoppingList, isBought, type MealShopItem } from "@/lib/shoppi
 import { useCart } from "@/lib/store";
 import { useGuard } from "@/lib/use-guard";
 import { cn, haptic } from "@/lib/utils";
-import { GroupCard, GroupRow, GroupSection } from "./grouped-list";
+import { GroupCard, GroupRow } from "./grouped-list";
 
 /**
  * 买菜清单的数据：主料 / 辅料 / 调料一视同仁，都能勾选、都计进度。
@@ -59,10 +59,8 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
   // 否则 store 在等待期间收到一份旧快照，勾选圈会「勾上 → 弹回 → 又勾上」来回闪。
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
-  const toggle = (item: MealShopItem, on: boolean) => {
-    haptic(6);
+  const setItem = (item: MealShopItem, next: boolean) => {
     const name = item.name;
-    const next = !on;
     setPending((p) => ({ ...p, [name]: next }));
     const release = () =>
       setPending((p) => {
@@ -77,7 +75,19 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
       else release();
     });
   };
-  const checked = (it: MealShopItem) => pending[it.name] ?? isBought(it, bought);
+  const toggle = (item: MealShopItem, on: boolean) => {
+    haptic(6);
+    setItem(item, !on);
+  };
+  // 整组：没全勾就全勾上，已经全勾了就全取消
+  const toggleGroup = (items: MealShopItem[]) => {
+    haptic(8);
+    const allOn = items.every(checked);
+    for (const it of items) if (checked(it) === allOn) setItem(it, !allOn);
+  };
+  function checked(it: MealShopItem) {
+    return pending[it.name] ?? isBought(it, bought);
+  }
 
   if (groups.length === 0) {
     return <p className="py-14 text-center text-[13px] text-ink-3">这几餐没有要买的食材</p>;
@@ -137,15 +147,13 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
           const ordered = g.items;
           const had = ordered.filter(checked);
           return (
-            <GroupSection
-              key={g.group}
-              title={g.group}
-              aside={
-                <span className="tabular-nums">
-                  {had.length}/{g.items.length}
-                </span>
-              }
-            >
+            <section key={g.group}>
+              <GroupHeader
+                title={g.group}
+                done={had.length}
+                total={g.items.length}
+                onToggle={() => toggleGroup(g.items)}
+              />
               <GroupCard>
                 {ordered.map((it, idx) => (
                   <ShopRow
@@ -158,7 +166,7 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
                   />
                 ))}
               </GroupCard>
-            </GroupSection>
+            </section>
           );
         })}
 
@@ -222,5 +230,47 @@ function ShopRow({
         </span>
       </button>
     </GroupRow>
+  );
+}
+
+/**
+ * 组标题条（主料 / 辅料 / 调料）：整条都能点，前面是三态勾选框。
+ * 全勾 → 实心对勾；部分勾 → 横杠；没勾 → 空圈。点一下整组全选 / 全取消。
+ */
+function GroupHeader({
+  title,
+  done,
+  total,
+  onToggle,
+}: {
+  title: string;
+  done: number;
+  total: number;
+  onToggle: () => void;
+}) {
+  const all = total > 0 && done >= total;
+  const some = done > 0 && !all;
+  return (
+    <button
+      type="button"
+      aria-pressed={all}
+      aria-label={`${title}，已买 ${done} / ${total}，点一下${all ? "全部取消" : "全部勾选"}`}
+      onClick={onToggle}
+      className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3.5 text-left transition active:bg-paper-2"
+    >
+      <span
+        className={cn(
+          "grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] transition",
+          all || some ? "border-accent bg-accent text-white" : "border-line-2",
+        )}
+      >
+        {all && <Check size={11} weight="bold" />}
+        {some && <Minus size={11} weight="bold" />}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-display text-[16px] tracking-wider text-ink">{title}</span>
+      <span className="shrink-0 text-[11px] tabular-nums text-ink-3">
+        {done}/{total}
+      </span>
+    </button>
   );
 }
