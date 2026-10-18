@@ -9,11 +9,21 @@ import type { BoughtMark, CartItem, CartOp, Meal, MealItem, RequestOp, Snapshot 
 
 export type { BoughtMark, CartItem, Meal, MealItem, Snapshot };
 /** 点菜单操作（可离线排队），即协议里的 CartOp */
-/**
- * 能进离线队列的操作：点菜单的增删，以及买菜勾选（离线时先记下，联网后自动补发；
- * 勾选带 reqId，服务端去重，重放不会出错）
- */
-export type Op = CartOp | Extract<RequestOp, { type: "buy" }>;
+export type Op = CartOp;
+
+/** 一次买菜勾选。带 reqId，服务端去重，重发不会出错 */
+export type BuyJob = Extract<RequestOp, { type: "buy" }>;
+
+/** 服务端勾选 + 还没确认的本地勾选 = 界面上显示的勾选 */
+function overlayBuys(server: BoughtMark[], jobs: BuyJob[]): BoughtMark[] {
+  let out = server;
+  for (const j of jobs) {
+    const ids = new Set(j.mealIds);
+    out = out.filter((m) => !(m.name === j.name && ids.has(m.mealId)));
+    if (j.done) out = [...out, ...j.mealIds.map((mealId) => ({ mealId, name: j.name }))];
+  }
+  return out;
+}
 
 /** sync.ts 注册进来的发送钩子。store 不反向 import sync，避免循环依赖。 */
 let sink: (() => void) | null = null;
@@ -28,8 +38,12 @@ type CartState = {
   items: CartItem[];
   /** 待吃订单（mealDate >= today），随快照实时同步 */
   meals: Meal[];
-  /** 买菜清单里已勾选的 (订单, 食材) */
+  /** 买菜清单里已勾选的 (订单, 食材)：服务端为准，叠上本地还没确认的勾选 */
   bought: BoughtMark[];
+  /** 服务端最近一次快照里的勾选 */
+  serverBought: BoughtMark[];
+  /** 本地点了、服务端还没确认的勾选。持久化，断网 / 超时都不回滚，联网后继续发 */
+  buyQueue: BuyJob[];
   /** 菜品历史累计点单次数：dishId -> count，O(1) 极速读取 */
   stats: Record<string, number>;
   /** 还没送到服务端的操作 */
@@ -51,8 +65,10 @@ type CartState = {
   takeOutbox: () => Op[];
   requeueInflight: () => void;
   applySnapshot: (snap: Snapshot) => void;
-  /** 订单类操作成功后，乐观地更新买菜勾选（失败时回滚用） */
-  setBought: (bought: BoughtMark[]) => void;
+  /** 勾选 / 取消勾选：同一食材同一批订单只留最新一次 */
+  queueBuy: (job: BuyJob) => void;
+  /** 服务端确认（或明确拒绝）后移出队列 */
+  settleBuy: (reqId: string) => void;
   setOnDenied: (fn: (reason: string) => void) => void;
 };
 
@@ -65,15 +81,21 @@ const fixOp = (op: Op): Op => {
   return op;
 };
 
-/** 只保留能重放的操作；旧版本遗留的 lock / unlock / 不带 reqId 的 buy 直接丢弃 */
+/** 只保留点菜单操作；旧版本遗留的 lock / unlock / buy 直接丢弃 */
 const keepCartOps = (ops: unknown): Op[] =>
   (Array.isArray(ops) ? ops : []).filter(
-    (o): o is Op =>
-      !!o &&
-      (o.type === "set" ||
-        o.type === "removeMany" ||
-        o.type === "clear" ||
-        (o.type === "buy" && typeof o.reqId === "string")),
+    (o): o is Op => !!o && (o.type === "set" || o.type === "removeMany" || o.type === "clear"),
+  );
+
+const keepBuyJobs = (jobs: unknown): BuyJob[] =>
+  (Array.isArray(jobs) ? jobs : []).filter(
+    (j): j is BuyJob =>
+      !!j &&
+      j.type === "buy" &&
+      typeof j.reqId === "string" &&
+      typeof j.name === "string" &&
+      Array.isArray(j.mealIds) &&
+      typeof j.done === "boolean",
   );
 
 const isMark = (m: unknown): m is BoughtMark =>
@@ -93,6 +115,8 @@ export const useCart = create<CartState>()(
         items: [],
         meals: [],
         bought: [],
+        serverBought: [],
+        buyQueue: [],
         stats: {},
         outbox: [],
         inflight: [],
@@ -169,12 +193,25 @@ export const useCart = create<CartState>()(
             today: snap.today || s.today,
             items: (snap.items ?? []).map(fixItem),
             meals: snap.meals ?? [],
-            bought: snap.bought ?? [],
+            serverBought: snap.bought ?? [],
+            // 本地还没确认的勾选继续叠在上面，快照再旧也不会把刚点的勾选盖回去
+            bought: overlayBuys(snap.bought ?? [], s.buyQueue),
             stats: snap.stats ?? s.stats,
             inflight: [],
           })),
 
-        setBought: (bought) => set({ bought }),
+        queueBuy: (job) =>
+          set((s) => {
+            const key = (j: BuyJob) => `${j.name}|${[...j.mealIds].sort().join(",")}`;
+            const buyQueue = [...s.buyQueue.filter((j) => key(j) !== key(job)), job];
+            return { buyQueue, bought: overlayBuys(s.serverBought, buyQueue) };
+          }),
+
+        settleBuy: (reqId) =>
+          set((s) => {
+            const buyQueue = s.buyQueue.filter((j) => j.reqId !== reqId);
+            return { buyQueue, bought: overlayBuys(s.serverBought, buyQueue) };
+          }),
 
         setOnDenied: (fn) => set({ onDenied: fn }),
       };
@@ -186,7 +223,8 @@ export const useCart = create<CartState>()(
       partialize: (s) => ({
         items: s.items,
         meals: s.meals,
-        bought: s.bought,
+        serverBought: s.serverBought,
+        buyQueue: s.buyQueue,
         stats: s.stats,
         outbox: s.outbox,
         inflight: s.inflight,
@@ -209,7 +247,12 @@ export const useCart = create<CartState>()(
           ...p,
           items: (p.items ?? current.items).map(fixItem),
           meals: Array.isArray(p.meals) ? p.meals : [],
-          bought: Array.isArray(p.bought) ? p.bought.filter(isMark) : [],
+          serverBought: Array.isArray(p.serverBought) ? p.serverBought.filter(isMark) : [],
+          buyQueue: keepBuyJobs(p.buyQueue),
+          bought: overlayBuys(
+            Array.isArray(p.serverBought) ? p.serverBought.filter(isMark) : [],
+            keepBuyJobs(p.buyQueue),
+          ),
           stats: p.stats ?? {},
           outbox: keepCartOps(p.outbox).map(fixOp),
           inflight: keepCartOps(p.inflight).map(fixOp),

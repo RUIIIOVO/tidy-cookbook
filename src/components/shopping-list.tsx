@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Check, CopySimple, Minus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { buy } from "@/lib/meal-actions";
@@ -55,26 +55,8 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
     }
   }, 1000);
 
-  // 本地即时态：点下去立刻按目标值显示，直到服务端确认后再交还给 store。
-  // 否则 store 在等待期间收到一份旧快照，勾选圈会「勾上 → 弹回 → 又勾上」来回闪。
-  const [pending, setPending] = useState<Record<string, boolean>>({});
-
-  const setItem = (item: MealShopItem, next: boolean) => {
-    const name = item.name;
-    setPending((p) => ({ ...p, [name]: next }));
-    const release = () =>
-      setPending((p) => {
-        if (!(name in p)) return p;
-        const { [name]: _drop, ...rest } = p;
-        void _drop;
-        return rest;
-      });
-    void buy(item.mealIds, name, next).then((ack) => {
-      // 成功后留一小会儿，等对应的新快照落地；失败 buy() 已回滚，立刻交还
-      if (ack.ok) setTimeout(release, 800);
-      else release();
-    });
-  };
+  // 勾选状态全部来自 store.bought（服务端快照 + 本地还没确认的勾选），这里不再另存状态
+  const setItem = (item: MealShopItem, next: boolean) => buy(item.mealIds, item.name, next);
   const toggle = (item: MealShopItem, on: boolean) => {
     haptic(6);
     setItem(item, !on);
@@ -86,14 +68,13 @@ export function ShoppingList({ meals }: { meals: Meal[] }) {
     for (const it of items) if (checked(it) === allOn) setItem(it, !allOn);
   };
   function checked(it: MealShopItem) {
-    return pending[it.name] ?? isBought(it, bought);
+    return isBought(it, bought);
   }
 
   if (groups.length === 0) {
     return <p className="py-14 text-center text-[13px] text-ink-3">这几餐没有要买的食材</p>;
   }
 
-  // 进度也按即时态算，勾选时进度条和勾选圈同步动
   const done = buyGroups.reduce((n, g) => n + g.items.filter(checked).length, 0);
   const allDone = total > 0 && done >= total;
 

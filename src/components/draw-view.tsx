@@ -306,12 +306,12 @@ export function DrawView() {
   const topCard = cards[0];
   const isCover = topCard?.type === "cover";
 
-  const onAddAndContinue = useGuard(() => {
+  // 加入后停在当前这道，不再自动换下一道；想换再点「换一道」
+  const onAdd = useGuard(() => {
     if (!topCard || topCard.type !== "dish") return;
     haptic(25);
     add(topCard.dish.id);
     toast(`已加入 · ${topCard.dish.name}`);
-    handleSwipe("right");
   }, 350);
 
   const onOpenTop = () => {
@@ -394,7 +394,7 @@ export function DrawView() {
             </button>
             <button
               type="button"
-              onClick={onAddAndContinue}
+              onClick={onAdd}
               className="flex flex-1 items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] font-medium tracking-wide text-white shadow-sm transition active:scale-[0.98]"
             >
               <Plus size={16} weight="bold" />

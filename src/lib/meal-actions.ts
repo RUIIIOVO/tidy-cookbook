@@ -8,9 +8,8 @@
 import { toast } from "sonner";
 import { useHistory } from "./history-store";
 import type { Slot } from "./meal-time";
-import type { BoughtMark } from "./protocol";
 import { useCart } from "./store";
-import { getSyncStatus, request, type Ack } from "./sync";
+import { getSyncStatus, onSyncStatus, request, type Ack } from "./sync";
 
 type Lines = { dishId: string; qty: number }[];
 
@@ -74,36 +73,59 @@ export async function deleteMeal(p: {
   return ack;
 }
 
-/** 在 bought 上套用一次勾选 / 取消勾选（幂等） */
-function applyMarks(
-  bought: BoughtMark[],
-  mealIds: string[],
-  name: string,
-  done: boolean,
-): BoughtMark[] {
-  const ids = new Set(mealIds);
-  const rest = bought.filter((m) => !(m.name === name && ids.has(m.mealId)));
-  return done ? [...rest, ...mealIds.map((mealId) => ({ mealId, name }))] : rest;
+// ── 买菜勾选 ──────────────────────────────────────────────────────────────
+// 勾选先记进 store.buyQueue（界面立刻按它显示），再在后台发给服务端：
+// - 服务端快照为准，本地没确认的勾选叠在快照上面，所以旧快照盖不掉刚点的勾选
+// - 断网、超时都不回滚，联网后继续发（reqId 去重，重发不会出错）
+// - 只有服务端明确拒绝（订单没了、没有这个食材）才撤销，并提示原因
+
+/** 正在发送中的勾选，避免重复发 */
+const sendingBuys = new Set<string>();
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleRetry() {
+  if (retryTimer) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    drainBuys();
+  }, 4000);
 }
 
-/**
- * 勾选 / 取消勾选买菜清单里的一项（合并后的食材可能涉及多张订单）。
- * 先乐观更新 store.bought，失败则反向恢复并提示。
- */
-export async function buy(mealIds: string[], name: string, done: boolean): Promise<Ack> {
-  const { setBought } = useCart.getState();
-  setBought(applyMarks(useCart.getState().bought, mealIds, name, done));
-  const op = { type: "buy" as const, reqId: newReqId(), mealIds, name, done };
-  // 离线：和点菜单一样先记进队列，联网后自动补发（reqId 去重）
-  if (getSyncStatus() !== "online") {
-    useCart.getState().enqueue(op);
-    return { ok: true };
+/** 把队列里的勾选发出去；联网、切回前台、定时重试时都会调用 */
+export function drainBuys() {
+  if (typeof window === "undefined") return;
+  if (getSyncStatus() !== "online") return;
+  for (const job of useCart.getState().buyQueue) {
+    if (sendingBuys.has(job.reqId)) continue;
+    sendingBuys.add(job.reqId);
+    void request(job).then((ack) => {
+      sendingBuys.delete(job.reqId);
+      if (ack.ok) {
+        useCart.getState().settleBuy(job.reqId);
+      } else if (ack.code) {
+        // 服务端明确拒绝：撤销这次勾选
+        useCart.getState().settleBuy(job.reqId);
+        toast(ack.reason ?? "勾选没有生效");
+      } else {
+        // 超时 / 掉线：保留，稍后重发
+        scheduleRetry();
+      }
+    });
   }
-  const ack = await request(op);
-  if (!ack.ok) {
-    // 反向恢复而不是还原旧快照：等待期间可能已经来了新的服务端快照
-    setBought(applyMarks(useCart.getState().bought, mealIds, name, !done));
-    toast(ack.reason ?? "操作失败");
-  }
-  return ack;
+}
+
+if (typeof window !== "undefined") {
+  onSyncStatus((st) => {
+    if (st === "online") drainBuys();
+  });
+  // 从后台切回来：连接可能已经悄悄断了，先补发一轮，发不出去会按重试节奏再来
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") drainBuys();
+  });
+}
+
+/** 勾选 / 取消勾选买菜清单里的一项（合并后的食材可能涉及多张订单） */
+export function buy(mealIds: string[], name: string, done: boolean): void {
+  useCart.getState().queueBuy({ type: "buy", reqId: newReqId(), mealIds, name, done });
+  drainBuys();
 }
