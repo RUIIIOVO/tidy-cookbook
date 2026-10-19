@@ -270,12 +270,15 @@ export class KitchenDO implements DurableObject {
 
     // 旧页面的 lock / unlock / 不带 reqId 的 buy 等，一律让它刷新；新页面发了不认识的操作直接忽略
     if (!isRequest && !isCart) {
-      if (oldClient || type === "lock" || type === "unlock")
-        this.send(ws, { type: "denied", reason: OLD_VERSION });
+      if (oldClient || type === "lock" || type === "unlock") this.tooOld(ws, who);
       return;
     }
-    if (isRequest && (oldClient || typeof op.reqId !== "string" || !op.reqId)) {
-      this.send(ws, { type: "denied", reason: OLD_VERSION });
+    if (isRequest && oldClient) {
+      this.tooOld(ws, who);
+      return;
+    }
+    if (isRequest && (typeof op.reqId !== "string" || !op.reqId)) {
+      this.send(ws, { type: "denied", reason: "参数错误" });
       return;
     }
 
@@ -285,11 +288,30 @@ export class KitchenDO implements DurableObject {
         this.send(ws, { type: "denied", reason: "只有 rui 和 hui 能清空点菜单" });
         return;
       }
-      if (await this.applyCart(op, who, snap)) this.broadcast();
+      let changed: boolean;
+      try {
+        changed = await this.applyCart(op, who, snap);
+      } catch (e) {
+        // 写库失败：丢掉内存快照（下条消息重读），告诉客户端，它会 pull 回权威状态
+        console.error("cart failed", type, e);
+        this.snap = null;
+        this.send(ws, { type: "denied", reason: BUSY });
+        return;
+      }
+      if (changed) this.broadcast();
       return;
     }
 
     await this.handleRequest(ws, op as unknown as RequestOp, who, snap);
+  }
+
+  /**
+   * 客户端协议过旧。v2 起的页面认识 reload，会自动刷新一次拿新代码；
+   * 更早的页面不认识，只能提示用户手动刷新
+   */
+  private tooOld(ws: WebSocket, who: Attachment) {
+    if ((who.v ?? 0) >= 2) this.send(ws, { type: "reload" });
+    else this.send(ws, { type: "denied", reason: OLD_VERSION });
   }
 
   /** 点菜单操作。返回是否有变化（要不要广播） */
@@ -304,10 +326,11 @@ export class KitchenDO implements DurableObject {
         const qty = Math.floor(Number(op.qty));
         if (typeof dishId !== "string" || !Number.isFinite(qty)) return false;
         if (qty <= 0) {
-          snap.items = snap.items.filter((i) => i.dishId !== dishId);
+          // 先写库再改内存：写库失败时内存快照不能先变
           await this.env.DB.prepare(`DELETE FROM cart_item WHERE kitchen_id = ? AND dish_id = ?`)
             .bind(K, dishId)
             .run();
+          snap.items = snap.items.filter((i) => i.dishId !== dishId);
         } else {
           if (!DISH_NAME.has(dishId)) return false;
           const found = snap.items.find((i) => i.dishId === dishId);

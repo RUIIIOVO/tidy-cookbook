@@ -4,7 +4,10 @@
  */
 import type { Slot } from "./meal-time";
 
-/** 客户端连接 /api/sync 时带 ?v=；服务端发现低于此版本就回 { type: "reload" } */
+/**
+ * 客户端连接 /api/sync 时带 ?v=；服务端发现低于此版本时，对 v>=2 的页面回 { type: "reload" }（自动刷新一次），
+ * 更早的页面回 denied 提示手动刷新
+ */
 export const PROTOCOL_VERSION = 2;
 
 /** 点菜单里的一行 */
