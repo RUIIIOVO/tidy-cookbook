@@ -27,7 +27,8 @@ import { useSyncStatus } from "@/lib/sync";
 import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
-import { DishPickerSheet, QtyStepper, useBackClose, type DraftItem } from "./dish-picker-sheet";
+import { useBackClose } from "@/lib/use-back-close";
+import { DishPickerSheet, QtyStepper, type DraftItem } from "./dish-picker-sheet";
 import { MealTimeFields, type MealTime } from "./meal-time-fields";
 import { SwipeRow } from "./swipe-row";
 
