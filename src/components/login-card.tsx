@@ -48,11 +48,10 @@ export function LoginCard() {
   return (
     <div className="grid min-h-dvh place-items-center bg-paper px-6">
       <div className="w-full max-w-[320px]">
-        <p className="text-[10px] tracking-[0.34em] text-ink-3">TODAY&apos;S PICK</p>
-        <h1 className="mt-1.5 font-display text-[26px] tracking-wide text-ink">
+        <h1 className="font-display text-[26px] tracking-wide text-ink">
           今天吃什么
         </h1>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-3">
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">
           {mode === "login"
             ? "登录后点菜单会在所有设备同步"
             : "注册的账号可以点菜，但不能清空点菜单，也不能改以前的订单"}

@@ -148,14 +148,8 @@ function StackedCard({
                 共 {total} 道精选
               </span>
             </div>
-            <p className="mt-2 line-clamp-2 min-h-[38px] text-[12.5px] leading-relaxed text-ink-2">
-              选择困难？左右滑卡换一道，或点「开始抽菜」随机抽取。
-            </p>
-            <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-3">
-              <span>左右滑卡换一道</span>
-              <span className="text-line-2">/</span>
-              <span>点击卡片看做法</span>
-              <span className="ml-auto text-accent">点击开始 →</span>
+            <div className="mt-5 flex items-center justify-end text-[11px]">
+              <span className="text-accent font-medium">点击开始 →</span>
             </div>
           </div>
         </>
@@ -194,7 +188,7 @@ function StackedCard({
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-3">
                   <span>{spicyLabel[dish.spicy]}</span>
-                  <span className="ml-auto text-ink-3">点开看做法 →</span>
+                  <span className="ml-auto text-ink-3">查看详情 →</span>
                 </div>
               </div>
             </>
@@ -327,8 +321,7 @@ export function DrawView() {
   return (
     <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-4">
       <header>
-        <p className="text-[11px] tracking-[0.3em] text-ink-3">TODAY&apos;S PICK</p>
-        <h1 className="mt-1.5 font-display text-[28px] leading-tight tracking-wider text-ink">
+        <h1 className="font-display text-[28px] leading-tight tracking-wider text-ink">
           今天吃什么
         </h1>
       </header>

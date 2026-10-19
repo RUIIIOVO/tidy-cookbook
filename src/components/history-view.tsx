@@ -328,7 +328,7 @@ function HistoryTabPane({
       {initialized && !loading && !error && meals.length === 0 && (
         <Placeholder
           text={rangeKey === "all" ? "还没有记录" : `${RANGE_OPTIONS.find((o) => o.key === rangeKey)?.label}暂无记录`}
-          hint={rangeKey === "all" ? "吃过的订单会出现在这里" : "可以切换到「全部」查看更早的订单"}
+          hint={rangeKey === "all" ? "吃过的订单会出现在这里" : undefined}
         />
       )}
 
@@ -442,9 +442,9 @@ function Placeholder({
 }) {
   const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
-    <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-line-2 py-20 text-center">
-      <p className="font-display text-[15px] tracking-wider text-ink-3">{text}</p>
-      {hint && <p className="mt-2 px-10 text-[11px] leading-relaxed text-ink-3">{hint}</p>}
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <p className="font-display text-[16px] tracking-wider text-ink">{text}</p>
+      {hint && <p className="mt-2 px-10 text-[12.5px] leading-relaxed text-ink-3">{hint}</p>}
       {retry && (
         <button
           type="button"
@@ -454,15 +454,14 @@ function Placeholder({
           重试
         </button>
       )}
-      {!retry && !hint && null}
-      {!retry && hint && (
+      {!retry && (
         <Link
           href="/menu/"
           onClick={(e) => {
             e.preventDefault();
             setActiveTab("menu");
           }}
-          className="mt-5 rounded-full bg-accent px-5 py-2 text-[12px] text-white"
+          className="mt-5 rounded-full bg-accent px-5 py-2 text-[12.5px] font-medium text-white transition active:scale-95"
         >
           去点菜
         </Link>

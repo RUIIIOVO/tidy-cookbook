@@ -93,8 +93,8 @@ export function CartView() {
           <p className="font-display text-[18px] tracking-wider text-ink">
             已下单：{orderTitle} · {lastOrder.count} 道
           </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-            菜品已加入备菜，可查看买菜清单和做法
+          <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+            菜品已加入备菜，可查看买菜清单和配料
           </p>
           <div className="mt-6 flex items-center gap-2.5">
             <button
@@ -126,9 +126,9 @@ export function CartView() {
 
     return (
       <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
-        <p className="font-display text-[18px] tracking-wider text-ink">还没点菜</p>
-        <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-          自己挑几道，或者随机抽一道
+        <p className="font-display text-[18px] tracking-wider text-ink">菜单空空</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+          天大地大，吃饭最大，快去点菜吧
         </p>
         <div className="mt-6 flex items-center gap-2.5">
           <Link

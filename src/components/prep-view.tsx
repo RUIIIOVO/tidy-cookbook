@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClipboardText, type Icon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
 import { prepTabIcon } from "@/lib/icons";
 import { dayLabel, shortDate } from "@/lib/meal-time";
@@ -226,15 +226,17 @@ function Empty() {
   const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <ClipboardText size={40} weight="light" className="text-ink-3" />
-      <p className="mt-4 text-[15px] text-ink-2">还没有订单</p>
+      <p className="font-display text-[16px] tracking-wider text-ink">大厨摸鱼中</p>
+      <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+        快去下单吧，大厨随时火力全开！
+      </p>
       <button
         type="button"
         onClick={() => {
           haptic(6);
           setActiveTab("menu");
         }}
-        className="mt-5 rounded-full bg-accent px-6 py-2.5 text-[13px] font-medium text-white transition active:scale-95"
+        className="mt-5 rounded-full bg-accent px-5 py-2 text-[12.5px] font-medium text-white transition active:scale-95"
       >
         去点菜
       </button>
