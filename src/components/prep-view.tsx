@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Icon } from "@phosphor-icons/react";
+import { BookOpen, type Icon } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
 import { prepTabIcon } from "@/lib/icons";
 import { dayLabel, shortDate } from "@/lib/meal-time";
@@ -59,9 +59,13 @@ export function PrepView() {
 
   if (sorted.length === 0) {
     return (
-      <div className="px-4 pt-4">
-        <h1 className="font-display text-[22px] tracking-wider text-ink">备菜</h1>
-        <Empty />
+      <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col px-4 pt-4">
+        <header>
+          <h1 className="font-display text-[22px] tracking-wider text-ink">备菜</h1>
+        </header>
+        <div className="flex flex-1 items-center justify-center pb-16">
+          <Empty />
+        </div>
       </div>
     );
   }
@@ -225,8 +229,11 @@ function DishGroups({ meals }: { meals: Meal[] }) {
 function Empty() {
   const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="font-display text-[16px] tracking-wider text-ink">大厨摸鱼中</p>
+    <div className="flex flex-col items-center justify-center px-8 text-center">
+      <span className="text-[36px] leading-none select-none" role="img" aria-label="摸鱼">
+        🐟
+      </span>
+      <p className="mt-3.5 font-display text-[18px] tracking-wider text-ink">大厨摸鱼中</p>
       <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
         快去下单吧，大厨随时火力全开！
       </p>
@@ -236,8 +243,9 @@ function Empty() {
           haptic(6);
           setActiveTab("menu");
         }}
-        className="mt-5 rounded-full bg-accent px-5 py-2 text-[12.5px] font-medium text-white transition active:scale-95"
+        className="mt-6 flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
       >
+        <BookOpen size={15} weight="regular" />
         去点菜
       </button>
     </div>

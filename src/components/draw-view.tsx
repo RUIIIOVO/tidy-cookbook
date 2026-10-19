@@ -148,8 +148,10 @@ function StackedCard({
                 共 {total} 道精选
               </span>
             </div>
-            <div className="mt-5 flex items-center justify-end text-[11px]">
-              <span className="text-accent font-medium">点击开始 →</span>
+            {/* 占位：与菜品卡的描述行等高，封面卡才能完全盖住后面的卡 */}
+            <div aria-hidden className="mt-2 h-[41px]" />
+            <div className="mt-3 flex items-center justify-end text-[11px]">
+              <span className="font-medium text-accent">点击开始 →</span>
             </div>
           </div>
         </>
@@ -183,7 +185,7 @@ function StackedCard({
                     {dish.tags[0] ?? "家常"}
                   </span>
                 </div>
-                <p className="mt-2 line-clamp-2 min-h-[38px] text-[12.5px] leading-relaxed text-ink-2">
+                <p className="mt-2 line-clamp-2 min-h-[41px] text-[12.5px] leading-relaxed text-ink-2">
                   {dish.desc}
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-3">

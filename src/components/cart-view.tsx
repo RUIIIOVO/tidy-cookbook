@@ -4,9 +4,9 @@ import { useState } from "react";
 import {
   BookOpen,
   Check,
+  CookingPot,
   Knife,
   PencilSimple,
-  SealCheck,
   Sparkle,
   Trash,
 } from "@phosphor-icons/react";
@@ -86,73 +86,78 @@ export function CartView() {
   if (rows.length > 0 && lastOrder) setLastOrder(null);
 
   if (rows.length === 0) {
-    if (lastOrder) {
-      const orderTitle = mealTitle(lastOrder.date, lastOrder.slot, today);
-      return (
-        <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
-          <p className="font-display text-[18px] tracking-wider text-ink">
-            已下单：{orderTitle} · {lastOrder.count} 道
-          </p>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
-            菜品已加入备菜，可查看买菜清单和配料
-          </p>
-          <div className="mt-6 flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                haptic(6);
-                setActiveTab("prep");
-              }}
-              className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
-            >
-              <Knife size={15} weight="regular" />
-              去备菜
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                haptic(6);
-                setActiveTab("menu");
-              }}
-              className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
-            >
-              <BookOpen size={15} weight="regular" />
-              接着点下一餐
-            </button>
-          </div>
-        </div>
-      );
-    }
-
+    // 空状态与备菜页同一版式：左上角页面标题，内容在剩余区域居中
     return (
-      <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-8 text-center">
-        <p className="font-display text-[18px] tracking-wider text-ink">菜单空空</p>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
-          天大地大，吃饭最大，快去点菜吧
-        </p>
-        <div className="mt-6 flex items-center gap-2.5">
-          <Link
-            href="/menu/"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab("menu");
-            }}
-            className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
-          >
-            <BookOpen size={15} weight="regular" />
-            去点菜
-          </Link>
-          <Link
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab("draw");
-            }}
-            className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
-          >
-            <Sparkle size={15} weight="regular" />
-            抽一道
-          </Link>
+      <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col px-4 pt-4">
+        <header>
+          <h1 className="font-display text-[22px] tracking-wider text-ink">点菜单</h1>
+        </header>
+        <div className="flex flex-1 flex-col items-center justify-center px-8 pb-16 text-center">
+          {lastOrder ? (
+            <>
+              <p className="font-display text-[18px] tracking-wider text-ink">
+                已下单：{mealTitle(lastOrder.date, lastOrder.slot, today)} · {lastOrder.count} 道
+              </p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+                菜品已加入备菜，可查看买菜清单和配料
+              </p>
+              <div className="mt-6 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setActiveTab("prep");
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
+                >
+                  <Knife size={15} weight="regular" />
+                  去备菜
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setActiveTab("menu");
+                  }}
+                  className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
+                >
+                  <BookOpen size={15} weight="regular" />
+                  接着点下一餐
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-[18px] tracking-wider text-ink">菜单空空</p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+                天大地大，吃饭最大，快去点菜吧
+              </p>
+              <div className="mt-6 flex items-center gap-2.5">
+                <Link
+                  href="/menu/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab("menu");
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
+                >
+                  <BookOpen size={15} weight="regular" />
+                  去点菜
+                </Link>
+                <Link
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab("draw");
+                  }}
+                  className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
+                >
+                  <Sparkle size={15} weight="regular" />
+                  抽一道
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -376,7 +381,7 @@ export function CartView() {
             onClick={openOrderConfirm}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.99]"
           >
-            <SealCheck size={16} weight="regular" />
+            <CookingPot size={17} weight="regular" />
             下单
           </button>
         )}
