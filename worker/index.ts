@@ -128,10 +128,13 @@ export default {
       return json({ error: String(e) }, { status: 500 });
     }
   },
-  /** 每天北京时间凌晨 4 点（UTC 20:00）：清理过期 op_seen、广播新快照，不碰点菜单 */
+  /** 每天北京时间凌晨 4 点（UTC 20:00）：清理过期会话和 op_seen、广播新快照，不碰点菜单 */
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
       (async () => {
+        // 没人再用的过期会话不会被 resolveSession 碰到，只能在这里清
+        const s = await env.DB.prepare(`DELETE FROM session WHERE expires_at < ?`).bind(Date.now()).run();
+        console.log("session purged", s.meta?.changes ?? 0);
         const kitchens = await env.DB.prepare(`SELECT id FROM kitchen`).all<{ id: string }>();
         for (const k of kitchens.results ?? []) {
           const stub = env.KITCHEN.get(env.KITCHEN.idFromName(k.id));

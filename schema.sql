@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS session (
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_session_user ON session(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_expires ON session(expires_at);
 
 -- 活的点菜单，一个厨房一份
 CREATE TABLE IF NOT EXISTS cart_item (
@@ -37,14 +38,6 @@ CREATE TABLE IF NOT EXISTS cart_item (
   added_at    INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL,
   PRIMARY KEY (kitchen_id, dish_id)
-);
-
--- 已弃用（0006 去掉锁单），表保留不删，代码不再读写
-CREATE TABLE IF NOT EXISTS cart_state (
-  kitchen_id  TEXT PRIMARY KEY,
-  locked      INTEGER NOT NULL DEFAULT 0,
-  updated_at  INTEGER NOT NULL,
-  locked_by   TEXT
 );
 
 -- 订单：一个「就餐日期 + 餐别」一张，同一餐唯一由 KitchenDO 保证（不建唯一索引，旧数据可能重复）。
@@ -75,8 +68,7 @@ CREATE TABLE IF NOT EXISTS dish_stat (
   PRIMARY KEY (kitchen_id, dish_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_meal_kitchen ON meal(kitchen_id, ordered_at DESC);
-CREATE INDEX IF NOT EXISTS idx_meal_day ON meal(kitchen_id, meal_date DESC, slot DESC);
+CREATE INDEX IF NOT EXISTS idx_meal_day ON meal(kitchen_id, meal_date, slot, id);
 
 -- 买菜清单的勾选：某张订单的某个食材已买，所有人共享；订单删除时一起删
 CREATE TABLE IF NOT EXISTS shopping_done (
@@ -94,6 +86,7 @@ CREATE TABLE IF NOT EXISTS op_seen (
   meal_id     TEXT,
   at          INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_op_seen_at ON op_seen(kitchen_id, at);
 
 INSERT OR IGNORE INTO kitchen (id, name, created_at)
   VALUES ('main', '我家厨房', 0);
