@@ -3,6 +3,17 @@
 const ITER = 100_000;
 const SESSION_DAYS = 90;
 
+/** 登录限流：15 分钟窗口内，同一用户名失败 5 次、同一 IP 失败 20 次就暂时拒绝 */
+export const FAIL_WINDOW_MS = 15 * 60_000;
+const FAIL_MAX_USER = 5;
+const FAIL_MAX_IP = 20;
+
+/** 旧的游客默认名统一显示成「食客」 */
+export function normalizeName(n?: string | null): string | null {
+  if (!n) return null;
+  return n === "小客" || n.toLowerCase() === "guest" ? "食客" : n;
+}
+
 export type Role = "owner" | "guest";
 export type SessionUser = {
   id: string;
@@ -44,6 +55,46 @@ function sameSecret(a: string, b: string): boolean {
 
 export function randomHex(bytes: number): string {
   return hex(crypto.getRandomValues(new Uint8Array(bytes)).buffer);
+}
+
+const failKeys = (username: string, ip: string) => [`u:${username}`, `ip:${ip}`];
+
+/** 还在锁定中就返回还要等多少毫秒，否则 0。先查这个再跑 KDF，被锁时不白烧 CPU */
+export async function loginBlockedFor(db: D1Database, username: string, ip: string): Promise<number> {
+  const now = Date.now();
+  const rows = await db
+    .prepare(`SELECT key, fails, first_at AS firstAt FROM login_fail WHERE key IN (?, ?) AND first_at > ?`)
+    .bind(...failKeys(username, ip), now - FAIL_WINDOW_MS)
+    .all<{ key: string; fails: number; firstAt: number }>();
+  let wait = 0;
+  for (const r of rows.results ?? []) {
+    const max = r.key.startsWith("u:") ? FAIL_MAX_USER : FAIL_MAX_IP;
+    if (r.fails >= max) wait = Math.max(wait, r.firstAt + FAIL_WINDOW_MS - now);
+  }
+  return wait;
+}
+
+/** 记一次失败：窗口过了就从 1 重新计 */
+export async function recordLoginFail(db: D1Database, username: string, ip: string) {
+  const now = Date.now();
+  const stale = now - FAIL_WINDOW_MS;
+  await db.batch(
+    failKeys(username, ip).map((k) =>
+      db
+        .prepare(
+          `INSERT INTO login_fail (key, fails, first_at) VALUES (?, 1, ?)
+           ON CONFLICT(key) DO UPDATE SET
+             fails    = CASE WHEN first_at <= ? THEN 1 ELSE fails + 1 END,
+             first_at = CASE WHEN first_at <= ? THEN excluded.first_at ELSE first_at END`,
+        )
+        .bind(k, now, stale, stale),
+    ),
+  );
+}
+
+/** 登录成功后清掉该用户名的失败计数（IP 的不清，免得换着用户名猜） */
+export async function clearLoginFail(db: D1Database, username: string) {
+  await db.prepare(`DELETE FROM login_fail WHERE key = ?`).bind(`u:${username}`).run();
 }
 
 export async function login(
@@ -107,12 +158,6 @@ export async function register(
     return { error: "用户名只能用 2-16 位字母、数字或下划线" };
   if (password.length < 6) return { error: "密码至少 6 位" };
 
-  const dup = await db
-    .prepare(`SELECT 1 FROM user WHERE username = ?`)
-    .bind(username)
-    .first();
-  if (dup) return { error: "该用户名已被使用" };
-
   const salt = randomHex(16);
   const pwHash = await derive(password, salt);
   const now = Date.now();
@@ -121,13 +166,16 @@ export async function register(
   const resolvedName =
     displayName.trim() || (username.toLowerCase() === "guest" ? "食客" : username);
 
-  await db
+  // 用唯一约束判重：先查再插有空档，两人同时注册同名会抛错
+  const ins = await db
     .prepare(
       `INSERT INTO user (id, username, display_name, pw_hash, pw_salt, role, kitchen_id, created_at)
-       VALUES (?,?,?,?,?,'guest',?,?)`,
+       VALUES (?,?,?,?,?,'guest',?,?)
+       ON CONFLICT(username) DO NOTHING`,
     )
     .bind(id, username, resolvedName, pwHash, salt, kitchenId, now)
     .run();
+  if (!ins.meta?.changes) return { error: "该用户名已被使用" };
 
   const token = randomHex(32);
   await db
@@ -177,10 +225,7 @@ export async function resolveSession(
   return {
     id: row.id,
     username: row.username,
-    displayName:
-      row.display_name === "小客" || row.display_name.toLowerCase() === "guest"
-        ? "食客"
-        : row.display_name,
+    displayName: normalizeName(row.display_name) ?? row.display_name,
     role: row.role,
     kitchenId: row.kitchen_id,
   };

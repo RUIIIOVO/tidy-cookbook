@@ -4,7 +4,12 @@
  */
 import {
   CLEAR_COOKIE,
+  clearLoginFail,
+  FAIL_WINDOW_MS,
   login,
+  loginBlockedFor,
+  normalizeName,
+  recordLoginFail,
   logout,
   readCookie,
   readToken,
@@ -16,7 +21,6 @@ import {
   type SessionUser,
 } from "./auth";
 
-import { normalizeName } from "./kitchen-do";
 import { isMealDate, mealDayOf } from "../src/lib/meal-time";
 
 export { KitchenDO } from "./kitchen-do";
@@ -34,6 +38,32 @@ const json = (data: unknown, init: ResponseInit = {}) =>
     ...init,
     headers: { "Content-Type": "application/json; charset=utf-8", ...init.headers },
   });
+
+/** 请求体不是合法 JSON 对象时当空对象，由各接口自己报「缺字段」 */
+async function readBody(req: Request): Promise<Record<string, unknown>> {
+  try {
+    const v = await req.json();
+    return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/**
+ * 浏览器发起的跨站请求一律拒绝（重点是 WebSocket 握手，它不受 CORS 约束）。
+ * 没有 Origin 的（curl、脚本）放行，它们本来就带不上别人的 cookie。
+ */
+function crossSite(req: Request, url: URL): boolean {
+  const origin = req.headers.get("Origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== url.host;
+  } catch {
+    return true;
+  }
+}
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -55,18 +85,30 @@ export default {
       return res;
     }
 
+    if (crossSite(req, url)) return json({ error: "不允许跨站请求" }, { status: 403 });
+
     const token = readToken(req);
 
     try {
       // ── 不需要登录 ────────────────────────────────
       if (url.pathname === "/api/login" && req.method === "POST") {
-        const { username, password } = (await req.json()) as {
-          username?: string;
-          password?: string;
-        };
+        const body = await readBody(req);
+        const username = str(body.username).trim();
+        const password = str(body.password);
         if (!username || !password) return json({ error: "请填用户名和密码" }, { status: 400 });
-        const r = await login(env.DB, username.trim(), password);
-        if (!r) return json({ error: "用户名或密码错误" }, { status: 401 });
+        const ip = req.headers.get("CF-Connecting-IP") ?? "unknown";
+        const wait = await loginBlockedFor(env.DB, username, ip);
+        if (wait > 0)
+          return json(
+            { error: `尝试次数太多，请 ${Math.ceil(wait / 60_000)} 分钟后再试` },
+            { status: 429, headers: { "Retry-After": String(Math.ceil(wait / 1000)) } },
+          );
+        const r = await login(env.DB, username, password);
+        if (!r) {
+          await recordLoginFail(env.DB, username, ip);
+          return json({ error: "用户名或密码错误" }, { status: 401 });
+        }
+        await clearLoginFail(env.DB, username);
         return json(
           { user: r.user, token: r.token },
           { headers: { "Set-Cookie": sessionCookie(r.token) } },
@@ -74,13 +116,11 @@ export default {
       }
 
       if (url.pathname === "/api/register" && req.method === "POST") {
-        const { username, password, displayName } = (await req.json()) as {
-          username?: string;
-          password?: string;
-          displayName?: string;
-        };
+        const body = await readBody(req);
+        const username = str(body.username).trim();
+        const password = str(body.password);
         if (!username || !password) return json({ error: "请填用户名和密码" }, { status: 400 });
-        const r = await register(env.DB, username.trim(), password, displayName ?? username);
+        const r = await register(env.DB, username, password, str(body.displayName) || username);
         if ("error" in r) return json(r, { status: 400 });
         return json(
           { user: r.user, token: r.token },
@@ -125,7 +165,9 @@ export default {
 
       return json({ error: "没有这个接口" }, { status: 404 });
     } catch (e) {
-      return json({ error: String(e) }, { status: 500 });
+      // 内部报错只进日志，不把 SQL / 堆栈回给客户端
+      console.error("api failed", url.pathname, e);
+      return json({ error: "服务器出错了，请重试" }, { status: 500 });
     }
   },
   /** 每天北京时间凌晨 4 点（UTC 20:00）：清理过期会话和 op_seen、广播新快照，不碰点菜单 */
@@ -134,7 +176,10 @@ export default {
       (async () => {
         // 没人再用的过期会话不会被 resolveSession 碰到，只能在这里清
         const s = await env.DB.prepare(`DELETE FROM session WHERE expires_at < ?`).bind(Date.now()).run();
-        console.log("session purged", s.meta?.changes ?? 0);
+        const f = await env.DB.prepare(`DELETE FROM login_fail WHERE first_at < ?`)
+          .bind(Date.now() - FAIL_WINDOW_MS)
+          .run();
+        console.log("purged session", s.meta?.changes ?? 0, "login_fail", f.meta?.changes ?? 0);
         const kitchens = await env.DB.prepare(`SELECT id FROM kitchen`).all<{ id: string }>();
         for (const k of kitchens.results ?? []) {
           const stub = env.KITCHEN.get(env.KITCHEN.idFromName(k.id));

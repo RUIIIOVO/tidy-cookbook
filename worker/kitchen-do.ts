@@ -16,6 +16,7 @@
  */
 
 import { RAW } from "../src/data/raw";
+import { normalizeName } from "./auth";
 import {
   addDays,
   EDIT_MAX_AHEAD_DAYS,
@@ -66,11 +67,6 @@ function ingredientsOf(dishIds: Iterable<string>): Set<string> {
   return names;
 }
 
-/** 旧的游客默认名统一显示成「食客」 */
-export function normalizeName(n?: string | null): string | null {
-  if (!n) return null;
-  return n === "小客" || n.toLowerCase() === "guest" ? "食客" : n;
-}
 
 type Attachment = {
   userId: string;

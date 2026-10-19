@@ -88,5 +88,12 @@ CREATE TABLE IF NOT EXISTS op_seen (
 );
 CREATE INDEX IF NOT EXISTS idx_op_seen_at ON op_seen(kitchen_id, at);
 
+-- 登录失败计数，防暴力猜密码。key 为 'u:<用户名>' 或 'ip:<IP>'
+CREATE TABLE IF NOT EXISTS login_fail (
+  key       TEXT PRIMARY KEY,
+  fails     INTEGER NOT NULL,
+  first_at  INTEGER NOT NULL
+);
+
 INSERT OR IGNORE INTO kitchen (id, name, created_at)
   VALUES ('main', '我家厨房', 0);
