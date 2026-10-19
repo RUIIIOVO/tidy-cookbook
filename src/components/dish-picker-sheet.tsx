@@ -263,13 +263,22 @@ function PickerBody({
     const tail = tailRef.current;
     if (!sc || !tail) return;
     const last = sections[sections.length - 1].key;
+    // 按实际位置算：可滚到的最大 scrollTop 要不小于最后一节的顶端。
+    // 最后一节是 content-visibility:auto，打开时量到的是估算高度，真正渲染后会变；
+    // 不跟着重算的话最后一节滚不到顶、高亮停在上一节
     const measure = () => {
       const el = secRefs.current.get(last);
-      tail.style.height = `${Math.max(0, sc.clientHeight - (el?.offsetHeight ?? 0))}px`;
+      if (!el) return;
+      const cur = tail.offsetHeight;
+      const lastTop = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+      const need = lastTop + sc.clientHeight - (sc.scrollHeight - cur);
+      tail.style.height = `${Math.max(0, Math.ceil(need))}px`;
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(sc);
+    const lastEl = secRefs.current.get(last);
+    if (lastEl) ro.observe(lastEl);
     return () => ro.disconnect();
   }, [searching]);
 
