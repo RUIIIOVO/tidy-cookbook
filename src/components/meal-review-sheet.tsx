@@ -50,7 +50,6 @@ export function MealReviewSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  if (!meal || !open) return null;
   return <MealReviewSheetInner meal={meal} open={open} onClose={onClose} />;
 }
 
@@ -59,7 +58,7 @@ function MealReviewSheetInner({
   open,
   onClose,
 }: {
-  meal: Meal;
+  meal: Meal | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -67,17 +66,23 @@ function MealReviewSheetInner({
   const updateReview = useHistory((s) => s.updateReview);
   const fetchHeatmap = useHeatmap((s) => s.fetchHeatmap);
 
-  const [rating, setRating] = useState<number>(() => meal.review?.rating || 5);
-  const [tags, setTags] = useState<string[]>(() => meal.review?.tags || []);
+  const [activeMeal, setActiveMeal] = useState<Meal | null>(() => meal);
+  if (meal && meal !== activeMeal) {
+    setActiveMeal(meal);
+  }
+  const currentMeal = meal || activeMeal;
+
+  const [rating, setRating] = useState<number>(() => currentMeal?.review?.rating || 5);
+  const [tags, setTags] = useState<string[]>(() => currentMeal?.review?.tags || []);
   const [dishRatings, setDishRatings] = useState<Record<string, number>>(
-    () => meal.review?.dishRatings || {},
+    () => currentMeal?.review?.dishRatings || {},
   );
-  const [comment, setComment] = useState(() => meal.review?.comment || "");
+  const [comment, setComment] = useState(() => currentMeal?.review?.comment || "");
   const [submitting, setSubmitting] = useState(false);
 
   const starsContainerRef = useRef<HTMLDivElement>(null);
   const currentLevel = RATING_LEVELS.find((l) => l.rating === rating) ?? RATING_LEVELS[0];
-  const title = mealTitle(meal.mealDate, meal.slot, today);
+  const title = currentMeal ? mealTitle(currentMeal.mealDate, currentMeal.slot, today) : "";
 
   // 总体评分滑动选择逻辑
   const handleStarScrub = (clientX: number) => {
@@ -111,6 +116,7 @@ function MealReviewSheetInner({
   };
 
   const handleSubmit = async () => {
+    if (!currentMeal) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/reviews", {
@@ -121,7 +127,7 @@ function MealReviewSheetInner({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mealId: meal.id,
+          mealId: currentMeal.id,
           rating,
           ratingText: currentLevel.text,
           tags,
@@ -136,7 +142,7 @@ function MealReviewSheetInner({
       }
 
       const json = (await res.json()) as { ok: boolean; review: MealReview };
-      updateReview(meal.id, json.review);
+      updateReview(currentMeal.id, json.review);
       void fetchHeatmap(365, true);
       haptic(10);
       toast.success("评价已保存");
@@ -149,9 +155,17 @@ function MealReviewSheetInner({
   };
 
   return (
-    <Drawer.Root open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      repositionInputs={false}
+      scrollLockTimeout={0}
+      closeThreshold={0.2}
+    >
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity" />
+        <Drawer.Overlay className="fixed inset-0 z-50 bg-ink/35 transition-opacity" />
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-3xl border-t border-line bg-paper outline-none focus:outline-none">
           {/* 拖动把手 */}
           <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-line" />
@@ -204,11 +218,11 @@ function MealReviewSheetInner({
             </div>
 
             {/* 菜品点评（紧接着总体评价，去掉选填，支持滑动划选） */}
-            {meal.items.length > 0 && (
+            {currentMeal && currentMeal.items.length > 0 && (
               <div className="mt-2">
                 <p className="text-[12px] font-medium text-ink-3">菜品点评</p>
                 <ul className="mt-2 divide-y divide-line/60 rounded-xl border border-line bg-card/70 px-3">
-                  {meal.items.map((item) => {
+                  {currentMeal.items.map((item) => {
                     const dish = getDish(item.dishId);
                     if (!dish) return null;
                     const val = dishRatings[item.dishId] || 0;

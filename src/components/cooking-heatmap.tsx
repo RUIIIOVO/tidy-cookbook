@@ -125,13 +125,16 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 左侧星期指示 */}
-          <div className="flex h-full flex-col justify-between py-[2px] text-[8.5px] text-ink-3/70 select-none">
-            <span>一</span>
-            <span>三</span>
-            <span>五</span>
-            <span>日</span>
+        <div className="flex items-start gap-2">
+          {/* 左侧星期指示：与右侧 7 个格子保持相同的 gap 与高度比例，实现 1:1 绝对基线对齐 */}
+          <div className="flex flex-col gap-1.5 text-[8.5px] text-ink-3/70 select-none">
+            <span className="flex aspect-square items-center justify-center">一</span>
+            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">二</span>
+            <span className="flex aspect-square items-center justify-center">三</span>
+            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">四</span>
+            <span className="flex aspect-square items-center justify-center">五</span>
+            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">六</span>
+            <span className="flex aspect-square items-center justify-center">日</span>
           </div>
 
           {/* 13 列方块：grid-cols-13 等比自适应填充全宽 */}
