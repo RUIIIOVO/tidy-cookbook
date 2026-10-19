@@ -95,10 +95,9 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
         <Link
           href="/history/heatmap"
           onClick={() => haptic(4)}
-          className="group flex items-center gap-1 font-display tracking-wider text-ink transition hover:text-accent"
+          className="font-display tracking-wider text-ink transition hover:text-accent"
         >
-          <span>下厨记录</span>
-          <CaretRight size={11} className="text-ink-3 group-hover:text-accent transition-colors" />
+          下厨记录
         </Link>
         <div className="flex items-center gap-1.5 tabular-nums">
           <span>近 90 天做饭 <strong className="font-medium text-ink">{totalCookDays}</strong> 天</span>
