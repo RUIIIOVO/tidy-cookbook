@@ -37,7 +37,6 @@ const RELOAD_FLAG = "tc-proto-reload";
 const MAX_BACKOFF_MS = 30_000;
 
 let ws: WebSocket | null = null;
-let heartbeat: ReturnType<typeof setInterval> | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;
 let attempt = 0;
 let status: SyncStatus = "offline";
@@ -152,6 +151,8 @@ export function connect() {
     ? new WebSocket(`${proto}//${location.host}/api/sync?v=${PROTOCOL_VERSION}`, [`auth.${token}`])
     : new WebSocket(`${proto}//${location.host}/api/sync?v=${PROTOCOL_VERSION}`);
   ws = sock;
+  // 心跳定时器跟着这条连接走：旧连接迟到的 onclose 不能把新连接的心跳停掉
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
 
   sock.onopen = () => {
     attempt = 0;
@@ -213,9 +214,8 @@ function scheduleRetry() {
 }
 
 export function disconnect() {
-  if (heartbeat) clearInterval(heartbeat);
   if (retry) clearTimeout(retry);
-  heartbeat = retry = null;
+  retry = null;
   setOpSink(null);
   const sock = ws;
   ws = null;
