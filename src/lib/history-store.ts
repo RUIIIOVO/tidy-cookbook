@@ -4,11 +4,11 @@ import { create } from "zustand";
 import { authHeaders } from "./auth-store";
 import { deleteMeal } from "./meal-actions";
 import { addDays } from "./meal-time";
-import type { Meal, MealItem } from "./protocol";
+import type { Meal, MealItem, MealReview } from "./protocol";
 import { useCart } from "./store";
 import { useTabs } from "./tab-store";
 
-export type { Meal, MealItem };
+export type { Meal, MealItem, MealReview };
 
 export type HistoryRange = "all" | "7d" | "30d" | "90d";
 
@@ -52,6 +52,7 @@ type HistoryState = {
   ensureRange: (range: HistoryRange, force?: boolean) => Promise<void>;
   loadMoreForRange: (range: HistoryRange) => Promise<void>;
   remove: (id: string) => Promise<boolean>;
+  updateReview: (mealId: string, review: MealReview) => void;
   /** 订单有变动（补录、改已吃订单等）后：所有范围标记为未初始化，并强制重拉当前范围 */
   invalidateAll: () => Promise<void>;
 };
@@ -165,6 +166,20 @@ export const useHistory = create<HistoryState>()((set, get) => {
       // 删除失败：期间可能翻过页，不整体回滚旧快照，直接重拉
       void get().invalidateAll();
       return false;
+    },
+
+    updateReview: (mealId: string, review: MealReview) => {
+      const updateMeals = (meals: Meal[]) =>
+        meals.map((m) => (m.id === mealId ? { ...m, review } : m));
+      const c = get().cache;
+      set({
+        cache: {
+          all: { ...c.all, meals: updateMeals(c.all.meals) },
+          "7d": { ...c["7d"], meals: updateMeals(c["7d"].meals) },
+          "30d": { ...c["30d"], meals: updateMeals(c["30d"].meals) },
+          "90d": { ...c["90d"], meals: updateMeals(c["90d"].meals) },
+        },
+      });
     },
 
     invalidateAll: async () => {

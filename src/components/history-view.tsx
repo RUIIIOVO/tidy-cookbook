@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
+import { useHeatmap } from "@/lib/heatmap-store";
 import {
   RANGE_OPTIONS,
   useHistory,
@@ -21,6 +22,7 @@ import { ui } from "@/lib/ui";
 import { cn, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
+import { CookingHeatmap } from "./cooking-heatmap";
 import { MealTicket } from "./meal-ticket";
 
 export function HistoryView() {
@@ -53,10 +55,46 @@ export function HistoryView() {
     currentOffset: number;
   } | null>(null);
 
-  // 首屏加载激活项
+  // 首屏加载激活项与热力图
+  const fetchHeatmap = useHeatmap((s) => s.fetchHeatmap);
   useEffect(() => {
     void ensureRange(range);
-  }, [range, ensureRange]);
+    void fetchHeatmap();
+  }, [range, ensureRange, fetchHeatmap]);
+
+  /** 点击热力图上的某一天：滚到对应日期的订单小票 */
+  const handleSelectDateFromHeatmap = (date: string) => {
+    // 检查当前 DOM 中是否已有对应日期的订单小票
+    const targetEl = document.querySelector(`[data-meal-date="${date}"]`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      targetEl.classList.add("ring-2", "ring-accent", "transition-all");
+      setTimeout(() => {
+        targetEl.classList.remove("ring-2", "ring-accent");
+      }, 1800);
+      return;
+    }
+
+    // 若不在当前列表，看是否需要切到"全部"
+    if (range !== "all") {
+      setRange("all");
+      toast(`已切到全部订单，正在定位 ${date}...`);
+      setTimeout(() => {
+        const el = document.querySelector(`[data-meal-date="${date}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          el.classList.add("ring-2", "ring-accent", "transition-all");
+          setTimeout(() => {
+            el.classList.remove("ring-2", "ring-accent");
+          }, 1800);
+        } else {
+          toast(`${date} 当天未开火或未加载到`);
+        }
+      }, 600);
+    } else {
+      toast(`${date} 当天暂无订单小票`);
+    }
+  };
 
   // 点击胶囊切换
   const handleSelectTab = (newRange: HistoryRange) => {
@@ -220,6 +258,11 @@ export function HistoryView() {
           )}
         </div>
 
+        {/* 顶部做饭热力图 */}
+        <div className="mt-3">
+          <CookingHeatmap onSelectDate={handleSelectDateFromHeatmap} />
+        </div>
+
         {/* 顶部时间跨度胶囊 */}
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
           {RANGE_OPTIONS.map((opt) => {
@@ -334,7 +377,9 @@ function HistoryTabPane({
 
       <div className="flex flex-col gap-3 pb-4">
         {meals.map((m) => (
-          <MealCard key={m.id} meal={m} canDelete={canDeleteRecord} />
+          <div key={m.id} data-meal-date={m.mealDate} className="rounded-card">
+            <MealCard meal={m} canDelete={canDeleteRecord} />
+          </div>
         ))}
       </div>
 
@@ -375,6 +420,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
   return (
     <MealTicket
       meal={meal}
+      enableReview={true}
       onDelete={allowed ? () => removeMeal(meal.id) : undefined}
       footerAction={
         <button type="button" onClick={again} className={cn(ui.chip, ui.chipSoft)}>

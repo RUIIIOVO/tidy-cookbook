@@ -29,6 +29,18 @@ export type MealItem = {
   addedBy?: string | null;
 };
 
+/** 订单点评：家庭共用一份 */
+export type MealReview = {
+  mealId: string;
+  rating: number; // 1 ~ 5
+  ratingText: string; // "夯爆了" | "顶级" | "人上人" | "NPC" | "拉完了"
+  tags: string[];
+  dishRatings: Record<string, number>; // dishId -> 1~5
+  comment: string;
+  reviewedBy: string;
+  updatedAt: number;
+};
+
 /** 一张订单（历史订单）。就餐日期 >= today 的叫「待吃」，在快照里实时同步 */
 export type Meal = {
   id: string;
@@ -40,6 +52,7 @@ export type Meal = {
   orderedBy: string | null; // 显示名
   updatedAt: number;
   items: MealItem[];
+  review?: MealReview | null;
 };
 
 /** 买菜勾选：某张订单的某个食材已买 */

@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, ChatCircleDots, Star } from "@phosphor-icons/react";
 import { getDish } from "@/data/dishes";
 import { mealTitle } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
-import { cn, formatPersonName } from "@/lib/utils";
+import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { Avatar } from "./avatar";
 import { DishThumb } from "./dish-thumb";
 import { MealCardActions } from "./meal-card-actions";
+import { MealReviewSheet } from "./meal-review-sheet";
 
 /** 超过这个数就折叠其余菜品 */
 const FOLD_AT = 3;
@@ -31,6 +32,7 @@ export function MealTicket({
   onDelete,
   footerAction,
   dishFocus,
+  enableReview = false,
 }: {
   meal: Meal;
   /** 点菜品打开详情时直接定位到哪一段（备菜页传 "ingredients"） */
@@ -39,10 +41,13 @@ export function MealTicket({
   onDelete?: () => Promise<boolean>;
   /** 底部合计行右侧的动作（如「再点一次」） */
   footerAction?: ReactNode;
+  /** 是否开启点评功能（通常已吃订单开启） */
+  enableReview?: boolean;
 }) {
   const today = useCart((s) => s.today);
   const openSheet = useDishSheet((s) => s.open);
   const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const rows = meal.items
     .map((i) => ({ i, dish: getDish(i.dishId) }))
@@ -129,13 +134,86 @@ export function MealTicket({
         </button>
       )}
 
+      {/* 点评展示区（若已有点评） */}
+      {meal.review && (
+        <button
+          type="button"
+          onClick={() => {
+            haptic(6);
+            setReviewOpen(true);
+          }}
+          className="mt-2.5 flex w-full flex-col gap-1 rounded-lg border border-line bg-paper/70 p-2.5 text-left transition hover:bg-paper active:opacity-75"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="flex text-caramel">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    size={11}
+                    weight={s <= (meal.review?.rating || 0) ? "fill" : "regular"}
+                    className={s <= (meal.review?.rating || 0) ? "text-caramel" : "text-line-2"}
+                  />
+                ))}
+              </span>
+              <span className="text-[11px] font-medium text-ink-2">
+                {meal.review.ratingText}
+              </span>
+            </div>
+            {meal.review.reviewedBy && (
+              <span className="text-[10px] text-ink-3">
+                {formatPersonName(meal.review.reviewedBy)}
+              </span>
+            )}
+          </div>
+
+          {meal.review.tags && meal.review.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {meal.review.tags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded bg-line-2/70 px-1.5 py-0.5 text-[9.5px] text-ink-3"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {meal.review.comment && (
+            <p className="line-clamp-2 text-[11.5px] text-ink-2">“{meal.review.comment}”</p>
+          )}
+        </button>
+      )}
+
       {/* 小票合计 */}
       <div className="mt-1 flex min-h-11 items-center justify-between border-t border-dashed border-line-2 pt-3">
-        <span className="text-[11px] text-ink-3">
-          合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-ink-3">
+            合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
+          </span>
+          {enableReview && !meal.review && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic(6);
+                setReviewOpen(true);
+              }}
+              className="flex items-center gap-1 rounded-md border border-line bg-card px-2 py-0.5 text-[11px] text-ink-2 transition hover:bg-paper active:scale-95"
+            >
+              <ChatCircleDots size={12} className="text-ink-3" />
+              <span>点评</span>
+            </button>
+          )}
+        </div>
         {footerAction}
       </div>
+
+      <MealReviewSheet
+        meal={meal}
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+      />
     </article>
   );
 }

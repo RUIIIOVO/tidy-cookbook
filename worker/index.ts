@@ -21,7 +21,15 @@ import {
 } from "./auth";
 
 import { isMealDate, mealDayOf } from "../src/lib/meal-time";
-import { assembleMeals, ITEM_COLS, MEAL_COLS, type ItemRow, type MealRow } from "./meals";
+import {
+  assembleMeals,
+  ITEM_COLS,
+  MEAL_COLS,
+  REVIEW_COLS,
+  type ItemRow,
+  type MealRow,
+  type ReviewRow,
+} from "./meals";
 
 export { KitchenDO } from "./kitchen-do";
 
@@ -161,6 +169,73 @@ export default {
         return json(await listHistory(env.DB, user.kitchenId, limit, before, since || null));
       }
 
+      if (url.pathname === "/api/history/heatmap" && req.method === "GET") {
+        const days = Math.min(365, Math.max(7, Number(url.searchParams.get("days") || 90)));
+        const since = url.searchParams.get("since");
+        const heatmap = await getCookingHeatmap(env.DB, user.kitchenId, days, since);
+        return json({ heatmap });
+      }
+
+      if (url.pathname === "/api/reviews" && req.method === "POST") {
+        const body = await readBody(req);
+        const mealId = str(body.mealId).trim();
+        const rating = Number(body.rating);
+        const ratingText = str(body.ratingText).trim();
+        const comment = str(body.comment).trim();
+        const tags = Array.isArray(body.tags) ? body.tags.filter((t): t is string => typeof t === "string") : [];
+        const dishRatings = body.dishRatings && typeof body.dishRatings === "object" ? body.dishRatings : {};
+
+        if (!mealId || !rating || rating < 1 || rating > 5) {
+          return json({ error: "点评信息不完整或格式有误" }, { status: 400 });
+        }
+
+        // 校验 meal 归属
+        const meal = await env.DB.prepare(`SELECT id FROM meal WHERE id = ? AND kitchen_id = ?`)
+          .bind(mealId, user.kitchenId)
+          .first();
+        if (!meal) return json({ error: "未找到该订单" }, { status: 404 });
+
+        const now = Date.now();
+        await env.DB.prepare(
+          `INSERT INTO meal_review (meal_id, kitchen_id, rating, rating_text, tags, dish_ratings, comment, reviewed_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(meal_id) DO UPDATE SET
+             rating = excluded.rating,
+             rating_text = excluded.rating_text,
+             tags = excluded.tags,
+             dish_ratings = excluded.dish_ratings,
+             comment = excluded.comment,
+             reviewed_by = excluded.reviewed_by,
+             updated_at = excluded.updated_at`,
+        )
+          .bind(
+            mealId,
+            user.kitchenId,
+            rating,
+            ratingText,
+            JSON.stringify(tags),
+            JSON.stringify(dishRatings),
+            comment,
+            user.displayName,
+            now,
+          )
+          .run();
+
+        return json({
+          ok: true,
+          review: {
+            mealId,
+            rating,
+            ratingText,
+            tags,
+            dishRatings,
+            comment,
+            reviewedBy: user.displayName,
+            updatedAt: now,
+          },
+        });
+      }
+
       // 删订单改走 WebSocket 的 deleteMeal（要幂等、要同步 dish_stat 和勾选）
 
       return json({ error: "没有这个接口" }, { status: 404 });
@@ -264,19 +339,69 @@ async function listHistory(
   }
 
   const marks = rows.map(() => "?").join(",");
-  const items = await db
-    .prepare(
-      `SELECT ${ITEM_COLS}
-         FROM meal_item i LEFT JOIN user u ON u.id = i.added_by
-        WHERE i.meal_id IN (${marks}) ORDER BY i.rowid`,
-    )
-    .bind(...rows.map((m) => m.id))
-    .all<ItemRow>();
+  const [items, reviews] = await Promise.all([
+    db
+      .prepare(
+        `SELECT ${ITEM_COLS}
+           FROM meal_item i LEFT JOIN user u ON u.id = i.added_by
+          WHERE i.meal_id IN (${marks}) ORDER BY i.rowid`,
+      )
+      .bind(...rows.map((m) => m.id))
+      .all<ItemRow>(),
+    db
+      .prepare(
+        `SELECT ${REVIEW_COLS}
+           FROM meal_review r
+          WHERE r.meal_id IN (${marks})`,
+      )
+      .bind(...rows.map((m) => m.id))
+      .all<ReviewRow>(),
+  ]);
 
-  const resultMeals = assembleMeals(rows, items.results ?? []);
+  const resultMeals = assembleMeals(rows, items.results ?? [], reviews.results ?? []);
 
   const last = rows[rows.length - 1];
   const nextCursor = hasMore ? `${last.mealDate}|${last.slot}|${last.id}` : null;
 
   return { meals: resultMeals, nextCursor, hasMore };
+}
+
+/** 获取最近 N 天每天的做饭聚合（餐数、菜品数、是否有点评） */
+async function getCookingHeatmap(
+  db: D1Database,
+  kitchenId: string,
+  days = 90,
+  customSince: string | null = null,
+) {
+  const today = mealDayOf(Date.now());
+  // 餐饮日以当天为截止（包含当天，虽然当天可能在待吃列表，做饭也是开火）
+  const query = `
+    SELECT m.meal_date AS mealDate,
+           count(DISTINCT m.id) AS mealCount,
+           count(i.dish_id) AS dishCount,
+           count(r.meal_id) AS reviewCount
+      FROM meal m
+      LEFT JOIN meal_item i ON i.meal_id = m.id
+      LEFT JOIN meal_review r ON r.meal_id = m.id
+     WHERE m.kitchen_id = ?
+       AND m.meal_date >= date(?, '-' || ? || ' days')
+     GROUP BY m.meal_date
+     ORDER BY m.meal_date ASC
+  `;
+  const res = await db.prepare(query).bind(kitchenId, customSince ?? today, days).all<{
+    mealDate: string;
+    mealCount: number;
+    dishCount: number;
+    reviewCount: number;
+  }>();
+
+  const map: Record<string, { mealCount: number; dishCount: number; hasReview: boolean }> = {};
+  for (const row of res.results ?? []) {
+    map[row.mealDate] = {
+      mealCount: row.mealCount,
+      dishCount: row.dishCount,
+      hasReview: row.reviewCount > 0,
+    };
+  }
+  return map;
 }
