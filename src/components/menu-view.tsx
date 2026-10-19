@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { glideScroll, windowScroller } from "@/lib/glide-scroll";
 import { catIcon } from "@/lib/icons";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { SubId } from "@/data/types";
@@ -16,8 +17,6 @@ import {
 } from "@/lib/images";
 import { DishCard } from "./dish-card";
 
-/** 长距离跳转时只平滑滑完最后这一段，前面直接定位 */
-const GLIDE_PX = 320;
 
 export function MenuView() {
   const [q, setQ] = useState("");
@@ -103,22 +102,9 @@ export function MenuView() {
       const y = sectionY(key);
       if (y === null) return false;
       cancelGlide();
-      const dy = y - window.scrollY;
-      if (Math.abs(dy) < 2) return true;
-
-      lockRef.current = { y, until: Date.now() + 1000 };
-      if (Math.abs(dy) <= GLIDE_PX) {
-        window.scrollTo({ top: y, behavior: "smooth" });
-        return true;
-      }
-      window.scrollTo({ top: y - Math.sign(dy) * GLIDE_PX, behavior: "instant" });
-      // 必须隔一个事件循环再 smooth，否则浏览器会把两次合并成一次长距离滚动。
-      // 第二段重新取坐标，防止期间布局有变化
-      glideTimer.current = setTimeout(() => {
-        const y2 = sectionY(key) ?? y;
-        lockRef.current = { y: y2, until: Date.now() + 1000 };
-        window.scrollTo({ top: y2, behavior: "smooth" });
-      }, 25);
+      glideTimer.current = glideScroll(windowScroller, y, () => sectionY(key), (top) => {
+        lockRef.current = { y: top, until: Date.now() + 1000 };
+      });
       return true;
     },
     [sectionY, cancelGlide],

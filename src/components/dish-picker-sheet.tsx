@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlass, Minus, Plus, X } from "@phosphor-icons/react";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { Dish, SubId } from "@/data/types";
+import { elementScroller, glideScroll } from "@/lib/glide-scroll";
 import { catIcon } from "@/lib/icons";
 import { searchDishes } from "@/lib/search";
 import { catTheme } from "@/lib/theme";
@@ -17,8 +18,6 @@ export type DraftItem = { dishId: string; qty: number };
 const MAX_QTY = 99;
 /** 搜索结果最多渲染多少道，避免一次塞几百行 */
 const MAX_RESULTS = 60;
-/** 长距离跳转时只平滑滑完最后这一段，前面直接定位 */
-const GLIDE_PX = 320;
 /** 一张卡片（52 缩略图 + 内边距 + 边框）加间距的高度，估算分段高度给 content-visibility 用 */
 const CARD_H = 78;
 const SEC_HEAD_H = 46;
@@ -345,22 +344,9 @@ function PickerBody({
       const y = sectionTop(key);
       if (!sc || y === null) return;
       cancelGlide();
-      const dy = y - sc.scrollTop;
-      if (Math.abs(dy) < 2) return;
-
-      lockRef.current = { key, y, until: Date.now() + 1200, tries: 0 };
-      if (Math.abs(dy) <= GLIDE_PX) {
-        sc.scrollTo({ top: y, behavior: "smooth" });
-        return;
-      }
-      sc.scrollTo({ top: y - Math.sign(dy) * GLIDE_PX, behavior: "instant" });
-      // 必须隔一个事件循环再 smooth，否则浏览器会把两次合并成一次长距离滚动。
-      // 第二段重新取坐标，防止期间布局有变化
-      glideTimer.current = setTimeout(() => {
-        const y2 = sectionTop(key) ?? y;
-        lockRef.current = { key, y: y2, until: Date.now() + 1200, tries: 0 };
-        sc.scrollTo({ top: y2, behavior: "smooth" });
-      }, 25);
+      glideTimer.current = glideScroll(elementScroller(sc), y, () => sectionTop(key), (top) => {
+        lockRef.current = { key, y: top, until: Date.now() + 1200, tries: 0 };
+      });
     },
     [sectionTop, cancelGlide],
   );
