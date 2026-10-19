@@ -9,6 +9,8 @@ pnpm dev                       # 开发服务
 pnpm build                     # 生产构建
 pnpm lint                      # ESLint
 node scripts/build-pinyin.mjs  # 改过 src/data/raw.ts 后必须重跑
+pnpm import "<url/文本>"        # 外部菜谱导入（支持下厨房/小红书/抖音，自动转格式入库）
+pnpm import --clip             # 直接从系统剪贴板读取分享文案/链接导入
 ```
 
 ## 结构
@@ -27,7 +29,12 @@ node scripts/build-pinyin.mjs  # 改过 src/data/raw.ts 后必须重跑
 
 ## 约定
 
-- 加菜只改 `src/data/raw.ts`，再跑 `node scripts/build-pinyin.mjs`。`pinyin.generated.json` 不手改。
+- 加菜只改 `src/data/raw.ts`，再跑 `node scripts/build-pinyin.mjs`。`pinyin.generated.json` 不手改。对话中要求 AI 加菜时，可直接调用 `node scripts/import-recipe.mjs "<url或文案>"` 或按项目格式转换。
+- 菜品制作与加菜习惯：
+  - 肉类（除清汤和鸡爪外）不要焯水，改为切好洗净沥干水分直接入锅煎至微焦出油再烹饪。
+  - 不要写盛出回锅，肉片/虾仁滑熟后拨到锅边底油爆香小料后同炒。
+  - 水蒸蛋起沫正常，用勺子撇掉浮沫即可。
+  - 速冻半成品（烤肠/薯条/薯饼）直接说明空气炸锅与油煎/炸的温度时间。
 - 菜品 id 是 `raw.ts` 每行开头手写的数字，递增分配；一经使用永不改、不复用、不重排（点菜单、历史订单、配图文件名都靠它）。删菜也不要回收编号。
 - 菜品描述只写吃起来什么样，一句话；做法要点放进步骤。不展示耗时和难度，列表只显示标签，详情显示辣度和标签。
 - 食材编码 `主|名 用量;名 用量@辅|...@调|...`，步骤用 `@` 分隔。
