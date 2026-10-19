@@ -39,11 +39,9 @@ export function HeatmapDetailView() {
 
     if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (dx > 0) {
-        // 向右滑：上一月/上一年
         if (mode === "month") handlePrevMonth();
         else handlePrevYear();
       } else {
-        // 向左滑：下一月/下一年
         if (mode === "month") handleNextMonth();
         else handleNextYear();
       }
@@ -150,7 +148,6 @@ export function HeatmapDetailView() {
     let yearCookDays = 0;
     let yearMeals = 0;
 
-    // 全年所有日期的长列表（用于顶部全年 52 周长卷矩阵）
     const fullYearDays: { dateStr: string; count: number; inFuture: boolean }[] = [];
 
     for (let m = 1; m <= 12; m++) {
@@ -218,8 +215,8 @@ export function HeatmapDetailView() {
       onTouchEnd={onTouchEnd}
       className="flex min-h-dvh flex-col bg-paper px-4 pt-4 pb-16 select-none"
     >
-      {/* 顶栏导航 */}
-      <header className="flex items-center justify-between pb-3 border-b border-line">
+      {/* 顶栏导航：sticky 吸顶，背景带高斯模糊，不被内容顶走 */}
+      <header className="sticky top-0 z-30 -mx-4 flex items-center justify-between border-b border-line bg-paper/90 px-4 pb-3 backdrop-blur-md">
         <div className="flex items-center gap-2.5">
           <Link
             href="/history/"
@@ -231,7 +228,7 @@ export function HeatmapDetailView() {
           <h1 className="font-display text-[20px] tracking-wider text-ink">下厨详情</h1>
         </div>
 
-        {/* 月 / 年 维度切换：和导航栏完全一致的滑动平移动效 */}
+        {/* 月 / 年 维度切换：平移动效 */}
         <div className="relative flex rounded-full border border-line bg-card p-1">
           <motion.div
             initial={false}
@@ -279,9 +276,9 @@ export function HeatmapDetailView() {
             <CaretLeft size={14} />
           </button>
 
-          {/* 点击日期文字可唤起系统日期/年月选择器 */}
+          {/* 点击日期文字可唤起系统日期/年月选择器，已移除下划线 */}
           <div className="relative flex items-center">
-            <span className="font-display text-[15px] tracking-wide text-ink tabular-nums underline decoration-line-2 underline-offset-4 cursor-pointer">
+            <span className="font-display text-[15px] tracking-wide text-ink tabular-nums cursor-pointer">
               {mode === "month" ? `${selectedYear} 年 ${selectedMonth} 月` : `${selectedYear} 年`}
             </span>
             <input
@@ -309,9 +306,9 @@ export function HeatmapDetailView() {
           </button>
         </div>
 
-        {/* 统计指标 */}
+        {/* 统计指标：共下厨 XX 天 */}
         <div className="text-[11.5px] text-ink-3 tabular-nums">
-          下厨{" "}
+          共下厨{" "}
           <strong className="font-medium text-ink">
             {mode === "month" ? monthCalendarData.cookDays : yearCalendarData.cookDays}
           </strong>{" "}
@@ -344,7 +341,6 @@ export function HeatmapDetailView() {
               const isFuture = cell.dateStr > today;
               const isToday = cell.dateStr === today;
 
-              // 自然温润色阶
               let cellBg = "bg-paper/70 text-ink-2";
               if (cell.mealCount === 1) cellBg = "bg-[#6b9e7f] text-white";
               else if (cell.mealCount === 2) cellBg = "bg-[#457c5f] text-white";
@@ -375,7 +371,7 @@ export function HeatmapDetailView() {
             })}
           </div>
 
-          {/* 底部图例（与外面一致） */}
+          {/* 底部图例 */}
           <div className="mt-4 flex items-center justify-end gap-1.5 text-[9.5px] text-ink-3 border-t border-line-2/40 pt-3">
             <span>少</span>
             <div className="size-2 rounded bg-[#e4e2dc]" />
@@ -392,7 +388,7 @@ export function HeatmapDetailView() {
           <div className="rounded-2xl border border-line bg-card p-4 shadow-2xs">
             <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
               <span className="font-display text-ink">{selectedYear} 全年做饭分布</span>
-              <span className="tabular-nums">共开火 {yearCalendarData.cookDays} 天</span>
+              <span className="tabular-nums">共下厨 {yearCalendarData.cookDays} 天</span>
             </div>
             <div className="overflow-x-auto pt-1 pb-1">
               <div className="grid grid-flow-col grid-rows-7 gap-1 min-w-fit">

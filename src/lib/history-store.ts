@@ -52,7 +52,7 @@ type HistoryState = {
   ensureRange: (range: HistoryRange, force?: boolean) => Promise<void>;
   loadMoreForRange: (range: HistoryRange) => Promise<void>;
   remove: (id: string) => Promise<boolean>;
-  updateReview: (mealId: string, review: MealReview) => void;
+  updateReview: (mealId: string, review: MealReview | null) => void;
   /** 订单有变动（补录、改已吃订单等）后：所有范围标记为未初始化，并强制重拉当前范围 */
   invalidateAll: () => Promise<void>;
 };
@@ -168,7 +168,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
       return false;
     },
 
-    updateReview: (mealId: string, review: MealReview) => {
+    updateReview: (mealId: string, review: MealReview | null) => {
       const updateMeals = (meals: Meal[]) =>
         meals.map((m) => (m.id === mealId ? { ...m, review } : m));
       const c = get().cache;

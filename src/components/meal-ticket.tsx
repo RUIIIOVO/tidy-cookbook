@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CaretDown, Star } from "@phosphor-icons/react";
+import { CaretDown, PencilSimple, Star } from "@phosphor-icons/react";
 import { getDish } from "@/data/dishes";
 import { mealTitle } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
@@ -144,7 +144,7 @@ export function MealTicket({
           合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
         </span>
 
-        {/* 右侧操作按钮组：未评价时显示星星icon的评价按钮 + 再点一次 */}
+        {/* 右侧操作按钮组：未评价时显示空心星星图标的评价按钮 + 再点一次 */}
         <div className="flex items-center gap-2">
           {enableReview && !meal.review && (
             <button
@@ -155,7 +155,7 @@ export function MealTicket({
               }}
               className={cn(ui.chip, ui.chipOff)}
             >
-              <Star size={13} weight="fill" className="text-accent" />
+              <Star size={13} weight="regular" className="text-ink-2" />
               <span>评价</span>
             </button>
           )}
@@ -165,7 +165,7 @@ export function MealTicket({
         </div>
       </div>
 
-      {/* 评价展示区：与小票融为一体的纸墨手账便签，取消突兀卡片套卡片 */}
+      {/* 评价展示区：与小票融为一体的纸墨手账便签，彻底取消突兀卡片套卡片 */}
       {meal.review && (
         <div
           role="button"
@@ -176,7 +176,7 @@ export function MealTicket({
           }}
           className="group relative mt-3 border-t border-dashed border-line-2 pt-3 text-left transition active:opacity-75 cursor-pointer"
         >
-          {/* 评价头部：星级、评级与编辑 */}
+          {/* 评价头部：星级、评级与编辑小铅笔图标 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <div className="flex text-accent">
@@ -194,12 +194,19 @@ export function MealTicket({
               </span>
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] text-ink-3 group-hover:text-accent transition-colors">
+            <div className="flex items-center gap-2 text-ink-3">
               {meal.review.reviewedBy && (
-                <span className="mr-1">{formatPersonName(meal.review.reviewedBy)}</span>
+                <span className="flex items-center gap-1 text-[10px]">
+                  <Avatar
+                    name={formatPersonName(meal.review.reviewedBy)}
+                    className="size-[12px] text-[7.5px]"
+                  />
+                  <span>{formatPersonName(meal.review.reviewedBy)}</span>
+                </span>
               )}
-              <span>编辑</span>
-              <span>›</span>
+              <span className="grid size-6 place-items-center rounded-full text-ink-3 transition group-hover:text-accent">
+                <PencilSimple size={13} />
+              </span>
             </div>
           </div>
 
@@ -217,13 +224,11 @@ export function MealTicket({
             </div>
           )}
 
-          {/* 评语文字：手账引述条 */}
+          {/* 评语文字：自然留白呼吸感，移除左侧竖条 */}
           {meal.review.comment && (
-            <div className="mt-2.5 border-l-2 border-accent/40 pl-2.5">
-              <p className="text-[12px] leading-relaxed text-ink-2">
-                “{meal.review.comment}”
-              </p>
-            </div>
+            <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
+              “{meal.review.comment}”
+            </p>
           )}
         </div>
       )}

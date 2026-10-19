@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { Drawer } from "vaul";
-import { Star } from "@phosphor-icons/react";
+import { Star, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { authHeaders } from "@/lib/auth-store";
+import { useConfirm } from "@/lib/confirm-store";
 import { useHeatmap } from "@/lib/heatmap-store";
 import { useHistory } from "@/lib/history-store";
 import { mealTitle } from "@/lib/meal-time";
@@ -65,6 +66,7 @@ function MealReviewSheetInner({
   const today = useCart((s) => s.today);
   const updateReview = useHistory((s) => s.updateReview);
   const fetchHeatmap = useHeatmap((s) => s.fetchHeatmap);
+  const confirm = useConfirm((s) => s.confirm);
 
   const [activeMeal, setActiveMeal] = useState<Meal | null>(() => meal);
   if (meal && meal !== activeMeal) {
@@ -113,6 +115,36 @@ function MealReviewSheetInner({
   const toggleTag = (t: string) => {
     haptic(4);
     setTags((prev) => (prev.includes(t) ? prev.filter((item) => item !== t) : [...prev, t]));
+  };
+
+  const handleDelete = () => {
+    if (!currentMeal) return;
+    confirm({
+      title: "删除这条评价？",
+      desc: "删除后无法恢复",
+      confirmText: "删除",
+      onConfirm: async () => {
+        try {
+          const res = await fetch("/api/reviews", {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: {
+              ...authHeaders(),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ mealId: currentMeal.id }),
+          });
+          if (!res.ok) throw new Error("删除失败");
+          updateReview(currentMeal.id, null);
+          void fetchHeatmap(365, true);
+          haptic(8);
+          toast.success("评价已删除");
+          onClose();
+        } catch {
+          toast.error("删除失败，请重试");
+        }
+      },
+    });
   };
 
   const handleSubmit = async () => {
@@ -177,9 +209,8 @@ function MealReviewSheetInner({
               <span className="text-[12px] text-ink-3 tabular-nums">{title}</span>
             </div>
 
-            {/* 总体评价：大厂标准无感化融合（去除“整体评分”生硬表单框） */}
+            {/* 总体评价：大厂标准无感化融合 */}
             <div className="py-5 text-center">
-              {/* 五星交互区：支持点击与拖拽划过，冷杉绿强调 */}
               <div
                 ref={starsContainerRef}
                 onPointerDown={(e) => {
@@ -211,7 +242,6 @@ function MealReviewSheetInner({
                 })}
               </div>
 
-              {/* 实时星级文案 */}
               <p className="mt-2 font-display text-[16px] tracking-widest text-accent">
                 {currentLevel.text}
               </p>
@@ -230,13 +260,11 @@ function MealReviewSheetInner({
 
                     return (
                       <li key={item.dishId} className="flex items-center justify-between py-2.5">
-                        {/* 左侧：菜品缩略图 + 菜名 */}
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           <DishThumb dish={dish} className="size-8 shrink-0 rounded" sizes="32px" />
                           <span className="truncate text-[13px] text-ink">{dish.name}</span>
                         </div>
 
-                        {/* 右侧：[描述文案] + [贴紧最右侧的 5 颗星，支持滑动控制] */}
                         <div className="flex items-center gap-2 shrink-0 select-none">
                           <span className="w-11 text-right text-[11px] font-medium text-ink-2">
                             {dishLevel ? dishLevel.text : ""}
@@ -277,11 +305,9 @@ function MealReviewSheetInner({
               </div>
             )}
 
-            {/* 评价标签（分层：正向体验在先，复盘备忘在后） */}
+            {/* 评价标签 */}
             <div className="mt-5">
               <p className="text-[12px] font-medium text-ink-3">评价标签</p>
-
-              {/* 好评梯队 */}
               <div className="mt-2.5 grid grid-cols-3 gap-2">
                 {POSITIVE_TAGS.map((t) => {
                   const selected = tags.includes(t);
@@ -303,7 +329,6 @@ function MealReviewSheetInner({
                 })}
               </div>
 
-              {/* 复盘备忘梯队 */}
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {REVIEW_TAGS.map((t) => {
                   const selected = tags.includes(t);
@@ -342,13 +367,23 @@ function MealReviewSheetInner({
               />
             </div>
 
-            {/* 保存按钮 */}
-            <div className="mt-6">
+            {/* 保存按钮行：编辑状态下并排显示删除按钮 */}
+            <div className="mt-6 flex items-center gap-2.5">
+              {currentMeal?.review && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  title="删除此评价"
+                  className="flex size-12 shrink-0 items-center justify-center rounded-full border border-line bg-card text-chili transition active:scale-90"
+                >
+                  <Trash size={18} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex h-12 w-full items-center justify-center rounded-full bg-accent text-[15px] font-medium tracking-wide text-white transition active:scale-[0.99] disabled:opacity-40"
+                className="flex h-12 flex-1 items-center justify-center rounded-full bg-accent text-[15px] font-medium tracking-wide text-white transition active:scale-[0.99] disabled:opacity-40"
               >
                 {submitting ? "正在保存..." : "保存点评"}
               </button>

@@ -236,6 +236,18 @@ export default {
         });
       }
 
+      if (url.pathname === "/api/reviews" && req.method === "DELETE") {
+        const body = await readBody(req);
+        const mealId = str(body.mealId).trim();
+        if (!mealId) return json({ error: "缺少 mealId" }, { status: 400 });
+
+        await env.DB.prepare(`DELETE FROM meal_review WHERE meal_id = ? AND kitchen_id = ?`)
+          .bind(mealId, user.kitchenId)
+          .run();
+
+        return json({ ok: true, mealId });
+      }
+
       // 删订单改走 WebSocket 的 deleteMeal（要幂等、要同步 dish_stat 和勾选）
 
       return json({ error: "没有这个接口" }, { status: 404 });

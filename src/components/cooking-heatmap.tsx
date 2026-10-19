@@ -60,7 +60,7 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           meals += count;
         }
 
-        // 以每列中部的日期确定月份标签位置（更精准对齐）
+        // 识别月份标签
         if (d === 0) {
           const m = curDateStr.slice(5, 7);
           const monthText = `${parseInt(m, 10)}月`;
@@ -107,11 +107,11 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
         </div>
       </div>
 
-      {/* GitHub 风格热力矩阵：采用自适应 13 列等宽排布，撑满整张卡片横宽 */}
+      {/* GitHub 风格热力矩阵：星期指示与右侧 13 列方块统一在同一个 grid 容器中，杜绝任何位移差 */}
       <div className="w-full pt-1 pb-1">
-        {/* 月份表头：绝对按比例对应 13 列 */}
+        {/* 月份表头 */}
         <div className="relative mb-1.5 flex h-3.5 text-[9px] text-ink-3">
-          <div className="w-4 shrink-0" />
+          <div className="w-3.5 shrink-0" />
           <div className="relative flex-1">
             {monthLabels.map((m) => (
               <span
@@ -125,61 +125,55 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           </div>
         </div>
 
-        <div className="flex items-start gap-2">
-          {/* 左侧星期指示：与右侧 7 个格子保持相同的 gap 与高度比例，实现 1:1 绝对基线对齐 */}
-          <div className="flex flex-col gap-1.5 text-[8.5px] text-ink-3/70 select-none">
-            <span className="flex aspect-square items-center justify-center">一</span>
-            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">二</span>
-            <span className="flex aspect-square items-center justify-center">三</span>
-            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">四</span>
-            <span className="flex aspect-square items-center justify-center">五</span>
-            <span className="flex aspect-square items-center justify-center text-transparent" aria-hidden="true">六</span>
-            <span className="flex aspect-square items-center justify-center">日</span>
+        {/* 统一网格：左边 1 列星期，右边 13 列日期，完全共享相同的行高和 gap */}
+        <div className="grid grid-cols-[14px_repeat(13,1fr)] gap-1.5 items-center">
+          {/* 第 1 列：左侧星期指示，按 7 行精细排列 */}
+          <div className="grid grid-rows-7 gap-1.5 text-[8.5px] text-ink-3/70 select-none text-center">
+            <span className="flex aspect-square items-center justify-center leading-none">一</span>
+            <span className="flex aspect-square items-center justify-center leading-none opacity-0">二</span>
+            <span className="flex aspect-square items-center justify-center leading-none">三</span>
+            <span className="flex aspect-square items-center justify-center leading-none opacity-0">四</span>
+            <span className="flex aspect-square items-center justify-center leading-none">五</span>
+            <span className="flex aspect-square items-center justify-center leading-none opacity-0">六</span>
+            <span className="flex aspect-square items-center justify-center leading-none">日</span>
           </div>
 
-          {/* 13 列方块：grid-cols-13 等比自适应填充全宽 */}
-          <div className="grid flex-1 grid-cols-13 gap-1.5">
-            {weeks.map((w) => (
-              <div key={w.weekIdx} className="flex flex-col gap-1.5">
-                {w.days.map((d) => {
-                  if (d.inFuture) {
-                    return (
-                      <div
-                        key={d.date}
-                        className="aspect-square w-full rounded-[2.5px] bg-line/20"
-                      />
-                    );
-                  }
-
-                  // 调优后的自然素净色阶：
-                  // 0餐：浅灰沙色，绝不发黄
-                  // 1餐：温润草木青
-                  // 2餐：中度深青
-                  // 3餐及以上：冷杉正绿
-                  let cellBg = "bg-[#e4e2dc] hover:bg-line-2 transition-colors";
-                  if (d.count === 1) cellBg = "bg-[#6b9e7f] hover:bg-[#5c8d6f]";
-                  else if (d.count === 2) cellBg = "bg-[#457c5f] hover:bg-[#386b51]";
-                  else if (d.count >= 3) cellBg = "bg-[#2e6349] hover:bg-[#25523c]";
-
+          {/* 剩余 13 列方块 */}
+          {weeks.map((w) => (
+            <div key={w.weekIdx} className="grid grid-rows-7 gap-1.5">
+              {w.days.map((d) => {
+                if (d.inFuture) {
                   return (
-                    <button
+                    <div
                       key={d.date}
-                      type="button"
-                      onClick={() => {
-                        haptic(6);
-                        onSelectDate(d.date);
-                      }}
-                      title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}`}
-                      className={cn(
-                        "aspect-square w-full rounded-[2.5px] transition active:scale-125 focus:outline-none",
-                        cellBg,
-                      )}
+                      className="aspect-square w-full rounded-[2.5px] bg-line/20"
                     />
                   );
-                })}
-              </div>
-            ))}
-          </div>
+                }
+
+                let cellBg = "bg-[#e4e2dc] hover:bg-line-2 transition-colors";
+                if (d.count === 1) cellBg = "bg-[#6b9e7f] hover:bg-[#5c8d6f]";
+                else if (d.count === 2) cellBg = "bg-[#457c5f] hover:bg-[#386b51]";
+                else if (d.count >= 3) cellBg = "bg-[#2e6349] hover:bg-[#25523c]";
+
+                return (
+                  <button
+                    key={d.date}
+                    type="button"
+                    onClick={() => {
+                      haptic(6);
+                      onSelectDate(d.date);
+                    }}
+                    title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}`}
+                    className={cn(
+                      "aspect-square w-full rounded-[2.5px] transition active:scale-125 focus:outline-none",
+                      cellBg,
+                    )}
+                  />
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* 底部图例与查看详情入口 */}
