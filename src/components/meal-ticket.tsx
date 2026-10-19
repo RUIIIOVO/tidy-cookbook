@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CaretDown, ChatCircleDots, Star } from "@phosphor-icons/react";
+import { CaretDown, Star } from "@phosphor-icons/react";
 import { getDish } from "@/data/dishes";
 import { mealTitle } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
@@ -144,7 +144,7 @@ export function MealTicket({
           合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
         </span>
 
-        {/* 右侧操作按钮组：未评价时显示评价+再点一次；已评价时仅保留再点一次 */}
+        {/* 右侧操作按钮组：未评价时显示星星icon的评价按钮 + 再点一次 */}
         <div className="flex items-center gap-2">
           {enableReview && !meal.review && (
             <button
@@ -155,7 +155,7 @@ export function MealTicket({
               }}
               className={cn(ui.chip, ui.chipOff)}
             >
-              <ChatCircleDots size={12} className="text-ink-3" />
+              <Star size={13} weight="fill" className="text-accent" />
               <span>评价</span>
             </button>
           )}
@@ -165,7 +165,7 @@ export function MealTicket({
         </div>
       </div>
 
-      {/* 评价展示区（已评价时挂在小票最下方，作为精致便签） */}
+      {/* 评价展示区：与小票融为一体的纸墨手账便签，取消突兀卡片套卡片 */}
       {meal.review && (
         <div
           role="button"
@@ -174,42 +174,42 @@ export function MealTicket({
             haptic(6);
             setReviewOpen(true);
           }}
-          className="group relative mt-3 rounded-xl border border-line-2/70 bg-card/60 p-3 text-left transition hover:border-line hover:bg-card active:scale-[0.99] cursor-pointer"
+          className="group relative mt-3 border-t border-dashed border-line-2 pt-3 text-left transition active:opacity-75 cursor-pointer"
         >
-          {/* 评价头部：星级、评级、评价人与右上角编辑提示 */}
+          {/* 评价头部：星级、评级与编辑 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <div className="flex text-accent">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star
                     key={s}
-                    size={12}
+                    size={13}
                     weight={s <= (meal.review?.rating || 0) ? "fill" : "regular"}
                     className={s <= (meal.review?.rating || 0) ? "text-accent" : "text-line-2"}
                   />
                 ))}
               </div>
-              <span className="font-display text-[12.5px] font-medium tracking-wide text-ink">
+              <span className="font-display text-[13px] font-medium tracking-wide text-accent">
                 {meal.review.ratingText}
               </span>
             </div>
 
             <div className="flex items-center gap-1 text-[11px] text-ink-3 group-hover:text-accent transition-colors">
               {meal.review.reviewedBy && (
-                <span className="mr-1 text-[10.5px]">{formatPersonName(meal.review.reviewedBy)}</span>
+                <span className="mr-1">{formatPersonName(meal.review.reviewedBy)}</span>
               )}
               <span>编辑</span>
               <span>›</span>
             </div>
           </div>
 
-          {/* 评价标签 */}
+          {/* 评价标签：轻量素雅胶囊 */}
           {meal.review.tags && meal.review.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {meal.review.tags.map((t) => (
                 <span
                   key={t}
-                  className="rounded-full bg-paper px-2 py-0.5 text-[10px] text-ink-2 border border-line-2/50"
+                  className="rounded-md bg-paper px-2 py-0.5 text-[10.5px] text-ink-2"
                 >
                   {t}
                 </span>
@@ -217,11 +217,13 @@ export function MealTicket({
             </div>
           )}
 
-          {/* 评语心得 */}
+          {/* 评语文字：手账引述条 */}
           {meal.review.comment && (
-            <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
-              {meal.review.comment}
-            </p>
+            <div className="mt-2.5 border-l-2 border-accent/40 pl-2.5">
+              <p className="text-[12px] leading-relaxed text-ink-2">
+                “{meal.review.comment}”
+              </p>
+            </div>
           )}
         </div>
       )}

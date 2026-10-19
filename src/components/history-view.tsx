@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, CaretUp, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
@@ -324,6 +324,24 @@ function HistoryTabPane({
   const loadMoreForRange = useHistory((s) => s.loadMoreForRange);
   const ensureRange = useHistory((s) => s.ensureRange);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 回到顶部按钮状态
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const top = e.currentTarget.scrollTop;
+    if (top > 320 && !showBackToTop) {
+      setShowBackToTop(true);
+    } else if (top <= 320 && showBackToTop) {
+      setShowBackToTop(false);
+    }
+  };
+
+  const scrollToTop = () => {
+    haptic(6);
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // 触底流式翻页加载
   useEffect(() => {
@@ -349,7 +367,11 @@ function HistoryTabPane({
   const meals = finishedToday.length ? [...finishedToday, ...fetched] : fetched;
 
   return (
-    <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="relative no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain"
+    >
       {/* 仅在「全部」Tab 列表顶部展示下厨记录热力图，其余时间段不占屏幕 */}
       {rangeKey === "all" && (
         <div className="mb-3">
@@ -402,6 +424,18 @@ function HistoryTabPane({
         <p className="py-6 text-center text-[10.5px] tracking-wider text-ink-3">
           — 没有更早的订单了 —
         </p>
+      )}
+
+      {/* 右下角悬浮「回到顶部」按钮 */}
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          aria-label="回到顶部"
+          className="fixed bottom-20 right-5 z-30 flex size-9 items-center justify-center rounded-full border border-line bg-card/90 text-ink shadow-md backdrop-blur-md transition active:scale-90"
+        >
+          <CaretUp size={16} weight="bold" />
+        </button>
       )}
     </div>
   );

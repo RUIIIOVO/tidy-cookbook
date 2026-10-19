@@ -35,7 +35,7 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
 
     const weeksList: {
       weekIdx: number;
-      days: { date: string; inFuture: boolean; count: number; dishes: number; hasReview: boolean }[];
+      days: { date: string; inFuture: boolean; count: number; dishes: number }[];
     }[] = [];
 
     const months: { label: string; weekIdx: number }[] = [];
@@ -54,7 +54,6 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
         const stat = data[curDateStr];
         const count = stat?.mealCount ?? 0;
         const dishes = stat?.dishCount ?? 0;
-        const hasReview = Boolean(stat?.hasReview);
 
         if (!inFuture && count > 0) {
           cookDays += 1;
@@ -76,7 +75,6 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           inFuture,
           count,
           dishes,
-          hasReview,
         });
       }
       weeksList.push({ weekIdx: w, days: daysInWeek });
@@ -91,9 +89,9 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
   }, [today, data]);
 
   return (
-    <div className="rounded-card border border-line bg-card p-3.5 shadow-2xs">
+    <div className="rounded-card border border-line bg-card p-4 shadow-2xs">
       {/* 标题与统计 */}
-      <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
+      <div className="flex items-center justify-between pb-3 text-[11px] text-ink-3">
         <Link
           href="/history/heatmap"
           onClick={() => haptic(4)}
@@ -109,93 +107,96 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
         </div>
       </div>
 
-      {/* GitHub 风格热力矩阵容器（支持超出微横滑） */}
-      <div className="overflow-x-auto pt-1 pb-1">
-        <div className="min-w-fit">
-          {/* 月份表头：严格按每列的绝对像素距离计算，彻底解决响应式错位 */}
-          <div className="relative mb-1 flex h-3.5 text-[9px] text-ink-3">
-            <div className="w-[18px] shrink-0" />
-            <div className="relative flex-1">
-              {monthLabels.map((m) => (
-                <span
-                  key={`${m.label}-${m.weekIdx}`}
-                  className="absolute tracking-tight"
-                  style={{ left: `${m.weekIdx * 15.5}px` }}
-                >
-                  {m.label}
-                </span>
-              ))}
-            </div>
+      {/* GitHub 风格热力矩阵：采用自适应 13 列等宽排布，撑满整张卡片横宽 */}
+      <div className="w-full pt-1 pb-1">
+        {/* 月份表头：绝对按比例对应 13 列 */}
+        <div className="relative mb-1.5 flex h-3.5 text-[9px] text-ink-3">
+          <div className="w-4 shrink-0" />
+          <div className="relative flex-1">
+            {monthLabels.map((m) => (
+              <span
+                key={`${m.label}-${m.weekIdx}`}
+                className="absolute tracking-tight -translate-x-1"
+                style={{ left: `${(m.weekIdx / WEEKS_COUNT) * 100}%` }}
+              >
+                {m.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* 左侧星期指示 */}
+          <div className="flex h-full flex-col justify-between py-[2px] text-[8.5px] text-ink-3/70 select-none">
+            <span>一</span>
+            <span>三</span>
+            <span>五</span>
+            <span>日</span>
           </div>
 
-          <div className="flex gap-1.5">
-            {/* 左侧星期指示 */}
-            <div className="flex flex-col justify-between py-[1px] pr-0.5 text-[8.5px] text-ink-3/70 select-none">
-              <span>一</span>
-              <span>三</span>
-              <span>五</span>
-              <span>日</span>
-            </div>
-
-            {/* 13 列方块 */}
-            <div className="flex gap-[4px]">
-              {weeks.map((w) => (
-                <div key={w.weekIdx} className="flex flex-col gap-[4px]">
-                  {w.days.map((d) => {
-                    if (d.inFuture) {
-                      return (
-                        <div
-                          key={d.date}
-                          className="size-[11.5px] rounded-[2px] bg-line/20"
-                        />
-                      );
-                    }
-
-                    let cellBg = "bg-[#ebe4d5] hover:bg-line-2 transition-colors";
-                    if (d.count === 1) cellBg = "bg-[#a3c4b2] hover:bg-[#92b8a2]";
-                    else if (d.count === 2) cellBg = "bg-[#5d9476] hover:bg-[#508569]";
-                    else if (d.count >= 3) cellBg = "bg-[#2e6349] hover:bg-[#25523c]";
-
+          {/* 13 列方块：grid-cols-13 等比自适应填充全宽 */}
+          <div className="grid flex-1 grid-cols-13 gap-1.5">
+            {weeks.map((w) => (
+              <div key={w.weekIdx} className="flex flex-col gap-1.5">
+                {w.days.map((d) => {
+                  if (d.inFuture) {
                     return (
-                      <button
+                      <div
                         key={d.date}
-                        type="button"
-                        onClick={() => {
-                          haptic(6);
-                          onSelectDate(d.date);
-                        }}
-                        title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}`}
-                        className={cn(
-                          "size-[11.5px] rounded-[2px] transition active:scale-125 focus:outline-none",
-                          cellBg,
-                        )}
+                        className="aspect-square w-full rounded-[2.5px] bg-line/20"
                       />
                     );
-                  })}
-                </div>
-              ))}
-            </div>
+                  }
+
+                  // 调优后的自然素净色阶：
+                  // 0餐：浅灰沙色，绝不发黄
+                  // 1餐：温润草木青
+                  // 2餐：中度深青
+                  // 3餐及以上：冷杉正绿
+                  let cellBg = "bg-[#e4e2dc] hover:bg-line-2 transition-colors";
+                  if (d.count === 1) cellBg = "bg-[#6b9e7f] hover:bg-[#5c8d6f]";
+                  else if (d.count === 2) cellBg = "bg-[#457c5f] hover:bg-[#386b51]";
+                  else if (d.count >= 3) cellBg = "bg-[#2e6349] hover:bg-[#25523c]";
+
+                  return (
+                    <button
+                      key={d.date}
+                      type="button"
+                      onClick={() => {
+                        haptic(6);
+                        onSelectDate(d.date);
+                      }}
+                      title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}`}
+                      className={cn(
+                        "aspect-square w-full rounded-[2.5px] transition active:scale-125 focus:outline-none",
+                        cellBg,
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* 底部图例与查看详情入口 */}
-          <div className="mt-2.5 flex items-center justify-between text-[9px] text-ink-3">
-            <Link
-              href="/history/heatmap"
-              onClick={() => haptic(4)}
-              className="flex items-center gap-0.5 text-accent hover:underline"
-            >
-              <span>查看年度与月份详情</span>
-              <CaretRight size={9} />
-            </Link>
+        {/* 底部图例与查看详情入口 */}
+        <div className="mt-3.5 flex items-center justify-between text-[9px] text-ink-3 border-t border-line/40 pt-2.5">
+          <Link
+            href="/history/heatmap"
+            onClick={() => haptic(4)}
+            className="flex items-center gap-0.5 text-accent hover:underline font-medium"
+          >
+            <span>查看年度与月份详情</span>
+            <CaretRight size={9} />
+          </Link>
 
-            <div className="flex items-center gap-1">
-              <span>少</span>
-              <div className="size-[8px] rounded-[2px] bg-[#ebe4d5]" />
-              <div className="size-[8px] rounded-[2px] bg-[#a3c4b2]" />
-              <div className="size-[8px] rounded-[2px] bg-[#5d9476]" />
-              <div className="size-[8px] rounded-[2px] bg-[#2e6349]" />
-              <span>多</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span>少</span>
+            <div className="size-[8.5px] rounded-[2px] bg-[#e4e2dc]" />
+            <div className="size-[8.5px] rounded-[2px] bg-[#6b9e7f]" />
+            <div className="size-[8.5px] rounded-[2px] bg-[#457c5f]" />
+            <div className="size-[8.5px] rounded-[2px] bg-[#2e6349]" />
+            <span>多</span>
           </div>
         </div>
       </div>

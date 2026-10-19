@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { motion } from "motion/react";
 import { useHeatmap } from "@/lib/heatmap-store";
 import { useCart } from "@/lib/store";
 import { cn, haptic } from "@/lib/utils";
@@ -13,14 +14,42 @@ export function HeatmapDetailView() {
   const today = useCart((s) => s.today) || new Date().toISOString().slice(0, 10);
   const data = useHeatmap((s) => s.data);
 
-  // 模式：按月 (month) 或 按年 (year)
+  // 模式：月 (month) 或 年 (year)
   const [mode, setMode] = useState<"month" | "year">("month");
 
   // 选中的年份与月份
   const [selectedYear, setSelectedYear] = useState(() => parseInt(today.slice(0, 4), 10));
   const [selectedMonth, setSelectedMonth] = useState(() => parseInt(today.slice(5, 7), 10));
 
-  // 切换前一个月/后一个月
+  // 滑动手势支持（左右划切换月/年）
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx > 0) {
+        // 向右滑：上一月/上一年
+        if (mode === "month") handlePrevMonth();
+        else handlePrevYear();
+      } else {
+        // 向左滑：下一月/下一年
+        if (mode === "month") handleNextMonth();
+        else handleNextYear();
+      }
+    }
+  };
+
   const handlePrevMonth = () => {
     haptic(4);
     if (selectedMonth === 1) {
@@ -41,7 +70,6 @@ export function HeatmapDetailView() {
     }
   };
 
-  // 切换年份
   const handlePrevYear = () => {
     haptic(4);
     setSelectedYear((y) => y - 1);
@@ -56,13 +84,9 @@ export function HeatmapDetailView() {
     const year = selectedYear;
     const month = selectedMonth;
 
-    // 当月第一天与最后一天
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
     const totalDays = lastDay.getDate();
-
-    // 当月 1 号是周几（0: 周日, 1: 周一, ... 6: 周六）
-    // 转换为周一为 0 (0: 周一, 6: 周日)
     const startWeekday = (firstDay.getDay() + 6) % 7;
 
     const cells: {
@@ -74,7 +98,6 @@ export function HeatmapDetailView() {
       hasReview: boolean;
     }[] = [];
 
-    // 填充前面补齐的上月空白
     for (let i = 0; i < startWeekday; i++) {
       cells.push({
         dayNum: 0,
@@ -89,7 +112,6 @@ export function HeatmapDetailView() {
     let cookDays = 0;
     let meals = 0;
 
-    // 填充当月
     for (let d = 1; d <= totalDays; d++) {
       const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const stat = data[dateStr];
@@ -120,13 +142,16 @@ export function HeatmapDetailView() {
     };
   }, [selectedYear, selectedMonth, data, today]);
 
-  // ── 年视图数据计算（12 个精美迷你热力图月份阵列） ─────────────
+  // ── 年视图数据计算（年度宏观长卷 + 12 个月份拆解） ─────────────
   const yearCalendarData = useMemo(() => {
     const year = selectedYear;
     const monthsData = [];
 
     let yearCookDays = 0;
     let yearMeals = 0;
+
+    // 全年所有日期的长列表（用于顶部全年 52 周长卷矩阵）
+    const fullYearDays: { dateStr: string; count: number; inFuture: boolean }[] = [];
 
     for (let m = 1; m <= 12; m++) {
       const firstDay = new Date(year, m - 1, 1);
@@ -147,8 +172,9 @@ export function HeatmapDetailView() {
         const stat = data[dateStr];
         const count = stat?.mealCount ?? 0;
         const hasReview = Boolean(stat?.hasReview);
+        const inFuture = dateStr > today;
 
-        if (count > 0 && dateStr <= today) {
+        if (count > 0 && !inFuture) {
           mCookDays += 1;
           mMeals += count;
         }
@@ -158,6 +184,12 @@ export function HeatmapDetailView() {
           dateStr,
           count,
           hasReview,
+        });
+
+        fullYearDays.push({
+          dateStr,
+          count,
+          inFuture,
         });
       }
 
@@ -174,28 +206,39 @@ export function HeatmapDetailView() {
 
     return {
       months: monthsData,
+      fullYearDays,
       cookDays: yearCookDays,
       meals: yearMeals,
     };
   }, [selectedYear, data, today]);
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col bg-paper px-4 pt-4 pb-12 select-none">
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      className="flex min-h-dvh flex-col bg-paper px-4 pt-4 pb-16 select-none"
+    >
       {/* 顶栏导航 */}
       <header className="flex items-center justify-between pb-3 border-b border-line">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/history/"
             onClick={() => haptic(4)}
-            className="flex size-8 items-center justify-center rounded-full bg-line-2 text-ink transition active:scale-90"
+            className="flex items-center justify-center text-ink transition active:scale-90"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={20} />
           </Link>
           <h1 className="font-display text-[20px] tracking-wider text-ink">下厨详情</h1>
         </div>
 
-        {/* 月 / 年 维度切换 */}
-        <div className="flex rounded-lg border border-line bg-card p-0.5 text-[11.5px]">
+        {/* 月 / 年 维度切换：和导航栏完全一致的滑动平移动效 */}
+        <div className="relative flex rounded-full border border-line bg-card p-1">
+          <motion.div
+            initial={false}
+            animate={{ x: mode === "month" ? 0 : 44 }}
+            transition={{ type: "spring", stiffness: 480, damping: 38 }}
+            className="pointer-events-none absolute inset-y-1 left-1 w-11 rounded-full bg-accent"
+          />
           <button
             type="button"
             onClick={() => {
@@ -203,11 +246,11 @@ export function HeatmapDetailView() {
               setMode("month");
             }}
             className={cn(
-              "rounded-md px-3 py-1 font-medium transition",
-              mode === "month" ? "bg-accent text-white" : "text-ink-3 hover:text-ink",
+              "relative z-10 w-11 py-1 text-center text-[12px] font-medium transition-colors",
+              mode === "month" ? "text-white" : "text-ink-3 hover:text-ink",
             )}
           >
-            按月
+            月
           </button>
           <button
             type="button"
@@ -216,17 +259,17 @@ export function HeatmapDetailView() {
               setMode("year");
             }}
             className={cn(
-              "rounded-md px-3 py-1 font-medium transition",
-              mode === "year" ? "bg-accent text-white" : "text-ink-3 hover:text-ink",
+              "relative z-10 w-11 py-1 text-center text-[12px] font-medium transition-colors",
+              mode === "year" ? "text-white" : "text-ink-3 hover:text-ink",
             )}
           >
-            按年
+            年
           </button>
         </div>
       </header>
 
       {/* 控制条：时间前进后退与统计 */}
-      <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5">
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 shadow-2xs">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -236,9 +279,26 @@ export function HeatmapDetailView() {
             <CaretLeft size={14} />
           </button>
 
-          <span className="font-display text-[15px] tracking-wide text-ink tabular-nums">
-            {mode === "month" ? `${selectedYear} 年 ${selectedMonth} 月` : `${selectedYear} 年`}
-          </span>
+          {/* 点击日期文字可唤起系统日期/年月选择器 */}
+          <div className="relative flex items-center">
+            <span className="font-display text-[15px] tracking-wide text-ink tabular-nums underline decoration-line-2 underline-offset-4 cursor-pointer">
+              {mode === "month" ? `${selectedYear} 年 ${selectedMonth} 月` : `${selectedYear} 年`}
+            </span>
+            <input
+              type="month"
+              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const [y, m] = e.target.value.split("-").map(Number);
+                if (y && m) {
+                  haptic(6);
+                  setSelectedYear(y);
+                  setSelectedMonth(m);
+                }
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            />
+          </div>
 
           <button
             type="button"
@@ -274,38 +334,35 @@ export function HeatmapDetailView() {
             ))}
           </div>
 
-          {/* 日历格子 */}
-          <div className="mt-2 grid grid-cols-7 gap-1.5">
+          {/* 日历大格子 */}
+          <div className="mt-2.5 grid grid-cols-7 gap-1.5">
             {monthCalendarData.cells.map((cell, idx) => {
               if (!cell.isCurrentMonth) {
-                return <div key={`empty-${idx}`} className="h-14 rounded-lg bg-transparent" />;
+                return <div key={`empty-${idx}`} className="h-15 rounded-lg bg-transparent" />;
               }
 
               const isFuture = cell.dateStr > today;
               const isToday = cell.dateStr === today;
 
-              // 纸墨层级色阶
+              // 自然温润色阶
               let cellBg = "bg-paper/70 text-ink-2";
-              if (cell.mealCount === 1) cellBg = "bg-[#a3c4b2] text-ink";
-              else if (cell.mealCount === 2) cellBg = "bg-[#5d9476] text-white";
+              if (cell.mealCount === 1) cellBg = "bg-[#6b9e7f] text-white";
+              else if (cell.mealCount === 2) cellBg = "bg-[#457c5f] text-white";
               else if (cell.mealCount >= 3) cellBg = "bg-[#2e6349] text-white";
 
               return (
                 <div
                   key={cell.dateStr}
                   className={cn(
-                    "relative flex h-14 flex-col justify-between rounded-lg p-1.5 transition select-none",
+                    "relative flex h-15 flex-col justify-between rounded-lg p-1.5 transition select-none",
                     isFuture ? "bg-paper-2/40 text-ink-3/40" : cellBg,
-                    isToday && "ring-1.5 ring-accent",
+                    isToday && "ring-2 ring-accent",
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-medium leading-none tabular-nums">
                       {cell.dayNum}
                     </span>
-                    {cell.hasReview && (
-                      <span className="size-1.5 rounded-full bg-caramel ring-1 ring-card" />
-                    )}
                   </div>
 
                   {!isFuture && cell.mealCount > 0 && (
@@ -318,58 +375,96 @@ export function HeatmapDetailView() {
             })}
           </div>
 
-          {/* 图例 */}
+          {/* 底部图例（与外面一致） */}
           <div className="mt-4 flex items-center justify-end gap-1.5 text-[9.5px] text-ink-3 border-t border-line-2/40 pt-3">
-            <span>未做饭</span>
-            <div className="size-2.5 rounded bg-paper border border-line" />
-            <div className="size-2.5 rounded bg-[#a3c4b2]" />
-            <div className="size-2.5 rounded bg-[#5d9476]" />
-            <div className="size-2.5 rounded bg-[#2e6349]" />
-            <span>多次做饭</span>
+            <span>少</span>
+            <div className="size-2 rounded bg-[#e4e2dc]" />
+            <div className="size-2 rounded bg-[#6b9e7f]" />
+            <div className="size-2 rounded bg-[#457c5f]" />
+            <div className="size-2 rounded bg-[#2e6349]" />
+            <span>多</span>
           </div>
         </div>
       ) : (
-        /* 年视图：12 个迷你月份热力矩阵排列 */
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {yearCalendarData.months.map((m) => (
-            <div
-              key={m.month}
-              className="rounded-xl border border-line bg-card p-3 shadow-2xs"
-            >
-              <div className="flex items-center justify-between pb-1.5 text-[11px]">
-                <span className="font-display font-medium text-ink">{m.month} 月</span>
-                <span className="text-[9.5px] text-ink-3 tabular-nums">
-                  {m.cookDays > 0 ? `${m.cookDays} 天` : "未做饭"}
-                </span>
-              </div>
-
-              {/* 7 列流式紧凑矩阵 */}
-              <div className="grid grid-cols-7 gap-1 pt-1">
-                {m.days.map((d, i) => {
-                  if (d.dayNum === 0) {
-                    return <div key={`empty-${m.month}-${i}`} className="size-[10px]" />;
-                  }
-
-                  const isFuture = d.dateStr > today;
-                  let cellBg = "bg-[#ebe4d5]";
-                  if (d.count === 1) cellBg = "bg-[#a3c4b2]";
-                  else if (d.count === 2) cellBg = "bg-[#5d9476]";
-                  else if (d.count >= 3) cellBg = "bg-[#2e6349]";
+        /* 年视图：顶部全年 52 周总览长卷 + 下方 12 个可点击直达的月份矩阵 */
+        <div className="mt-4 flex flex-col gap-4">
+          {/* 全年 365 天宏观长卷 */}
+          <div className="rounded-2xl border border-line bg-card p-4 shadow-2xs">
+            <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
+              <span className="font-display text-ink">{selectedYear} 全年做饭分布</span>
+              <span className="tabular-nums">共开火 {yearCalendarData.cookDays} 天</span>
+            </div>
+            <div className="overflow-x-auto pt-1 pb-1">
+              <div className="grid grid-flow-col grid-rows-7 gap-1 min-w-fit">
+                {yearCalendarData.fullYearDays.map((d) => {
+                  let bg = "bg-[#e4e2dc]";
+                  if (d.inFuture) bg = "bg-line/20";
+                  else if (d.count === 1) bg = "bg-[#6b9e7f]";
+                  else if (d.count === 2) bg = "bg-[#457c5f]";
+                  else if (d.count >= 3) bg = "bg-[#2e6349]";
 
                   return (
                     <div
                       key={d.dateStr}
                       title={`${d.dateStr}: ${d.count} 餐`}
-                      className={cn(
-                        "size-[10px] rounded-[1.5px] transition",
-                        isFuture ? "bg-line/20" : cellBg,
-                      )}
+                      className={cn("size-[9px] rounded-[1.5px]", bg)}
                     />
                   );
                 })}
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* 12 个月份卡片：点击月份直接跳转到该月详情 */}
+          <div className="grid grid-cols-2 gap-3">
+            {yearCalendarData.months.map((m) => (
+              <div
+                key={m.month}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  haptic(6);
+                  setSelectedMonth(m.month);
+                  setMode("month");
+                }}
+                className="group rounded-xl border border-line bg-card p-3 shadow-2xs transition active:scale-[0.98] hover:border-accent cursor-pointer"
+              >
+                <div className="flex items-center justify-between pb-1.5 text-[11px]">
+                  <span className="font-display font-medium text-ink group-hover:text-accent transition-colors">
+                    {m.month} 月 ›
+                  </span>
+                  <span className="text-[9.5px] text-ink-3 tabular-nums">
+                    {m.cookDays > 0 ? `${m.cookDays} 天` : "未做饭"}
+                  </span>
+                </div>
+
+                {/* 7 列月份微缩图 */}
+                <div className="grid grid-cols-7 gap-1 pt-1">
+                  {m.days.map((d, i) => {
+                    if (d.dayNum === 0) {
+                      return <div key={`empty-${m.month}-${i}`} className="size-[10px]" />;
+                    }
+
+                    const isFuture = d.dateStr > today;
+                    let cellBg = "bg-[#e4e2dc]";
+                    if (d.count === 1) cellBg = "bg-[#6b9e7f]";
+                    else if (d.count === 2) cellBg = "bg-[#457c5f]";
+                    else if (d.count >= 3) cellBg = "bg-[#2e6349]";
+
+                    return (
+                      <div
+                        key={d.dateStr}
+                        className={cn(
+                          "size-[10px] rounded-[1.5px] transition",
+                          isFuture ? "bg-line/20" : cellBg,
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

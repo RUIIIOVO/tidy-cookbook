@@ -34,10 +34,10 @@ const POSITIVE_TAGS = [
 ];
 
 const REVIEW_TAGS = [
-  "下次少盐",
+  "味道偏咸",
+  "过于清淡",
   "稍微偏辣",
   "油有点大",
-  "味道偏淡",
   "糖放多了",
 ];
 
@@ -79,7 +79,7 @@ function MealReviewSheetInner({
   const currentLevel = RATING_LEVELS.find((l) => l.rating === rating) ?? RATING_LEVELS[0];
   const title = mealTitle(meal.mealDate, meal.slot, today);
 
-  // 滑动选择星星逻辑（支持 touch 与 pointer 连续划选）
+  // 总体评分滑动选择逻辑
   const handleStarScrub = (clientX: number) => {
     const container = starsContainerRef.current;
     if (!container) return;
@@ -93,17 +93,21 @@ function MealReviewSheetInner({
     }
   };
 
+  // 单道菜滑动/拖动选择星级
+  const handleDishScrub = (dishId: string, clientX: number, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const relativeX = clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, relativeX / rect.width));
+    const nextVal = Math.max(1, Math.min(5, Math.ceil(ratio * 5)));
+    if (dishRatings[dishId] !== nextVal) {
+      haptic(4);
+      setDishRatings((prev) => ({ ...prev, [dishId]: nextVal }));
+    }
+  };
+
   const toggleTag = (t: string) => {
     haptic(4);
     setTags((prev) => (prev.includes(t) ? prev.filter((item) => item !== t) : [...prev, t]));
-  };
-
-  const handleDishRating = (dishId: string, val: number) => {
-    haptic(4);
-    setDishRatings((prev) => ({
-      ...prev,
-      [dishId]: prev[dishId] === val ? 0 : val, // 点击同星取消
-    }));
   };
 
   const handleSubmit = async () => {
@@ -199,7 +203,7 @@ function MealReviewSheetInner({
               </p>
             </div>
 
-            {/* 菜品点评（紧接着总体评价，去掉选填） */}
+            {/* 菜品点评（紧接着总体评价，去掉选填，支持滑动划选） */}
             {meal.items.length > 0 && (
               <div className="mt-2">
                 <p className="text-[12px] font-medium text-ink-3">菜品点评</p>
@@ -218,27 +222,36 @@ function MealReviewSheetInner({
                           <span className="truncate text-[13px] text-ink">{dish.name}</span>
                         </div>
 
-                        {/* 右侧：[描述文案] + [贴紧最右侧的 5 颗星] */}
-                        <div className="flex items-center gap-2 shrink-0">
+                        {/* 右侧：[描述文案] + [贴紧最右侧的 5 颗星，支持滑动控制] */}
+                        <div className="flex items-center gap-2 shrink-0 select-none">
                           <span className="w-11 text-right text-[11px] font-medium text-ink-2">
                             {dishLevel ? dishLevel.text : ""}
                           </span>
-                          <div className="flex items-center">
+                          <div
+                            onPointerDown={(e) => {
+                              handleDishScrub(item.dishId, e.clientX, e.currentTarget);
+                              e.currentTarget.setPointerCapture?.(e.pointerId);
+                            }}
+                            onPointerMove={(e) => {
+                              if (e.buttons > 0) {
+                                handleDishScrub(item.dishId, e.clientX, e.currentTarget);
+                              }
+                            }}
+                            className="flex items-center cursor-pointer touch-none p-1"
+                          >
                             {[1, 2, 3, 4, 5].map((s) => {
                               const active = s <= val;
                               return (
-                                <button
+                                <div
                                   key={s}
-                                  type="button"
-                                  onClick={() => handleDishRating(item.dishId, s)}
-                                  className="p-1 text-line-2 transition hover:text-accent active:scale-125 focus:outline-none"
+                                  className="p-0.5 text-line-2 transition pointer-events-none"
                                 >
                                   <Star
-                                    size={16}
+                                    size={17}
                                     weight={active ? "fill" : "regular"}
                                     className={active ? "text-accent" : "text-line-2"}
                                   />
-                                </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -299,10 +312,10 @@ function MealReviewSheetInner({
               </div>
             </div>
 
-            {/* 点评输入框 */}
+            {/* 文字点评输入框 */}
             <div className="mt-5">
               <label htmlFor="review-comment" className="text-[12px] font-medium text-ink-3">
-                心得
+                文字点评
               </label>
               <textarea
                 id="review-comment"
