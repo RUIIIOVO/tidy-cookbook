@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, type Icon } from "@phosphor-icons/react";
+import { CookingPot, type Icon } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
 import { prepTabIcon } from "@/lib/icons";
 import { dayLabel, shortDate } from "@/lib/meal-time";
@@ -230,10 +230,12 @@ function Empty() {
   const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
     <div className="flex flex-col items-center justify-center px-8 text-center">
-      <span className="text-[36px] leading-none select-none" role="img" aria-label="摸鱼">
-        🐟
-      </span>
-      <p className="mt-3.5 font-display text-[18px] tracking-wider text-ink">大厨摸鱼中</p>
+      <p className="font-display text-[18px] tracking-wider text-ink">
+        大厨摸鱼中
+        <span className="ml-1.5 select-none" role="img" aria-label="鱼">
+          🐟
+        </span>
+      </p>
       <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
         快去下单吧，大厨随时火力全开！
       </p>
@@ -241,12 +243,12 @@ function Empty() {
         type="button"
         onClick={() => {
           haptic(6);
-          setActiveTab("menu");
+          setActiveTab("cart");
         }}
         className="mt-6 flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-[13px] text-white transition active:scale-[0.97]"
       >
-        <BookOpen size={15} weight="regular" />
-        去点菜
+        <CookingPot size={15} weight="regular" />
+        去下单
       </button>
     </div>
   );
