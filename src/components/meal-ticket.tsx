@@ -186,9 +186,22 @@ export function MealTicket({
         </div>
       </div>
 
-      {/* 已评价：小票末尾一段，和小票同一张纸，用虚线隔开 */}
+      {/* 已评价：小票末尾一段，和小票同一张纸，用虚线隔开。整块可点，点哪里都打开编辑；
+          里面的编辑 / 删除是 <button>，所以外层用 div role="button" */}
       {enableReview && review && (
-        <section className="mt-3 border-t border-dashed border-line-2 pt-3">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="编辑评价"
+          onClick={openReview}
+          onKeyDown={(e) => {
+            if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              openReview();
+            }
+          }}
+          className="mt-3 cursor-pointer border-t border-dashed border-line-2 pt-3 transition active:opacity-70"
+        >
           <div className="flex items-center gap-2">
             <span className="flex items-center">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -205,7 +218,10 @@ export function MealTicket({
               <button
                 type="button"
                 aria-label="编辑评价"
-                onClick={openReview}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openReview();
+                }}
                 className="grid size-8 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
               >
                 <PencilSimple size={16} />
@@ -213,7 +229,8 @@ export function MealTicket({
               <button
                 type="button"
                 aria-label="删除评价"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   confirm({
                     title: "删除这条评价？",
                     desc: "删除后无法恢复",
@@ -224,8 +241,8 @@ export function MealTicket({
                         () => toast("删除失败，请稍后重试"),
                       );
                     },
-                  })
-                }
+                  });
+                }}
                 className="grid size-8 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
               >
                 <Trash size={16} />
@@ -252,7 +269,7 @@ export function MealTicket({
               {formatPersonName(review.reviewedBy)} 评价
             </p>
           )}
-        </section>
+        </div>
       )}
 
       {enableReview && (
