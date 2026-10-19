@@ -20,7 +20,7 @@ import {
   type SessionUser,
 } from "./auth";
 
-import { isMealDate, mealDayOf } from "../src/lib/meal-time";
+import { addDays, isMealDate, mealDayOf } from "../src/lib/meal-time";
 import {
   assembleMeals,
   ITEM_COLS,
@@ -170,10 +170,38 @@ export default {
       }
 
       if (url.pathname === "/api/history/heatmap" && req.method === "GET") {
-        const days = Math.min(365, Math.max(7, Number(url.searchParams.get("days") || 90)));
-        const since = url.searchParams.get("since");
-        const heatmap = await getCookingHeatmap(env.DB, user.kitchenId, days, since);
-        return json({ heatmap });
+        // 按 [from, to] 闭区间聚合（前端按自然年拉取）；兼容旧参数 days + since
+        let from = url.searchParams.get("from");
+        let to = url.searchParams.get("to");
+        if (!from || !to) {
+          const days = Math.min(366, Math.max(7, Number(url.searchParams.get("days") || 90)));
+          to = url.searchParams.get("since") || mealDayOf(Date.now());
+          from = isMealDate(to) ? addDays(to, -days) : null;
+        }
+        if (!from || !to || !isMealDate(from) || !isMealDate(to) || from > to)
+          return json({ error: "from / to 要是 YYYY-MM-DD" }, { status: 400 });
+        if (addDays(from, 400) < to) return json({ error: "区间太长" }, { status: 400 });
+        return json({ heatmap: await getCookingHeatmap(env.DB, user.kitchenId, from, to) });
+      }
+
+      // 按订单 id 批量取点评：今天已吃完的几餐来自实时快照，快照不带点评，由前端单独补拉
+      if (url.pathname === "/api/reviews" && req.method === "GET") {
+        const ids = (url.searchParams.get("ids") ?? "").split(",").filter(Boolean).slice(0, 20);
+        if (!ids.length) return json({ reviews: [] });
+        const marks = ids.map(() => "?").join(",");
+        const rows = await env.DB.prepare(
+          `SELECT ${REVIEW_COLS} FROM meal_review r WHERE r.kitchen_id = ? AND r.meal_id IN (${marks})`,
+        )
+          .bind(user.kitchenId, ...ids)
+          .all<ReviewRow>();
+        const meals = assembleMeals(
+          (rows.results ?? []).map((r) => ({
+            id: r.mealId, mealDate: "", slot: 1, rev: 0, orderedAt: 0, updatedAt: 0, orderedBy: null,
+          })),
+          [],
+          rows.results ?? [],
+        );
+        return json({ reviews: meals.map((m) => m.review).filter(Boolean) });
       }
 
       if (url.pathname === "/api/reviews" && req.method === "POST") {
@@ -378,41 +406,31 @@ async function listHistory(
   return { meals: resultMeals, nextCursor, hasMore };
 }
 
-/** 获取最近 N 天每天的做饭聚合（餐数、菜品数、是否有点评） */
-async function getCookingHeatmap(
-  db: D1Database,
-  kitchenId: string,
-  days = 90,
-  customSince: string | null = null,
-) {
-  const today = mealDayOf(Date.now());
-  // 餐饮日以当天为截止（包含当天，虽然当天可能在待吃列表，做饭也是开火）
-  const query = `
-    SELECT m.meal_date AS mealDate,
-           count(DISTINCT m.id) AS mealCount,
-           count(i.dish_id) AS dishCount,
-           count(r.meal_id) AS reviewCount
-      FROM meal m
-      LEFT JOIN meal_item i ON i.meal_id = m.id
-      LEFT JOIN meal_review r ON r.meal_id = m.id
-     WHERE m.kitchen_id = ?
-       AND m.meal_date >= date(?, '-' || ? || ' days')
-     GROUP BY m.meal_date
-     ORDER BY m.meal_date ASC
-  `;
-  const res = await db.prepare(query).bind(kitchenId, customSince ?? today, days).all<{
-    mealDate: string;
-    mealCount: number;
-    dishCount: number;
-    reviewCount: number;
-  }>();
+/** [from, to] 区间内每天的下厨聚合：几餐、几道菜、点评均分 */
+async function getCookingHeatmap(db: D1Database, kitchenId: string, from: string, to: string) {
+  // meal_review 以 meal_id 为主键，LEFT JOIN 是一对一，不会把行数放大；菜品数用子查询单独数
+  const res = await db
+    .prepare(
+      `SELECT m.meal_date AS mealDate,
+              COUNT(*) AS mealCount,
+              SUM((SELECT COUNT(*) FROM meal_item i WHERE i.meal_id = m.id)) AS dishCount,
+              COUNT(r.meal_id) AS reviewCount,
+              AVG(r.rating) AS avgRating
+         FROM meal m
+         LEFT JOIN meal_review r ON r.meal_id = m.id
+        WHERE m.kitchen_id = ? AND m.meal_date >= ? AND m.meal_date <= ?
+        GROUP BY m.meal_date`,
+    )
+    .bind(kitchenId, from, to)
+    .all<{ mealDate: string; mealCount: number; dishCount: number; reviewCount: number; avgRating: number | null }>();
 
-  const map: Record<string, { mealCount: number; dishCount: number; hasReview: boolean }> = {};
+  const map: Record<string, { mealCount: number; dishCount: number; hasReview: boolean; avgRating: number | null }> = {};
   for (const row of res.results ?? []) {
     map[row.mealDate] = {
       mealCount: row.mealCount,
-      dishCount: row.dishCount,
+      dishCount: row.dishCount ?? 0,
       hasReview: row.reviewCount > 0,
+      avgRating: row.avgRating == null ? null : Math.round(row.avgRating * 10) / 10,
     };
   }
   return map;

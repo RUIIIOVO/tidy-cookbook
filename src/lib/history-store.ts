@@ -52,7 +52,13 @@ type HistoryState = {
   ensureRange: (range: HistoryRange, force?: boolean) => Promise<void>;
   loadMoreForRange: (range: HistoryRange) => Promise<void>;
   remove: (id: string) => Promise<boolean>;
+  /**
+   * 点评的本地覆盖表：保存 / 删除后立即生效，也用来放「今天已吃完」那几餐补拉回来的点评
+   * （它们来自实时快照，快照里不带点评）。键存在就以它为准，值为 null 表示没有点评
+   */
+  reviews: Record<string, MealReview | null>;
   updateReview: (mealId: string, review: MealReview | null) => void;
+  setReviews: (map: Record<string, MealReview | null>) => void;
   /** 订单有变动（补录、改已吃订单等）后：所有范围标记为未初始化，并强制重拉当前范围 */
   invalidateAll: () => Promise<void>;
 };
@@ -99,6 +105,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
   return {
     range: "all",
     cache: initialCache,
+    reviews: {},
 
     setRange: (range) => {
       if (get().range === range) return;
@@ -115,6 +122,10 @@ export const useHistory = create<HistoryState>()((set, get) => {
       try {
         const data = await fetchPage(range, null);
         if (my !== gen[range]) return;
+        // 服务端刚返回的点评是最新的：这些订单的本地覆盖作废，避免盖住别的设备上的修改
+        const fresh = new Set(data.meals.map((m) => m.id));
+        const kept = Object.fromEntries(Object.entries(get().reviews).filter(([id]) => !fresh.has(id)));
+        set({ reviews: kept });
         patch(range, () => ({
           meals: data.meals,
           hasMore: Boolean(data.hasMore),
@@ -173,6 +184,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
         meals.map((m) => (m.id === mealId ? { ...m, review } : m));
       const c = get().cache;
       set({
+        reviews: { ...get().reviews, [mealId]: review },
         cache: {
           all: { ...c.all, meals: updateMeals(c.all.meals) },
           "7d": { ...c["7d"], meals: updateMeals(c["7d"].meals) },
@@ -181,6 +193,8 @@ export const useHistory = create<HistoryState>()((set, get) => {
         },
       });
     },
+
+    setReviews: (map) => set({ reviews: { ...get().reviews, ...map } }),
 
     invalidateAll: async () => {
       const cleared = Object.fromEntries(

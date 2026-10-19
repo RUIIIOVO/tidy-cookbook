@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowCounterClockwise, CaretUp, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
-import { useHeatmap } from "@/lib/heatmap-store";
 import { addDays } from "@/lib/meal-time";
 import {
   RANGE_OPTIONS,
@@ -17,6 +18,7 @@ import {
   type RangeData,
 } from "@/lib/history-store";
 import { useCart } from "@/lib/store";
+import { fetchReviews } from "@/lib/review-actions";
 import { useMealsSplit } from "@/lib/use-meals";
 import { useTabs } from "@/lib/tab-store";
 import { ui } from "@/lib/ui";
@@ -24,6 +26,7 @@ import { cn, haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { Avatar } from "./avatar";
 import { CookingHeatmap } from "./cooking-heatmap";
+import { HeatmapDetail } from "./heatmap-detail-view";
 import { MealTicket } from "./meal-ticket";
 
 export function HistoryView() {
@@ -56,49 +59,72 @@ export function HistoryView() {
     currentOffset: number;
   } | null>(null);
 
-  // 首屏加载激活项与热力图
-  const fetchHeatmap = useHeatmap((s) => s.fetchHeatmap);
+  // 首屏加载激活项
   useEffect(() => {
     void ensureRange(range);
-    void fetchHeatmap();
-  }, [range, ensureRange, fetchHeatmap]);
+  }, [range, ensureRange]);
 
-  /** 点击热力图上的某一天：在当前选中的 tab 内查找并滚动定位，超出当前 tab 范围的不强制切换 tab */
-  const handleSelectDateFromHeatmap = (date: string) => {
-    // 仅在当前处于激活状态的 pane 容器内寻找对应日期的元素，避免跨 tab 错乱
-    const activePane = containerRef.current?.querySelectorAll<HTMLElement>(".overscroll-contain")[activeIndex];
-    const targetEl = (activePane || document).querySelector<HTMLElement>(`[data-meal-date="${date}"]`);
+  // 今天已吃完的几餐来自实时快照，快照不带点评，单独补拉
+  const finishedIds = finishedToday.map((m) => m.id).join(",");
+  useEffect(() => {
+    if (finishedIds) void fetchReviews(finishedIds.split(","));
+  }, [finishedIds]);
 
-    if (targetEl && activePane) {
-      // 预留顶部 16px 的卡片 margin 呼吸空隙，避免直接顶死贴顶
-      const paneRect = activePane.getBoundingClientRect();
-      const targetRect = targetEl.getBoundingClientRect();
-      const offsetTop = targetRect.top - paneRect.top + activePane.scrollTop - 16;
+  // 下厨详情（全屏子页面）。首次打开前不挂 Portal，避免服务端预渲染时访问 document
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailMounted, setDetailMounted] = useState(false);
+  const openDetail = () => {
+    setDetailMounted(true);
+    setDetailOpen(true);
+  };
 
-      activePane.scrollTo({
-        top: Math.max(0, offsetTop),
-        behavior: "smooth",
-      });
+  // 回到顶部：只看当前这一页的滚动位置
+  const [scrolled, setScrolled] = useState<Partial<Record<HistoryRange, boolean>>>({});
+  const onPaneScroll = (key: HistoryRange, top: number) => {
+    const far = top > 480;
+    if (!!scrolled[key] !== far) setScrolled((p) => ({ ...p, [key]: far }));
+  };
+  const paneOf = (key: HistoryRange) =>
+    containerRef.current?.querySelector<HTMLElement>(`[data-pane="${key}"]`) ?? null;
+  const scrollToTop = () => {
+    haptic(6);
+    paneOf(range)?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-      targetEl.classList.add("ring-2", "ring-accent", "transition-all");
-      setTimeout(() => {
-        targetEl.classList.remove("ring-2", "ring-accent");
-      }, 1800);
+  /**
+   * 定位到某一天的订单：
+   * 当前时间段装不下这天就切到「全部」；没翻到那么早就一页页往后加载，再滚过去（上方留一个卡片间距）
+   */
+  const jumpToDate = async (date: string) => {
+    const today = useCart.getState().today;
+    const cur = useHistory.getState().range;
+    const days = RANGE_OPTIONS.find((o) => o.key === cur)?.days;
+    const target: HistoryRange = days && today && date < addDays(today, -days) ? "all" : cur;
+    if (target !== cur) setRange(target);
+
+    await useHistory.getState().ensureRange(target);
+    for (let i = 0; i < 60; i++) {
+      const b = useHistory.getState().cache[target];
+      if (b.loading || b.loadingMore) {
+        await new Promise((r) => setTimeout(r, 80));
+        continue;
+      }
+      if (!b.hasMore || b.meals.some((m) => m.mealDate <= date)) break;
+      await useHistory.getState().loadMoreForRange(target);
+    }
+    // 等新卡片渲染出来
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const pane = paneOf(target);
+    const el = pane?.querySelector<HTMLElement>(`[data-meal-date="${date}"]`);
+    if (!pane || !el) {
+      toast(date >= today ? "这天的订单还没吃，在备菜里" : "这天没有订单");
       return;
     }
-
-    // 检查该日期是否超出了当前 tab 的起止时间
-    const currentDays = RANGE_OPTIONS[activeIndex]?.days;
-    const today = useCart.getState().today;
-    if (currentDays && today) {
-      const minDate = addDays(today, -currentDays);
-      if (date < minDate) {
-        toast(`${date} 超出当前时间段`);
-        return;
-      }
-    }
-
-    toast(`${date} 暂无该日订单`);
+    const top = el.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop - 12;
+    pane.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    el.classList.add("ring-2", "ring-accent/60");
+    setTimeout(() => el.classList.remove("ring-2", "ring-accent/60"), 1600);
   };
 
   // 点击胶囊切换
@@ -206,7 +232,7 @@ export function HistoryView() {
   return (
     <div
       id="history-view"
-      className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden bg-paper select-none"
+      className="relative flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden bg-paper select-none"
     >
       {/* ── 固定顶部栏：标题、餐数统计、退出登录、时间跨度筛选 ─────────────── */}
       <header className="z-20 shrink-0 border-b border-line bg-paper/90 px-4 pt-4 pb-3 backdrop-blur-lg">
@@ -308,12 +334,48 @@ export function HistoryView() {
                 rangeKey={opt.key}
                 data={cache[opt.key]}
                 canDeleteRecord={canDelete(me)}
-                onSelectDateFromHeatmap={handleSelectDateFromHeatmap}
+                onSelectDate={(d) => void jumpToDate(d)}
+                onOpenDetail={openDetail}
+                onScrollTop={onPaneScroll}
               />
             </div>
           ))}
         </div>
       </div>
+
+      {/* 回到顶部：放在横滑轨道外面（轨道有 transform，里面的 fixed 会跟着轨道跑出屏幕） */}
+      <AnimatePresence>
+        {scrolled[range] && (
+          <motion.button
+            type="button"
+            aria-label="回到顶部"
+            onClick={scrollToTop}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.16 }}
+            className="absolute right-4 bottom-4 z-20 grid size-10 place-items-center rounded-full border border-line bg-card/95 text-ink-2 shadow-sm backdrop-blur"
+          >
+            <CaretUp size={17} weight="bold" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {detailMounted &&
+        createPortal(
+          <AnimatePresence>
+            {detailOpen && (
+              <HeatmapDetail
+                onClose={() => setDetailOpen(false)}
+                onJump={(d) => {
+                  setDetailOpen(false);
+                  void jumpToDate(d);
+                }}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -323,35 +385,20 @@ function HistoryTabPane({
   rangeKey,
   data,
   canDeleteRecord,
-  onSelectDateFromHeatmap,
+  onSelectDate,
+  onOpenDetail,
+  onScrollTop,
 }: {
   rangeKey: HistoryRange;
   data: RangeData;
   canDeleteRecord: boolean;
-  onSelectDateFromHeatmap: (date: string) => void;
+  onSelectDate: (date: string) => void;
+  onOpenDetail: () => void;
+  onScrollTop: (key: HistoryRange, top: number) => void;
 }) {
   const loadMoreForRange = useHistory((s) => s.loadMoreForRange);
   const ensureRange = useHistory((s) => s.ensureRange);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // 回到顶部按钮状态
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const top = e.currentTarget.scrollTop;
-    if (top > 320 && !showBackToTop) {
-      setShowBackToTop(true);
-    } else if (top <= 320 && showBackToTop) {
-      setShowBackToTop(false);
-    }
-  };
-
-  const scrollToTop = () => {
-    haptic(6);
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   // 触底流式翻页加载
   useEffect(() => {
     const el = sentinelRef.current;
@@ -377,14 +424,14 @@ function HistoryTabPane({
 
   return (
     <div
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-      className="relative no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain"
+      data-pane={rangeKey}
+      onScroll={(e) => onScrollTop(rangeKey, e.currentTarget.scrollTop)}
+      className="no-scrollbar h-full overflow-y-auto overscroll-contain px-4 pt-3 pb-24"
     >
       {/* 仅在「全部」Tab 列表顶部展示下厨记录热力图，其余时间段不占屏幕 */}
       {rangeKey === "all" && (
         <div className="mb-3">
-          <CookingHeatmap onSelectDate={onSelectDateFromHeatmap} />
+          <CookingHeatmap onSelectDate={onSelectDate} onOpenDetail={onOpenDetail} />
         </div>
       )}
 
@@ -435,17 +482,6 @@ function HistoryTabPane({
         </p>
       )}
 
-      {/* 右下角悬浮「回到顶部」按钮 */}
-      {showBackToTop && (
-        <button
-          type="button"
-          onClick={scrollToTop}
-          aria-label="回到顶部"
-          className="fixed bottom-20 right-5 z-30 flex size-9 items-center justify-center rounded-full border border-line bg-card/90 text-ink shadow-md backdrop-blur-md transition active:scale-90"
-        >
-          <CaretUp size={16} weight="bold" />
-        </button>
-      )}
     </div>
   );
 }

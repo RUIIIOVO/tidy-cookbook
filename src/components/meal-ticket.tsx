@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CaretDown, PencilSimple, Star } from "@phosphor-icons/react";
+import { CaretDown, PencilSimple, Star, Trash } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
+import { useConfirm } from "@/lib/confirm-store";
+import { useHistory } from "@/lib/history-store";
 import { mealTitle } from "@/lib/meal-time";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
+import { deleteReview } from "@/lib/review-actions";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
 import { ui } from "@/lib/ui";
@@ -52,6 +56,18 @@ export function MealTicket({
   const openSheet = useDishSheet((s) => s.open);
   const [open, setOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // 每次打开点评都换一个 session，表单按当前点评重新初始化
+  const [reviewSession, setReviewSession] = useState(0);
+  const confirm = useConfirm((s) => s.confirm);
+  // 本地覆盖（刚保存 / 删除、今天补拉的）优先，其次是订单自带的点评
+  const override = useHistory((s) => s.reviews[meal.id]);
+  const review = override !== undefined ? override : (meal.review ?? null);
+
+  const openReview = () => {
+    haptic(6);
+    setReviewSession((n) => n + 1);
+    setReviewOpen(true);
+  };
 
   const rows = meal.items
     .map((i) => ({ i, dish: getDish(i.dishId) }))
@@ -117,6 +133,19 @@ export function MealTicket({
                   </p>
                 )}
               </div>
+              {/* 单菜星级（点评里给这道菜打过分才显示） */}
+              {(review?.dishRatings?.[i.dishId] ?? 0) > 0 && (
+                <span className="flex shrink-0 items-center" aria-label={`${review!.dishRatings[i.dishId]} 星`}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      size={10}
+                      weight={n <= review!.dishRatings[i.dishId] ? "fill" : "regular"}
+                      className={n <= review!.dishRatings[i.dishId] ? "text-accent" : "text-line-2"}
+                    />
+                  ))}
+                </span>
+              )}
               {/* 只有 2 份及以上才写份数，1 份不写 */}
               {i.qty > 1 && (
                 <span className="shrink-0 text-[12px] text-ink-2 tabular-nums">×{i.qty}</span>
@@ -144,100 +173,97 @@ export function MealTicket({
           合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
         </span>
 
-        {/* 右侧操作按钮组：未评价时显示空心星星图标的评价按钮 + 再点一次 */}
+        {/* 右侧：未评价时「评价」+「再点一次」 */}
         <div className="flex items-center gap-2">
-          {enableReview && !meal.review && (
-            <button
-              type="button"
-              onClick={() => {
-                haptic(6);
-                setReviewOpen(true);
-              }}
-              className={cn(ui.chip, ui.chipOff)}
-            >
-              <Star size={13} weight="regular" className="text-ink-2" />
-              <span>评价</span>
+          {enableReview && !review && (
+            <button type="button" onClick={openReview} className={cn(ui.chip, ui.chipOff)}>
+              <Star size={13} />
+              评价
             </button>
           )}
-
           {againAction}
           {footerAction}
         </div>
       </div>
 
-      {/* 评价展示区：与小票融为一体的纸墨手账便签，彻底取消突兀卡片套卡片 */}
-      {meal.review && (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => {
-            haptic(6);
-            setReviewOpen(true);
-          }}
-          className="group relative mt-3 border-t border-dashed border-line-2 pt-3 text-left transition active:opacity-75 cursor-pointer"
-        >
-          {/* 评价头部：星级、评级与编辑小铅笔图标 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <div className="flex text-accent">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    size={13}
-                    weight={s <= (meal.review?.rating || 0) ? "fill" : "regular"}
-                    className={s <= (meal.review?.rating || 0) ? "text-accent" : "text-line-2"}
-                  />
-                ))}
-              </div>
-              <span className="font-display text-[13px] font-medium tracking-wide text-accent">
-                {meal.review.ratingText}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-ink-3">
-              {meal.review.reviewedBy && (
-                <span className="flex items-center gap-1 text-[10px]">
-                  <Avatar
-                    name={formatPersonName(meal.review.reviewedBy)}
-                    className="size-[12px] text-[7.5px]"
-                  />
-                  <span>{formatPersonName(meal.review.reviewedBy)}</span>
-                </span>
-              )}
-              <span className="grid size-6 place-items-center rounded-full text-ink-3 transition group-hover:text-accent">
-                <PencilSimple size={13} />
-              </span>
-            </div>
+      {/* 已评价：小票末尾一段，和小票同一张纸，用虚线隔开 */}
+      {enableReview && review && (
+        <section className="mt-3 border-t border-dashed border-line-2 pt-3">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  size={13}
+                  weight={n <= review.rating ? "fill" : "regular"}
+                  className={n <= review.rating ? "text-accent" : "text-line-2"}
+                />
+              ))}
+            </span>
+            <span className="font-display text-[13px] tracking-wide text-accent">{review.ratingText}</span>
+            <span className="ml-auto -mr-2 flex items-center">
+              <button
+                type="button"
+                aria-label="编辑评价"
+                onClick={openReview}
+                className="grid size-8 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
+              >
+                <PencilSimple size={16} />
+              </button>
+              <button
+                type="button"
+                aria-label="删除评价"
+                onClick={() =>
+                  confirm({
+                    title: "删除这条评价？",
+                    desc: "删除后无法恢复",
+                    confirmText: "删除",
+                    onConfirm: () => {
+                      deleteReview(meal.id).then(
+                        () => toast("评价已删除"),
+                        () => toast("删除失败，请稍后重试"),
+                      );
+                    },
+                  })
+                }
+                className="grid size-8 place-items-center rounded-full text-ink-3 transition active:scale-90 active:bg-paper-2"
+              >
+                <Trash size={16} />
+              </button>
+            </span>
           </div>
 
-          {/* 评价标签：轻量素雅胶囊 */}
-          {meal.review.tags && meal.review.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {meal.review.tags.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-md bg-paper px-2 py-0.5 text-[10.5px] text-ink-2"
-                >
+          {review.tags.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {review.tags.map((t) => (
+                <span key={t} className="rounded-md bg-paper px-2 py-0.5 text-[11px] text-ink-2">
                   {t}
                 </span>
               ))}
             </div>
           )}
 
-          {/* 评语文字：自然留白呼吸感，移除左侧竖条 */}
-          {meal.review.comment && (
-            <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
-              “{meal.review.comment}”
+          {review.comment && <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">{review.comment}</p>}
+
+          {/* 评价人：和菜品行的点菜人同一样式 */}
+          {review.reviewedBy && (
+            <p className="mt-2 flex items-center gap-1 text-[10px] text-ink-3">
+              <Avatar name={formatPersonName(review.reviewedBy)} className="size-[12px] text-[7.5px]" />
+              {formatPersonName(review.reviewedBy)} 评价
             </p>
           )}
-        </div>
+        </section>
       )}
 
-      <MealReviewSheet
-        meal={meal}
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-      />
+      {enableReview && (
+        <MealReviewSheet
+          meal={meal}
+          review={review}
+          open={reviewOpen}
+          session={reviewSession}
+          onClose={() => setReviewOpen(false)}
+        />
+      )}
     </article>
   );
 }

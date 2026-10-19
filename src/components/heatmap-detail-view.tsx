@@ -1,468 +1,328 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CaretLeft, CaretRight, Star } from "@phosphor-icons/react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import { useHeatmap } from "@/lib/heatmap-store";
+import { addDays, diffDays } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
+import { useBackClose } from "@/lib/use-back-close";
 import { cn, haptic } from "@/lib/utils";
+import { HEAT_BG, HeatLegend, HeatmapGrid, heatLevel, mondayOf } from "./heatmap-grid";
 
 const DAYS_OF_WEEK = ["一", "二", "三", "四", "五", "六", "日"];
+const pad = (n: number) => String(n).padStart(2, "0");
 
-export function HeatmapDetailView() {
-  const today = useCart((s) => s.today) || new Date().toISOString().slice(0, 10);
+/**
+ * 下厨详情：订单页里的全屏子页面（从右侧推入）。
+ * 和订单页共用登录态与数据；点有订单的某一天 → 关闭本页并在订单列表里定位到那天。
+ */
+export function HeatmapDetail({
+  onClose,
+  onJump,
+}: {
+  onClose: () => void;
+  onJump: (date: string) => void;
+}) {
+  const today = useCart((s) => s.today);
   const data = useHeatmap((s) => s.data);
+  const ensureYear = useHeatmap((s) => s.ensureYear);
 
-  // 模式：月 (month) 或 年 (year)
   const [mode, setMode] = useState<"month" | "year">("month");
+  const [year, setYear] = useState(() => Number(today.slice(0, 4)));
+  const [month, setMonth] = useState(() => Number(today.slice(5, 7)));
 
-  // 选中的年份与月份
-  const [selectedYear, setSelectedYear] = useState(() => parseInt(today.slice(0, 4), 10));
-  const [selectedMonth, setSelectedMonth] = useState(() => parseInt(today.slice(5, 7), 10));
+  useBackClose(true, onClose);
 
-  // 滑动手势支持（左右划切换月/年）
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    void ensureYear(year);
+  }, [year, ensureYear]);
 
+  const shift = (delta: number) => {
+    haptic(4);
+    if (mode === "year") {
+      setYear((y) => y + delta);
+      return;
+    }
+    const idx = year * 12 + (month - 1) + delta;
+    setYear(Math.floor(idx / 12));
+    setMonth((idx % 12) + 1);
+  };
+
+  // 左右滑动切换月 / 年；从可横向滚动的区域（全年长卷）开始的滑动不算
+  const touch = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
+    if ((e.target as HTMLElement).closest("[data-no-swipe]")) return;
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
+    const t = touch.current;
+    touch.current = null;
+    if (!t) return;
+    const dx = e.changedTouches[0].clientX - t.x;
+    const dy = e.changedTouches[0].clientY - t.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) shift(dx > 0 ? -1 : 1);
+  };
 
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      if (dx > 0) {
-        if (mode === "month") handlePrevMonth();
-        else handlePrevYear();
-      } else {
-        if (mode === "month") handleNextMonth();
-        else handleNextYear();
-      }
+  const pickDay = (date: string) => {
+    if (date > today) return;
+    if (!data[date]?.mealCount) {
+      toast("这天没下厨");
+      return;
     }
+    haptic(6);
+    onJump(date);
   };
 
-  const handlePrevMonth = () => {
-    haptic(4);
-    if (selectedMonth === 1) {
-      setSelectedYear((y) => y - 1);
-      setSelectedMonth(12);
-    } else {
-      setSelectedMonth((m) => m - 1);
-    }
-  };
+  // ── 月视图 ──
+  const monthView = useMemo(() => {
+    const first = `${year}-${pad(month)}-01`;
+    const total = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const lead = diffDays(mondayOf(first), first);
+    const days = Array.from({ length: total }, (_, i) => {
+      const date = addDays(first, i);
+      return { date, day: i + 1, stat: date <= today ? data[date] : undefined };
+    });
+    const cooked = days.filter((d) => (d.stat?.mealCount ?? 0) > 0);
+    const cookDays = cooked.length;
+    const meals = cooked.reduce((n, d) => n + (d.stat?.mealCount ?? 0), 0);
+    return { lead, days, cookDays, meals };
+  }, [year, month, data, today]);
 
-  const handleNextMonth = () => {
-    haptic(4);
-    if (selectedMonth === 12) {
-      setSelectedYear((y) => y + 1);
-      setSelectedMonth(1);
-    } else {
-      setSelectedMonth((m) => m + 1);
-    }
-  };
-
-  const handlePrevYear = () => {
-    haptic(4);
-    setSelectedYear((y) => y - 1);
-  };
-  const handleNextYear = () => {
-    haptic(4);
-    setSelectedYear((y) => y + 1);
-  };
-
-  // ── 月视图数据计算（标准月历大方格） ─────────────────────────
-  const monthCalendarData = useMemo(() => {
-    const year = selectedYear;
-    const month = selectedMonth;
-
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
-    const totalDays = lastDay.getDate();
-    const startWeekday = (firstDay.getDay() + 6) % 7;
-
-    const cells: {
-      dayNum: number;
-      dateStr: string;
-      isCurrentMonth: boolean;
-      mealCount: number;
-      dishCount: number;
-      hasReview: boolean;
-    }[] = [];
-
-    for (let i = 0; i < startWeekday; i++) {
-      cells.push({
-        dayNum: 0,
-        dateStr: "",
-        isCurrentMonth: false,
-        mealCount: 0,
-        dishCount: 0,
-        hasReview: false,
+  // ── 年视图 ──
+  const yearView = useMemo(() => {
+    const jan1 = `${year}-01-01`;
+    const weeks = Math.ceil((diffDays(mondayOf(jan1), `${year}-12-31`) + 1) / 7);
+    const months = Array.from({ length: 12 }, (_, m) => {
+      const first = `${year}-${pad(m + 1)}-01`;
+      const total = new Date(Date.UTC(year, m + 1, 0)).getUTCDate();
+      const days = Array.from({ length: total }, (_, i) => {
+        const date = addDays(first, i);
+        return { date, n: date <= today ? (data[date]?.mealCount ?? 0) : 0 };
       });
-    }
-
-    let cookDays = 0;
-    let meals = 0;
-
-    for (let d = 1; d <= totalDays; d++) {
-      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const stat = data[dateStr];
-      const count = stat?.mealCount ?? 0;
-      const dishes = stat?.dishCount ?? 0;
-      const hasReview = Boolean(stat?.hasReview);
-
-      if (count > 0 && dateStr <= today) {
-        cookDays += 1;
-        meals += count;
-      }
-
-      cells.push({
-        dayNum: d,
-        dateStr,
-        isCurrentMonth: true,
-        mealCount: count,
-        dishCount: dishes,
-        hasReview,
-      });
-    }
-
-    return {
-      cells,
-      cookDays,
-      meals,
-      totalDays,
-    };
-  }, [selectedYear, selectedMonth, data, today]);
-
-  // ── 年视图数据计算（年度宏观长卷 + 12 个月份拆解） ─────────────
-  const yearCalendarData = useMemo(() => {
-    const year = selectedYear;
-    const monthsData = [];
-
-    let yearCookDays = 0;
-    let yearMeals = 0;
-
-    const fullYearDays: { dateStr: string; count: number; inFuture: boolean }[] = [];
-
-    for (let m = 1; m <= 12; m++) {
-      const firstDay = new Date(year, m - 1, 1);
-      const lastDay = new Date(year, m, 0);
-      const totalDays = lastDay.getDate();
-      const startWeekday = (firstDay.getDay() + 6) % 7;
-
-      const days = [];
-      let mCookDays = 0;
-      let mMeals = 0;
-
-      for (let i = 0; i < startWeekday; i++) {
-        days.push({ dayNum: 0, dateStr: "", count: 0, hasReview: false });
-      }
-
-      for (let d = 1; d <= totalDays; d++) {
-        const dateStr = `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const stat = data[dateStr];
-        const count = stat?.mealCount ?? 0;
-        const hasReview = Boolean(stat?.hasReview);
-        const inFuture = dateStr > today;
-
-        if (count > 0 && !inFuture) {
-          mCookDays += 1;
-          mMeals += count;
-        }
-
-        days.push({
-          dayNum: d,
-          dateStr,
-          count,
-          hasReview,
-        });
-
-        fullYearDays.push({
-          dateStr,
-          count,
-          inFuture,
-        });
-      }
-
-      yearCookDays += mCookDays;
-      yearMeals += mMeals;
-
-      monthsData.push({
-        month: m,
+      const cooked = days.filter((d) => d.n > 0);
+      return {
+        month: m + 1,
+        lead: diffDays(mondayOf(first), first),
         days,
-        cookDays: mCookDays,
-        meals: mMeals,
-      });
-    }
+        cookDays: cooked.length,
+        meals: cooked.reduce((n, d) => n + d.n, 0),
+      };
+    });
+    const cookDays = months.reduce((n, m) => n + m.cookDays, 0);
+    const meals = months.reduce((n, m) => n + m.meals, 0);
+    return { jan1, weeks, months, cookDays, meals };
+  }, [year, data, today]);
 
-    return {
-      months: monthsData,
-      fullYearDays,
-      cookDays: yearCookDays,
-      meals: yearMeals,
-    };
-  }, [selectedYear, data, today]);
+  // 全年长卷默认滚到当前月附近
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || mode !== "year") return;
+    el.scrollLeft = String(year) === today.slice(0, 4) ? el.scrollWidth : 0;
+  }, [mode, year, today]);
+
+  const stats = mode === "month" ? monthView : yearView;
+  const inYear = (d: string) => d.startsWith(`${year}-`);
 
   return (
-    <div
+    <motion.div
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
+      transition={{ type: "spring", stiffness: 380, damping: 40 }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="flex min-h-dvh flex-col bg-paper px-4 pt-4 pb-16 select-none"
+      className="fixed inset-0 z-50 mx-auto max-w-[520px] overflow-y-auto overscroll-contain bg-paper select-none"
     >
-      {/* 顶栏导航：sticky 吸顶，背景带高斯模糊，不被内容顶走 */}
-      <header className="sticky top-0 z-30 -mx-4 flex items-center justify-between border-b border-line bg-paper/90 px-4 pb-3 backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/history/"
-            onClick={() => haptic(4)}
-            className="flex items-center justify-center text-ink transition active:scale-90"
+      {/* 顶栏：吸顶 */}
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-paper/90 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="返回"
+            onClick={() => {
+              haptic(4);
+              onClose();
+            }}
+            className="-ml-1.5 grid size-8 place-items-center rounded-full text-ink transition active:bg-paper-2"
           >
-            <ArrowLeft size={20} />
-          </Link>
+            <ArrowLeft size={19} />
+          </button>
           <h1 className="font-display text-[20px] tracking-wider text-ink">下厨详情</h1>
         </div>
 
-        {/* 月 / 年 维度切换：平移动效 */}
+        {/* 月 / 年：滑块平移，和底部导航一致 */}
         <div className="relative flex rounded-full border border-line bg-card p-1">
-          <motion.div
+          <motion.span
             initial={false}
             animate={{ x: mode === "month" ? 0 : 44 }}
             transition={{ type: "spring", stiffness: 480, damping: 38 }}
             className="pointer-events-none absolute inset-y-1 left-1 w-11 rounded-full bg-accent"
           />
-          <button
-            type="button"
-            onClick={() => {
-              haptic(4);
-              setMode("month");
-            }}
-            className={cn(
-              "relative z-10 w-11 py-1 text-center text-[12px] font-medium transition-colors",
-              mode === "month" ? "text-white" : "text-ink-3 hover:text-ink",
-            )}
-          >
-            月
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              haptic(4);
-              setMode("year");
-            }}
-            className={cn(
-              "relative z-10 w-11 py-1 text-center text-[12px] font-medium transition-colors",
-              mode === "year" ? "text-white" : "text-ink-3 hover:text-ink",
-            )}
-          >
-            年
-          </button>
+          {(["month", "year"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                haptic(4);
+                setMode(m);
+              }}
+              className={cn(
+                "relative w-11 py-1 text-center text-[12px] font-medium transition-colors",
+                mode === m ? "text-white" : "text-ink-3",
+              )}
+            >
+              {m === "month" ? "月" : "年"}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* 控制条：时间前进后退与统计 */}
-      <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={mode === "month" ? handlePrevMonth : handlePrevYear}
-            className="flex size-7 items-center justify-center rounded-md bg-paper text-ink transition active:scale-90"
-          >
-            <CaretLeft size={14} />
-          </button>
-
-          {/* 点击日期文字可唤起系统日期/年月选择器，已移除下划线 */}
-          <div className="relative flex items-center">
-            <span className="font-display text-[15px] tracking-wide text-ink tabular-nums cursor-pointer">
-              {mode === "month" ? `${selectedYear} 年 ${selectedMonth} 月` : `${selectedYear} 年`}
-            </span>
-            <input
-              type="month"
-              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
-              onChange={(e) => {
-                if (!e.target.value) return;
-                const [y, m] = e.target.value.split("-").map(Number);
-                if (y && m) {
+      <div className="px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        {/* 时间切换 + 统计 */}
+        <div className="flex items-center justify-between rounded-xl border border-line bg-card px-3 py-2.5 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <button type="button" aria-label="上一个" onClick={() => shift(-1)} className="grid size-7 place-items-center rounded-md bg-paper text-ink active:scale-90">
+              <CaretLeft size={14} />
+            </button>
+            {/* 透明的原生选择器铺在文字上，点日期即弹出系统年月选择 */}
+            <label className="relative px-1">
+              <span className="font-display text-[15px] tracking-wide text-ink tabular-nums">
+                {mode === "month" ? `${year} 年 ${month} 月` : `${year} 年`}
+              </span>
+              <input
+                type="month"
+                value={`${year}-${pad(month)}`}
+                onChange={(e) => {
+                  const [y, m] = e.target.value.split("-").map(Number);
+                  if (!y || !m) return;
                   haptic(6);
-                  setSelectedYear(y);
-                  setSelectedMonth(m);
-                }
-              }}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
+                  setYear(y);
+                  setMonth(m);
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
+            <button type="button" aria-label="下一个" onClick={() => shift(1)} className="grid size-7 place-items-center rounded-md bg-paper text-ink active:scale-90">
+              <CaretRight size={14} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={mode === "month" ? handleNextMonth : handleNextYear}
-            className="flex size-7 items-center justify-center rounded-md bg-paper text-ink transition active:scale-90"
-          >
-            <CaretRight size={14} />
-          </button>
+          <span className="text-[11.5px] text-ink-3 tabular-nums">
+            共下厨 <strong className="font-medium text-ink">{stats.cookDays}</strong> 天 · 共{" "}
+            <strong className="font-medium text-ink">{stats.meals}</strong> 餐
+          </span>
         </div>
 
-        {/* 统计指标：共下厨 XX 天 */}
-        <div className="text-[11.5px] text-ink-3 tabular-nums">
-          共下厨{" "}
-          <strong className="font-medium text-ink">
-            {mode === "month" ? monthCalendarData.cookDays : yearCalendarData.cookDays}
-          </strong>{" "}
-          天 · 共{" "}
-          <strong className="font-medium text-ink">
-            {mode === "month" ? monthCalendarData.meals : yearCalendarData.meals}
-          </strong>{" "}
-          餐
-        </div>
-      </div>
-
-      {/* ── 视图内容 ────────────────────────────────────────── */}
-      {mode === "month" ? (
-        /* 月历大网格视图 */
-        <div className="mt-4 rounded-2xl border border-line bg-card p-4 shadow-2xs">
-          {/* 星期表头 */}
-          <div className="grid grid-cols-7 gap-1.5 pb-2 text-center text-[11px] font-medium text-ink-3 border-b border-line-2/40">
-            {DAYS_OF_WEEK.map((d) => (
-              <span key={d}>{d}</span>
-            ))}
+        {mode === "month" ? (
+          <div className="mt-4 rounded-2xl border border-line bg-card p-3.5 shadow-2xs">
+            <div className="grid grid-cols-7 gap-1.5 border-b border-line/50 pb-2 text-center text-[11px] text-ink-3">
+              {DAYS_OF_WEEK.map((d) => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
+            <div className="mt-2.5 grid grid-cols-7 gap-1.5">
+              {Array.from({ length: monthView.lead }, (_, i) => (
+                <span key={`lead-${i}`} />
+              ))}
+              {monthView.days.map(({ date, day, stat }) => {
+                const future = date > today;
+                const n = future ? 0 : (stat?.mealCount ?? 0);
+                const lv = heatLevel(n);
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    disabled={future}
+                    onClick={() => pickDay(date)}
+                    className={cn(
+                      "flex h-14 flex-col justify-between rounded-lg p-1.5 text-left transition active:scale-95",
+                      future ? "bg-paper-2/40 text-ink-3/40" : HEAT_BG[lv],
+                      lv >= 1 ? "text-white" : !future && "text-ink-2",
+                      date === today && "ring-2 ring-accent ring-offset-1 ring-offset-card",
+                    )}
+                  >
+                    <span className="text-[11px] leading-none font-medium tabular-nums">{day}</span>
+                    {n > 0 && (
+                      <span className="flex items-end justify-between text-[9.5px] leading-none tabular-nums">
+                        <span>{n}餐</span>
+                        {stat?.avgRating != null && (
+                          <span className="flex items-center gap-px">
+                            <Star size={9} weight="fill" />
+                            {stat.avgRating}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <HeatLegend className="mt-3.5 justify-end border-t border-line/50 pt-3" />
           </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3">
+            {/* 全年总览：与订单页同一套网格，固定格子大小，横向可滚 */}
+            <div className="rounded-2xl border border-line bg-card p-3.5 shadow-2xs">
+              <div className="flex items-center justify-between pb-2.5 text-[11px] text-ink-3">
+                <span className="font-display text-[13px] text-ink">{year} 全年</span>
+                <HeatLegend />
+              </div>
+              <div ref={scrollRef} data-no-swipe className="no-scrollbar overflow-x-auto">
+                <div className="w-max">
+                  <HeatmapGrid
+                    start={yearView.jan1}
+                    weeks={yearView.weeks}
+                    today={today}
+                    data={data}
+                    cellSize={11}
+                    inRange={inYear}
+                    onSelectDate={pickDay}
+                  />
+                </div>
+              </div>
+            </div>
 
-          {/* 日历大格子 */}
-          <div className="mt-2.5 grid grid-cols-7 gap-1.5">
-            {monthCalendarData.cells.map((cell, idx) => {
-              if (!cell.isCurrentMonth) {
-                return <div key={`empty-${idx}`} className="h-15 rounded-lg bg-transparent" />;
-              }
-
-              const isFuture = cell.dateStr > today;
-              const isToday = cell.dateStr === today;
-
-              let cellBg = "bg-paper/70 text-ink-2";
-              if (cell.mealCount === 1) cellBg = "bg-[#6b9e7f] text-white";
-              else if (cell.mealCount === 2) cellBg = "bg-[#457c5f] text-white";
-              else if (cell.mealCount >= 3) cellBg = "bg-[#2e6349] text-white";
-
-              return (
-                <div
-                  key={cell.dateStr}
-                  className={cn(
-                    "relative flex h-15 flex-col justify-between rounded-lg p-1.5 transition select-none",
-                    isFuture ? "bg-paper-2/40 text-ink-3/40" : cellBg,
-                    isToday && "ring-2 ring-accent",
-                  )}
+            {/* 12 个月：点击进入该月 */}
+            <div className="grid grid-cols-2 gap-3">
+              {yearView.months.map((m) => (
+                <button
+                  key={m.month}
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setMonth(m.month);
+                    setMode("month");
+                  }}
+                  className="flex flex-col justify-start rounded-xl border border-line bg-card p-3 text-left shadow-2xs transition active:scale-[0.98]"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium leading-none tabular-nums">
-                      {cell.dayNum}
+                  <div className="flex items-center justify-between pb-2 text-[11px]">
+                    <span className="font-display text-[13px] text-ink">{m.month} 月</span>
+                    <span className="text-[10px] text-ink-3 tabular-nums">
+                      {m.cookDays > 0 ? `${m.cookDays} 天` : "没下厨"}
                     </span>
                   </div>
-
-                  {!isFuture && cell.mealCount > 0 && (
-                    <div className="text-[9.5px] leading-tight opacity-90 tabular-nums">
-                      <span>{cell.mealCount}餐</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 底部图例 */}
-          <div className="mt-4 flex items-center justify-end gap-1.5 text-[9.5px] text-ink-3 border-t border-line-2/40 pt-3">
-            <span>少</span>
-            <div className="size-2 rounded bg-[#e4e2dc]" />
-            <div className="size-2 rounded bg-[#6b9e7f]" />
-            <div className="size-2 rounded bg-[#457c5f]" />
-            <div className="size-2 rounded bg-[#2e6349]" />
-            <span>多</span>
-          </div>
-        </div>
-      ) : (
-        /* 年视图：顶部全年 52 周总览长卷 + 下方 12 个可点击直达的月份矩阵 */
-        <div className="mt-4 flex flex-col gap-4">
-          {/* 全年 365 天宏观长卷 */}
-          <div className="rounded-2xl border border-line bg-card p-4 shadow-2xs">
-            <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
-              <span className="font-display text-ink">{selectedYear} 全年做饭分布</span>
-              <span className="tabular-nums">共下厨 {yearCalendarData.cookDays} 天</span>
-            </div>
-            <div className="overflow-x-auto pt-1 pb-1">
-              <div className="grid grid-flow-col grid-rows-7 gap-1 min-w-fit">
-                {yearCalendarData.fullYearDays.map((d) => {
-                  let bg = "bg-[#e4e2dc]";
-                  if (d.inFuture) bg = "bg-line/20";
-                  else if (d.count === 1) bg = "bg-[#6b9e7f]";
-                  else if (d.count === 2) bg = "bg-[#457c5f]";
-                  else if (d.count >= 3) bg = "bg-[#2e6349]";
-
-                  return (
-                    <div
-                      key={d.dateStr}
-                      title={`${d.dateStr}: ${d.count} 餐`}
-                      className={cn("size-[9px] rounded-[1.5px]", bg)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* 12 个月份卡片：点击月份直接跳转到该月详情 */}
-          <div className="grid grid-cols-2 gap-3">
-            {yearCalendarData.months.map((m) => (
-              <div
-                key={m.month}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  haptic(6);
-                  setSelectedMonth(m.month);
-                  setMode("month");
-                }}
-                className="group rounded-xl border border-line bg-card p-3 shadow-2xs transition active:scale-[0.98] hover:border-accent cursor-pointer"
-              >
-                <div className="flex items-center justify-between pb-1.5 text-[11px]">
-                  <span className="font-display font-medium text-ink group-hover:text-accent transition-colors">
-                    {m.month} 月 ›
-                  </span>
-                  <span className="text-[9.5px] text-ink-3 tabular-nums">
-                    {m.cookDays > 0 ? `${m.cookDays} 天` : "未做饭"}
-                  </span>
-                </div>
-
-                {/* 7 列月份微缩图 */}
-                <div className="grid grid-cols-7 gap-1 pt-1">
-                  {m.days.map((d, i) => {
-                    if (d.dayNum === 0) {
-                      return <div key={`empty-${m.month}-${i}`} className="size-[10px]" />;
-                    }
-
-                    const isFuture = d.dateStr > today;
-                    let cellBg = "bg-[#e4e2dc]";
-                    if (d.count === 1) cellBg = "bg-[#6b9e7f]";
-                    else if (d.count === 2) cellBg = "bg-[#457c5f]";
-                    else if (d.count >= 3) cellBg = "bg-[#2e6349]";
-
-                    return (
-                      <div
-                        key={d.dateStr}
+                  <div className="grid grid-cols-7 gap-[3px]">
+                    {Array.from({ length: m.lead }, (_, i) => (
+                      <span key={`l-${i}`} />
+                    ))}
+                    {m.days.map(({ date, n }) => (
+                      <span
+                        key={date}
                         className={cn(
-                          "size-[10px] rounded-[1.5px] transition",
-                          isFuture ? "bg-line/20" : cellBg,
+                          "aspect-square rounded-[2px]",
+                          date > today ? "bg-line/25" : HEAT_BG[heatLevel(n)],
                         )}
                       />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
