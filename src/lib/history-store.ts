@@ -54,15 +54,6 @@ type HistoryState = {
   remove: (id: string) => Promise<boolean>;
   /** 订单有变动（补录、改已吃订单等）后：所有范围标记为未初始化，并强制重拉当前范围 */
   invalidateAll: () => Promise<void>;
-
-  // 兼容老调用方访问当前 range 数据
-  meals: Meal[];
-  loading: boolean;
-  loadingMore: boolean;
-  hasMore: boolean;
-  error: string | null;
-  load: () => Promise<void>;
-  loadMore: () => Promise<void>;
 };
 
 const PAGE_SIZE = 15;
@@ -74,34 +65,43 @@ const initialCache: Record<HistoryRange, RangeData> = {
   "90d": createEmptyBucket(),
 };
 
+type Page = { meals: Meal[]; nextCursor: string | null; hasMore: boolean };
+
+async function fetchPage(range: HistoryRange, before: string | null): Promise<Page> {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  // before 是服务端给的不透明游标，原样回传
+  if (before !== null) params.set("before", before);
+  const since = getSinceDate(range);
+  if (since !== null) params.set("since", since);
+  const r = await fetch(`/api/history?${params.toString()}`, {
+    credentials: "same-origin",
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(String(r.status));
+  return (await r.json()) as Page;
+}
+
+/**
+ * 每个范围的「第几次整页重拉」。整页重拉会作废还在路上的旧请求：
+ * 晚到的旧首页、旧翻页回来时发现代号变了就丢掉，不会把新数据盖回去
+ */
+const gen: Record<HistoryRange, number> = { all: 0, "7d": 0, "30d": 0, "90d": 0 };
+
 export const useHistory = create<HistoryState>()((set, get) => {
-  const syncConvenience = (cache: Record<HistoryRange, RangeData>, range: HistoryRange) => {
-    const activeData = cache[range] ?? createEmptyBucket();
-    return {
-      range,
-      cache,
-      meals: activeData.meals,
-      loading: activeData.loading,
-      loadingMore: activeData.loadingMore,
-      hasMore: activeData.hasMore,
-      error: activeData.error,
-    };
+  /** 只改一个范围；永远基于最新状态合并，不用请求发出前的旧快照 */
+  const patch = (range: HistoryRange, fn: (b: RangeData) => Partial<RangeData>) => {
+    const cache = get().cache;
+    const b = cache[range] ?? createEmptyBucket();
+    set({ cache: { ...cache, [range]: { ...b, ...fn(b) } } });
   };
 
   return {
     range: "all",
     cache: initialCache,
-    meals: [],
-    loading: false,
-    loadingMore: false,
-    hasMore: false,
-    error: null,
 
     setRange: (range) => {
-      const cur = get().range;
-      if (cur === range) return;
-      const cache = get().cache;
-      set(syncConvenience(cache, range));
+      if (get().range === range) return;
+      set({ range });
       void get().ensureRange(range);
     },
 
@@ -109,52 +109,22 @@ export const useHistory = create<HistoryState>()((set, get) => {
       const bucket = get().cache[range] ?? createEmptyBucket();
       if (!force && (bucket.initialized || bucket.loading)) return;
 
-      const nextCache = {
-        ...get().cache,
-        [range]: { ...bucket, loading: true, error: null },
-      };
-      set(syncConvenience(nextCache, get().range));
-
+      const my = ++gen[range];
+      patch(range, () => ({ loading: true, loadingMore: false, error: null }));
       try {
-        const since = getSinceDate(range);
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        if (since !== null) params.set("since", since);
-
-        const r = await fetch(`/api/history?${params.toString()}`, {
-          credentials: "same-origin",
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(String(r.status));
-        const data = (await r.json()) as {
-          meals: Meal[];
-          nextCursor: string | null;
-          hasMore: boolean;
-        };
-
-        const updated = {
-          ...get().cache,
-          [range]: {
-            meals: data.meals,
-            hasMore: Boolean(data.hasMore),
-            nextCursor: data.nextCursor ?? null,
-            loading: false,
-            loadingMore: false,
-            error: null,
-            initialized: true,
-          },
-        };
-        set(syncConvenience(updated, get().range));
+        const data = await fetchPage(range, null);
+        if (my !== gen[range]) return;
+        patch(range, () => ({
+          meals: data.meals,
+          hasMore: Boolean(data.hasMore),
+          nextCursor: data.nextCursor ?? null,
+          loading: false,
+          error: null,
+          initialized: true,
+        }));
       } catch {
-        const failed = {
-          ...get().cache,
-          [range]: {
-            ...bucket,
-            loading: false,
-            error: "加载订单失败，请重试",
-            initialized: true,
-          },
-        };
-        set(syncConvenience(failed, get().range));
+        if (my !== gen[range]) return;
+        patch(range, () => ({ loading: false, error: "加载订单失败，请重试", initialized: true }));
       }
     },
 
@@ -164,73 +134,36 @@ export const useHistory = create<HistoryState>()((set, get) => {
         return;
       }
 
-      const nextCache = {
-        ...get().cache,
-        [range]: { ...bucket, loadingMore: true },
-      };
-      set(syncConvenience(nextCache, get().range));
-
+      const my = gen[range];
+      patch(range, () => ({ loadingMore: true }));
       try {
-        const since = getSinceDate(range);
-        // before 是服务端给的不透明游标，原样回传
-        const params = new URLSearchParams({
-          limit: String(PAGE_SIZE),
-          before: bucket.nextCursor,
-        });
-        if (since !== null) params.set("since", since);
-
-        const r = await fetch(`/api/history?${params.toString()}`, {
-          credentials: "same-origin",
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(String(r.status));
-        const data = (await r.json()) as {
-          meals: Meal[];
-          nextCursor: string | null;
-          hasMore: boolean;
-        };
-
-        const updated = {
-          ...get().cache,
-          [range]: {
-            ...bucket,
-            meals: [...bucket.meals, ...data.meals],
+        const data = await fetchPage(range, bucket.nextCursor);
+        if (my !== gen[range]) return;
+        patch(range, (b) => {
+          // 翻页期间可能删了单或刷新过，按 id 去重合并到最新列表上
+          const seen = new Set(b.meals.map((m) => m.id));
+          return {
+            meals: [...b.meals, ...data.meals.filter((m) => !seen.has(m.id))],
             hasMore: Boolean(data.hasMore),
             nextCursor: data.nextCursor ?? null,
             loadingMore: false,
-          },
-        };
-        set(syncConvenience(updated, get().range));
+          };
+        });
       } catch {
-        const failed = {
-          ...get().cache,
-          [range]: { ...bucket, loadingMore: false },
-        };
-        set(syncConvenience(failed, get().range));
+        if (my !== gen[range]) return;
+        patch(range, () => ({ loadingMore: false }));
       }
     },
 
-    load: async () => {
-      await get().ensureRange(get().range, true);
-    },
-
-    loadMore: async () => {
-      await get().loadMoreForRange(get().range);
-    },
-
     remove: async (id) => {
-      const prevCache = get().cache;
-      const updatedCache: Record<HistoryRange, RangeData> = {
-        all: { ...prevCache.all, meals: prevCache.all.meals.filter((m) => m.id !== id) },
-        "7d": { ...prevCache["7d"], meals: prevCache["7d"].meals.filter((m) => m.id !== id) },
-        "30d": { ...prevCache["30d"], meals: prevCache["30d"].meals.filter((m) => m.id !== id) },
-        "90d": { ...prevCache["90d"], meals: prevCache["90d"].meals.filter((m) => m.id !== id) },
-      };
-      set(syncConvenience(updatedCache, get().range));
+      const drop = (b: RangeData): RangeData => ({ ...b, meals: b.meals.filter((m) => m.id !== id) });
+      const c = get().cache;
+      set({ cache: { all: drop(c.all), "7d": drop(c["7d"]), "30d": drop(c["30d"]), "90d": drop(c["90d"]) } });
 
       const ack = await deleteMeal({ mealId: id });
       if (ack.ok) return true;
-      set(syncConvenience(prevCache, get().range));
+      // 删除失败：期间可能翻过页，不整体回滚旧快照，直接重拉
+      void get().invalidateAll();
       return false;
     },
 
@@ -238,7 +171,7 @@ export const useHistory = create<HistoryState>()((set, get) => {
       const cleared = Object.fromEntries(
         Object.entries(get().cache).map(([k, v]) => [k, { ...v, initialized: false }]),
       ) as Record<HistoryRange, RangeData>;
-      set(syncConvenience(cleared, get().range));
+      set({ cache: cleared });
       await get().ensureRange(get().range, true);
     },
   };
