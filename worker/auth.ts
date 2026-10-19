@@ -3,9 +3,9 @@
 const ITER = 100_000;
 const SESSION_DAYS = 90;
 
-/** 登录限流：15 分钟窗口内，同一用户名失败 5 次、同一 IP 失败 20 次就暂时拒绝 */
+/** 登录限流：15 分钟窗口内，同一用户名失败 10 次、同一 IP 失败 20 次就暂时拒绝 */
 export const FAIL_WINDOW_MS = 15 * 60_000;
-const FAIL_MAX_USER = 5;
+const FAIL_MAX_USER = 10;
 const FAIL_MAX_IP = 20;
 
 /** 旧的游客默认名统一显示成「食客」 */
