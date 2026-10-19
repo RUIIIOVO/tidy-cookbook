@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
+import { CaretRight } from "@phosphor-icons/react";
 import { useHeatmap } from "@/lib/heatmap-store";
 import { addDays } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
@@ -59,8 +61,8 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           meals += count;
         }
 
-        // 取每列周三对应的月份做标记
-        if (d === 2) {
+        // 以每列中部的日期确定月份标签位置（更精准对齐）
+        if (d === 0) {
           const m = curDateStr.slice(5, 7);
           const monthText = `${parseInt(m, 10)}月`;
           if (monthText !== lastMonth) {
@@ -92,7 +94,14 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
     <div className="rounded-card border border-line bg-card p-3.5 shadow-2xs">
       {/* 标题与统计 */}
       <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
-        <span className="font-display tracking-wider text-ink">下厨记录</span>
+        <Link
+          href="/history/heatmap"
+          onClick={() => haptic(4)}
+          className="group flex items-center gap-1 font-display tracking-wider text-ink transition hover:text-accent"
+        >
+          <span>下厨记录</span>
+          <CaretRight size={11} className="text-ink-3 group-hover:text-accent transition-colors" />
+        </Link>
         <div className="flex items-center gap-1.5 tabular-nums">
           <span>近 90 天做饭 <strong className="font-medium text-ink">{totalCookDays}</strong> 天</span>
           <span>·</span>
@@ -103,15 +112,15 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
       {/* GitHub 风格热力矩阵容器（支持超出微横滑） */}
       <div className="overflow-x-auto pt-1 pb-1">
         <div className="min-w-fit">
-          {/* 月份表头 */}
+          {/* 月份表头：严格按每列的绝对像素距离计算，彻底解决响应式错位 */}
           <div className="relative mb-1 flex h-3.5 text-[9px] text-ink-3">
-            <div className="w-3.5 shrink-0" />
+            <div className="w-[18px] shrink-0" />
             <div className="relative flex-1">
               {monthLabels.map((m) => (
                 <span
                   key={`${m.label}-${m.weekIdx}`}
                   className="absolute tracking-tight"
-                  style={{ left: `${(m.weekIdx / WEEKS_COUNT) * 100}%` }}
+                  style={{ left: `${m.weekIdx * 15.5}px` }}
                 >
                   {m.label}
                 </span>
@@ -119,9 +128,9 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
             </div>
           </div>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {/* 左侧星期指示 */}
-            <div className="flex flex-col justify-between py-[1px] pr-1 text-[8.5px] text-ink-3/70 select-none">
+            <div className="flex flex-col justify-between py-[1px] pr-0.5 text-[8.5px] text-ink-3/70 select-none">
               <span>一</span>
               <span>三</span>
               <span>五</span>
@@ -129,9 +138,9 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
             </div>
 
             {/* 13 列方块 */}
-            <div className="flex gap-[3px]">
+            <div className="flex gap-[4px]">
               {weeks.map((w) => (
-                <div key={w.weekIdx} className="flex flex-col gap-[3px]">
+                <div key={w.weekIdx} className="flex flex-col gap-[4px]">
                   {w.days.map((d) => {
                     if (d.inFuture) {
                       return (
@@ -142,11 +151,6 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
                       );
                     }
 
-                    // 严选符合纸墨美学的渐进色：
-                    // 0餐：纸基柔和暖灰（不扎眼、与卡片完美融合）
-                    // 1餐：柔和冷杉青（明快清爽）
-                    // 2餐：草木青绿（饱和适中）
-                    // 3餐及以上：正调 accent 冷杉墨绿（温厚扎实）
                     let cellBg = "bg-[#ebe4d5] hover:bg-line-2 transition-colors";
                     if (d.count === 1) cellBg = "bg-[#a3c4b2] hover:bg-[#92b8a2]";
                     else if (d.count === 2) cellBg = "bg-[#5d9476] hover:bg-[#508569]";
@@ -160,16 +164,12 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
                           haptic(6);
                           onSelectDate(d.date);
                         }}
-                        title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}${d.hasReview ? " · 有点评" : ""}`}
+                        title={`${d.date}：${d.count > 0 ? `${d.count} 餐 (${d.dishes} 道菜)` : "未开火"}`}
                         className={cn(
-                          "relative size-[11.5px] rounded-[2px] transition active:scale-125 focus:outline-none",
+                          "size-[11.5px] rounded-[2px] transition active:scale-125 focus:outline-none",
                           cellBg,
                         )}
-                      >
-                        {d.hasReview && (
-                          <span className="absolute -top-[1px] -right-[1px] size-[3.5px] rounded-full bg-caramel ring-1 ring-card" />
-                        )}
-                      </button>
+                      />
                     );
                   })}
                 </div>
@@ -177,14 +177,25 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
             </div>
           </div>
 
-          {/* 底部图例 */}
-          <div className="mt-2.5 flex items-center justify-end gap-1 text-[9px] text-ink-3">
-            <span>少</span>
-            <div className="size-[8px] rounded-[2px] bg-[#ebe4d5]" />
-            <div className="size-[8px] rounded-[2px] bg-[#a3c4b2]" />
-            <div className="size-[8px] rounded-[2px] bg-[#5d9476]" />
-            <div className="size-[8px] rounded-[2px] bg-[#2e6349]" />
-            <span>多</span>
+          {/* 底部图例与查看详情入口 */}
+          <div className="mt-2.5 flex items-center justify-between text-[9px] text-ink-3">
+            <Link
+              href="/history/heatmap"
+              onClick={() => haptic(4)}
+              className="flex items-center gap-0.5 text-accent hover:underline"
+            >
+              <span>查看年度与月份详情</span>
+              <CaretRight size={9} />
+            </Link>
+
+            <div className="flex items-center gap-1">
+              <span>少</span>
+              <div className="size-[8px] rounded-[2px] bg-[#ebe4d5]" />
+              <div className="size-[8px] rounded-[2px] bg-[#a3c4b2]" />
+              <div className="size-[8px] rounded-[2px] bg-[#5d9476]" />
+              <div className="size-[8px] rounded-[2px] bg-[#2e6349]" />
+              <span>多</span>
+            </div>
           </div>
         </div>
       </div>

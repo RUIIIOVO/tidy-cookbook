@@ -8,6 +8,7 @@ import { getDish } from "@/data/dishes";
 import { canDelete, useAuth } from "@/lib/auth-store";
 import { useConfirm } from "@/lib/confirm-store";
 import { useHeatmap } from "@/lib/heatmap-store";
+import { addDays } from "@/lib/meal-time";
 import {
   RANGE_OPTIONS,
   useHistory,
@@ -62,10 +63,12 @@ export function HistoryView() {
     void fetchHeatmap();
   }, [range, ensureRange, fetchHeatmap]);
 
-  /** 点击热力图上的某一天：滚到对应日期的订单小票 */
+  /** 点击热力图上的某一天：在当前选中的 tab 内查找并滚动定位，超出当前 tab 范围的不强制切换 tab */
   const handleSelectDateFromHeatmap = (date: string) => {
-    // 检查当前 DOM 中是否已有对应日期的订单小票
-    const targetEl = document.querySelector(`[data-meal-date="${date}"]`);
+    // 仅在当前处于激活状态的 pane 容器内寻找对应日期的元素，避免跨 tab 错乱
+    const activePane = containerRef.current?.querySelectorAll(".overscroll-contain")[activeIndex];
+    const targetEl = (activePane || document).querySelector(`[data-meal-date="${date}"]`);
+
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
       targetEl.classList.add("ring-2", "ring-accent", "transition-all");
@@ -75,25 +78,18 @@ export function HistoryView() {
       return;
     }
 
-    // 若不在当前列表，看是否需要切到"全部"
-    if (range !== "all") {
-      setRange("all");
-      toast(`已切到全部订单，正在定位 ${date}...`);
-      setTimeout(() => {
-        const el = document.querySelector(`[data-meal-date="${date}"]`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-          el.classList.add("ring-2", "ring-accent", "transition-all");
-          setTimeout(() => {
-            el.classList.remove("ring-2", "ring-accent");
-          }, 1800);
-        } else {
-          toast(`${date} 当天未开火或未加载到`);
-        }
-      }, 600);
-    } else {
-      toast(`${date} 当天暂无订单小票`);
+    // 检查该日期是否超出了当前 tab 的起止时间
+    const currentDays = RANGE_OPTIONS[activeIndex]?.days;
+    const today = useCart.getState().today;
+    if (currentDays && today) {
+      const minDate = addDays(today, -currentDays);
+      if (date < minDate) {
+        toast(`${date} 超出当前时间段`);
+        return;
+      }
     }
+
+    toast(`${date} 暂无该日订单`);
   };
 
   // 点击胶囊切换
@@ -354,10 +350,12 @@ function HistoryTabPane({
 
   return (
     <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
-      {/* 顶部下厨记录热力图：置于可滚动区域顶端，随列表一起滚动，彻底释放视口空间 */}
-      <div className="mb-3">
-        <CookingHeatmap onSelectDate={onSelectDateFromHeatmap} />
-      </div>
+      {/* 仅在「全部」Tab 列表顶部展示下厨记录热力图，其余时间段不占屏幕 */}
+      {rangeKey === "all" && (
+        <div className="mb-3">
+          <CookingHeatmap onSelectDate={onSelectDateFromHeatmap} />
+        </div>
+      )}
 
       {/* 正在加载骨架屏 */}
       {loading && meals.length === 0 && (

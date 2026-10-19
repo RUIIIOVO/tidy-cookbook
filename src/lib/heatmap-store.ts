@@ -15,7 +15,7 @@ type HeatmapState = {
   data: Record<string, HeatmapDay>;
   loading: boolean;
   initialized: boolean;
-  fetchHeatmap: (force?: boolean) => Promise<void>;
+  fetchHeatmap: (days?: number, force?: boolean) => Promise<void>;
 };
 
 export const useHeatmap = create<HeatmapState>()((set, get) => ({
@@ -23,12 +23,12 @@ export const useHeatmap = create<HeatmapState>()((set, get) => ({
   loading: false,
   initialized: false,
 
-  fetchHeatmap: async (force = false) => {
-    if (!force && (get().initialized || get().loading)) return;
+  fetchHeatmap: async (days = 365, force = false) => {
+    if (!force && get().initialized && !get().loading) return;
     set({ loading: true });
     try {
       const today = useCart.getState().today;
-      const params = new URLSearchParams({ days: "90" });
+      const params = new URLSearchParams({ days: String(days) });
       if (today) params.set("since", today);
       const res = await fetch(`/api/history/heatmap?${params.toString()}`, {
         credentials: "same-origin",

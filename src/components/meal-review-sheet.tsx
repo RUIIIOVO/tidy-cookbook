@@ -16,8 +16,8 @@ import { DishThumb } from "./dish-thumb";
 
 /** 5 档评级定义 */
 export const RATING_LEVELS: { rating: number; text: string; color: string }[] = [
-  { rating: 5, text: "夯爆了", color: "text-caramel" },
-  { rating: 4, text: "顶级", color: "text-leaf" },
+  { rating: 5, text: "夯爆了", color: "text-accent" },
+  { rating: 4, text: "顶级", color: "text-accent" },
   { rating: 3, text: "人上人", color: "text-ink-2" },
   { rating: 2, text: "NPC", color: "text-ink-3" },
   { rating: 1, text: "拉完了", color: "text-chili" },
@@ -128,9 +128,9 @@ function MealReviewSheetInner({
 
       const json = (await res.json()) as { ok: boolean; review: MealReview };
       updateReview(meal.id, json.review);
-      void fetchHeatmap(true);
+      void fetchHeatmap(365, true);
       haptic(10);
-      toast.success("点评已保存");
+      toast.success("评价已保存");
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "提交失败，请重试");
@@ -157,7 +157,7 @@ function MealReviewSheetInner({
             {/* 整体打分：支持连续滑动打分 */}
             <div className="mt-5 rounded-card border border-line bg-card/70 p-4 text-center">
               <span className="text-[11px] text-ink-3">整体评分</span>
-              {/* 五星交互区：支持点击与拖拽划过 */}
+              {/* 五星交互区：支持点击与拖拽划过，采用主题色 accent */}
               <div
                 ref={starsContainerRef}
                 onPointerDown={(e) => {
@@ -181,7 +181,7 @@ function MealReviewSheetInner({
                         weight={filled ? "fill" : "regular"}
                         className={cn(
                           "transition-colors",
-                          filled ? "text-caramel" : "text-line-2",
+                          filled ? "text-accent" : "text-line-2",
                         )}
                       />
                     </div>
@@ -197,10 +197,10 @@ function MealReviewSheetInner({
               </div>
             </div>
 
-            {/* 标签选项：消除盒模型边框抖动，统一 1px border 保持基线一致 */}
+            {/* 标签选项：3 列等宽自适应网格，完美适配各种机型宽度，右边不留白 */}
             <div className="mt-4">
               <span className="text-[11px] text-ink-3">评价标签</span>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 {PRESET_TAGS.map((t) => {
                   const selected = tags.includes(t);
                   return (
@@ -209,7 +209,7 @@ function MealReviewSheetInner({
                       type="button"
                       onClick={() => toggleTag(t)}
                       className={cn(
-                        "rounded-full px-3 py-1 text-[11px] font-medium transition active:scale-95 border",
+                        "flex items-center justify-center rounded-xl py-2 text-[12px] font-medium transition active:scale-95 border",
                         selected
                           ? "border-accent bg-accent text-white"
                           : "border-line bg-card text-ink-2 hover:bg-paper",
@@ -247,12 +247,12 @@ function MealReviewSheetInner({
                                 key={s}
                                 type="button"
                                 onClick={() => handleDishRating(item.dishId, s)}
-                                className="p-0.5 text-line-2 transition hover:text-caramel active:scale-125"
+                                className="p-0.5 text-line-2 transition hover:text-accent active:scale-125"
                               >
                                 <Star
                                   size={17}
                                   weight={active ? "fill" : "regular"}
-                                  className={active ? "text-caramel" : "text-line-2"}
+                                  className={active ? "text-accent" : "text-line-2"}
                                 />
                               </button>
                             );
