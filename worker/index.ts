@@ -8,7 +8,6 @@ import {
   FAIL_WINDOW_MS,
   login,
   loginBlockedFor,
-  normalizeName,
   recordLoginFail,
   logout,
   readCookie,
@@ -22,6 +21,7 @@ import {
 } from "./auth";
 
 import { isMealDate, mealDayOf } from "../src/lib/meal-time";
+import { assembleMeals, ITEM_COLS, MEAL_COLS, type ItemRow, type MealRow } from "./meals";
 
 export { KitchenDO } from "./kitchen-do";
 
@@ -232,8 +232,7 @@ async function listHistory(
   since: string | null = null,
 ) {
   const today = mealDayOf(Date.now());
-  let query = `SELECT m.id, m.meal_date AS mealDate, m.slot, m.rev, m.ordered_at AS orderedAt,
-                      m.updated_at AS updatedAt, u.display_name AS orderedBy
+  let query = `SELECT ${MEAL_COLS}
          FROM meal m LEFT JOIN user u ON u.id = m.ordered_by
         WHERE m.kitchen_id = ? AND m.meal_date < ?`;
   const binds: unknown[] = [kitchenId, today];
@@ -254,15 +253,7 @@ async function listHistory(
   const meals = await db
     .prepare(query)
     .bind(...binds)
-    .all<{
-      id: string;
-      mealDate: string;
-      slot: number;
-      rev: number;
-      orderedAt: number;
-      updatedAt: number | null;
-      orderedBy: string | null;
-    }>();
+    .all<MealRow>();
 
   const rawRows = meals.results ?? [];
   const hasMore = rawRows.length > limit;
@@ -275,32 +266,14 @@ async function listHistory(
   const marks = rows.map(() => "?").join(",");
   const items = await db
     .prepare(
-      `SELECT i.meal_id AS mealId, i.dish_id AS dishId, i.qty,
-              i.added_by AS addedById, u.display_name AS addedBy
+      `SELECT ${ITEM_COLS}
          FROM meal_item i LEFT JOIN user u ON u.id = i.added_by
         WHERE i.meal_id IN (${marks}) ORDER BY i.rowid`,
     )
     .bind(...rows.map((m) => m.id))
-    .all<{ mealId: string; dishId: string; qty: number; addedById: string | null; addedBy: string | null }>();
+    .all<ItemRow>();
 
-  type Item = { dishId: string; qty: number; addedById: string | null; addedBy: string | null };
-  const byMeal = new Map<string, Item[]>();
-  for (const it of items.results ?? []) {
-    const arr = byMeal.get(it.mealId) ?? [];
-    arr.push({ dishId: it.dishId, qty: it.qty, addedById: it.addedById, addedBy: normalizeName(it.addedBy) });
-    byMeal.set(it.mealId, arr);
-  }
-
-  const resultMeals = rows.map((m) => ({
-    id: m.id,
-    mealDate: m.mealDate,
-    slot: m.slot,
-    rev: m.rev,
-    orderedAt: m.orderedAt,
-    orderedBy: normalizeName(m.orderedBy),
-    updatedAt: m.updatedAt ?? m.orderedAt,
-    items: byMeal.get(m.id) ?? [],
-  }));
+  const resultMeals = assembleMeals(rows, items.results ?? []);
 
   const last = rows[rows.length - 1];
   const nextCursor = hasMore ? `${last.mealDate}|${last.slot}|${last.id}` : null;

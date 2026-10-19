@@ -15,8 +15,10 @@
  * 所有消息串行处理（enqueue）：D1 调用会让出执行权，不串行的话两条消息会交错读写。
  */
 
+import { ingredientNames } from "../src/data/ingredients";
 import { RAW } from "../src/data/raw";
 import { normalizeName } from "./auth";
+import { assembleMeals, ITEM_COLS, MEAL_COLS, type ItemRow, type MealRow as DbMealRow } from "./meals";
 import {
   addDays,
   EDIT_MAX_AHEAD_DAYS,
@@ -30,8 +32,6 @@ import {
   PROTOCOL_VERSION,
   type BoughtMark,
   type CartItem,
-  type Meal,
-  type MealItem,
   type RequestOp,
   type ServerMessage,
   type Snapshot,
@@ -43,22 +43,8 @@ const DISH_NAME = new Map<string, string>(RAW.map((r) => [String(r[0]), r[1]]));
 /**
  * dishId → 这道菜用到的食材名。买菜清单按食材名合并，勾选以（订单, 食材名）为键。
  * 服务端自己算，菜被删时才能可靠地清掉对应勾选（不依赖客户端，多设备不会互相覆盖）。
- * 解析规则与 src/data/dishes.ts 的 parseIngredients 保持一致。
  */
-const DISH_INGREDIENTS = new Map<string, string[]>(
-  RAW.map((r) => {
-    const names: string[] = [];
-    for (const block of r[6].split("@")) {
-      const rest = block.split("|")[1] ?? "";
-      for (const x of rest.split(";").map((t) => t.trim())) {
-        if (!x || x === "无") continue;
-        const i = x.lastIndexOf(" ");
-        names.push(i === -1 ? x : x.slice(0, i));
-      }
-    }
-    return [String(r[0]), names];
-  }),
-);
+const DISH_INGREDIENTS = new Map<string, string[]>(RAW.map((r) => [String(r[0]), ingredientNames(r[6])]));
 
 /** 一组菜用到的食材名 */
 function ingredientsOf(dishIds: Iterable<string>): Set<string> {
@@ -155,8 +141,7 @@ export class KitchenDO implements DurableObject {
         .bind(K),
       db
         .prepare(
-          `SELECT m.id, m.meal_date AS mealDate, m.slot, m.rev, m.ordered_at AS orderedAt,
-                  m.updated_at AS updatedAt, u.display_name AS orderedBy
+          `SELECT ${MEAL_COLS}
              FROM meal m LEFT JOIN user u ON u.id = m.ordered_by
             WHERE m.kitchen_id = ? AND m.meal_date >= ?
             ORDER BY m.meal_date, m.slot, m.ordered_at, m.id`,
@@ -164,8 +149,7 @@ export class KitchenDO implements DurableObject {
         .bind(K, today),
       db
         .prepare(
-          `SELECT i.meal_id AS mealId, i.dish_id AS dishId, i.qty,
-                  i.added_by AS addedById, u.display_name AS addedBy
+          `SELECT ${ITEM_COLS}
              FROM meal_item i
              JOIN meal m ON m.id = i.meal_id
              LEFT JOIN user u ON u.id = i.added_by
@@ -184,23 +168,9 @@ export class KitchenDO implements DurableObject {
       db.prepare(`SELECT dish_id AS dishId, order_count AS count FROM dish_stat WHERE kitchen_id = ?`).bind(K),
     ]);
 
-    const byMeal = new Map<string, MealItem[]>();
-    for (const r of (mealItems.results ?? []) as (MealItem & { mealId: string })[]) {
-      const arr = byMeal.get(r.mealId) ?? [];
-      arr.push({ dishId: r.dishId, qty: r.qty, addedById: r.addedById, addedBy: normalizeName(r.addedBy) });
-      byMeal.set(r.mealId, arr);
-    }
-    const mealList = ((meals.results ?? []) as (Omit<Meal, "items"> & { updatedAt: number | null })[]).map(
-      (m): Meal => ({
-        id: m.id,
-        mealDate: m.mealDate,
-        slot: m.slot,
-        rev: m.rev,
-        orderedAt: m.orderedAt,
-        orderedBy: normalizeName(m.orderedBy),
-        updatedAt: m.updatedAt ?? m.orderedAt,
-        items: byMeal.get(m.id) ?? [],
-      }),
+    const mealList = assembleMeals(
+      (meals.results ?? []) as DbMealRow[],
+      (mealItems.results ?? []) as ItemRow[],
     );
     const statMap: Record<string, number> = {};
     for (const r of (stats.results ?? []) as { dishId: string; count: number }[]) statMap[r.dishId] = r.count;

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // wrangler dev 的临时打包产物
+    ".wrangler/**",
   ]),
 ]);
 

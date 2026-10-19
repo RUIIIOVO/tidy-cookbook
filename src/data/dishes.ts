@@ -1,30 +1,8 @@
 import { CATEGORIES, RAW, SUB_TO_CATEGORY, type Raw } from "./raw";
 import PINYIN from "./pinyin.generated.json";
 import LEGACY_IDS from "./legacy-ids.json";
-import type { Category, CategoryId, Dish, IngredientGroup, SubId } from "./types";
-
-const GROUP_LABEL = { 主: "主料", 辅: "辅料", 调: "调料" } as const;
-
-function parseIngredients(s: string): IngredientGroup[] {
-  return s
-    .split("@")
-    .map((block) => {
-      const [key, rest] = block.split("|");
-      const group = GROUP_LABEL[key.trim() as keyof typeof GROUP_LABEL] ?? "辅料";
-      const items = (rest ?? "")
-        .split(";")
-        .map((x) => x.trim())
-        .filter((x) => x && x !== "无")
-        .map((x) => {
-          const i = x.lastIndexOf(" ");
-          return i === -1
-            ? { name: x, amount: "" }
-            : { name: x.slice(0, i), amount: x.slice(i + 1) };
-        });
-      return { group, items };
-    })
-    .filter((g) => g.items.length > 0);
-}
+import { parseIngredients } from "./ingredients";
+import type { Category, CategoryId, Dish, SubId } from "./types";
 
 function build(r: Raw): Dish {
   const [num, name, desc, sub, spicy, tags, ing, steps] = r;
