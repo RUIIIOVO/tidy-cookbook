@@ -125,16 +125,24 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
         </div>
 
         {/* 统一网格：左边 1 列星期，右边 13 列日期，完全共享相同的行高和 gap */}
-        <div className="grid grid-cols-[14px_repeat(13,1fr)] gap-1.5 items-center">
-          {/* 第 1 列：左侧星期指示，按 7 行精细排列 */}
+        <div className="grid grid-cols-[14px_repeat(13,1fr)] gap-1.5 items-start">
+          {/* 第 1 列：左侧星期指示，按 7 行精细排列，确保与方块高度 1:1 几何居中 */}
           <div className="grid grid-rows-7 gap-1.5 text-[8.5px] text-ink-3/70 select-none text-center">
-            <span className="flex aspect-square items-center justify-center leading-none">一</span>
-            <span className="flex aspect-square items-center justify-center leading-none opacity-0">二</span>
-            <span className="flex aspect-square items-center justify-center leading-none">三</span>
-            <span className="flex aspect-square items-center justify-center leading-none opacity-0">四</span>
-            <span className="flex aspect-square items-center justify-center leading-none">五</span>
-            <span className="flex aspect-square items-center justify-center leading-none opacity-0">六</span>
-            <span className="flex aspect-square items-center justify-center leading-none">日</span>
+            <div className="aspect-square w-full flex items-center justify-center leading-none">
+              <span>一</span>
+            </div>
+            <div className="aspect-square w-full" aria-hidden="true" />
+            <div className="aspect-square w-full flex items-center justify-center leading-none">
+              <span>三</span>
+            </div>
+            <div className="aspect-square w-full" aria-hidden="true" />
+            <div className="aspect-square w-full flex items-center justify-center leading-none">
+              <span>五</span>
+            </div>
+            <div className="aspect-square w-full" aria-hidden="true" />
+            <div className="aspect-square w-full flex items-center justify-center leading-none">
+              <span>日</span>
+            </div>
           </div>
 
           {/* 剩余 13 列方块 */}

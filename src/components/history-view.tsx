@@ -66,11 +66,20 @@ export function HistoryView() {
   /** 点击热力图上的某一天：在当前选中的 tab 内查找并滚动定位，超出当前 tab 范围的不强制切换 tab */
   const handleSelectDateFromHeatmap = (date: string) => {
     // 仅在当前处于激活状态的 pane 容器内寻找对应日期的元素，避免跨 tab 错乱
-    const activePane = containerRef.current?.querySelectorAll(".overscroll-contain")[activeIndex];
-    const targetEl = (activePane || document).querySelector(`[data-meal-date="${date}"]`);
+    const activePane = containerRef.current?.querySelectorAll<HTMLElement>(".overscroll-contain")[activeIndex];
+    const targetEl = (activePane || document).querySelector<HTMLElement>(`[data-meal-date="${date}"]`);
 
-    if (targetEl) {
-      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (targetEl && activePane) {
+      // 预留顶部 16px 的卡片 margin 呼吸空隙，避免直接顶死贴顶
+      const paneRect = activePane.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const offsetTop = targetRect.top - paneRect.top + activePane.scrollTop - 16;
+
+      activePane.scrollTo({
+        top: Math.max(0, offsetTop),
+        behavior: "smooth",
+      });
+
       targetEl.classList.add("ring-2", "ring-accent", "transition-all");
       setTimeout(() => {
         targetEl.classList.remove("ring-2", "ring-accent");
