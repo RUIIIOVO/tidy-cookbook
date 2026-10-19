@@ -43,6 +43,7 @@ pnpm import --clip             # 直接从系统剪贴板读取分享文案/链�
 - 图标只用 `@phosphor-icons/react`，映射集中在 `src/lib/icons.tsx`；不混第二套图标库，不用汉字代替图标。
 - 配图（文件名 = 菜品数字 id）：`python3 scripts/gen-dish-images.py --sub pork` 生成（默认 1k）；单道用 `--ids 90`；生成前要在 `scripts/dish_prompts.json` 里按 id 加提示词 → `./scripts/optimize-images.sh` 压成 webp → `node scripts/build-image-manifest.mjs` 刷新清单。没图的菜自动回落到分类图标。
 - 可点击卡片用 `div role="button"`，内部才能嵌 `AddButton`；`<button>` 套 `<button>` 会触发 hydration 错误。
+- 弹窗 / Drawer 抽屉规范：统一不加右上角关闭按钮（右上角留白，靠手势下拉或遮罩点击关闭），避免破坏视觉统一与克制感。
 - 提交信息用 `feat:` / `fix:` / `chore:` 前缀，正文中文。
 
 <!-- BEGIN:nextjs-agent-rules -->

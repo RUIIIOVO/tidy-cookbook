@@ -258,11 +258,6 @@ export function HistoryView() {
           )}
         </div>
 
-        {/* 顶部做饭热力图 */}
-        <div className="mt-3">
-          <CookingHeatmap onSelectDate={handleSelectDateFromHeatmap} />
-        </div>
-
         {/* 顶部时间跨度胶囊 */}
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
           {RANGE_OPTIONS.map((opt) => {
@@ -308,6 +303,7 @@ export function HistoryView() {
                 rangeKey={opt.key}
                 data={cache[opt.key]}
                 canDeleteRecord={canDelete(me)}
+                onSelectDateFromHeatmap={handleSelectDateFromHeatmap}
               />
             </div>
           ))}
@@ -322,10 +318,12 @@ function HistoryTabPane({
   rangeKey,
   data,
   canDeleteRecord,
+  onSelectDateFromHeatmap,
 }: {
   rangeKey: HistoryRange;
   data: RangeData;
   canDeleteRecord: boolean;
+  onSelectDateFromHeatmap: (date: string) => void;
 }) {
   const loadMoreForRange = useHistory((s) => s.loadMoreForRange);
   const ensureRange = useHistory((s) => s.ensureRange);
@@ -356,6 +354,11 @@ function HistoryTabPane({
 
   return (
     <div className="no-scrollbar h-full overflow-y-auto px-4 pt-3 pb-24 overscroll-contain">
+      {/* 顶部下厨记录热力图：置于可滚动区域顶端，随列表一起滚动，彻底释放视口空间 */}
+      <div className="mb-3">
+        <CookingHeatmap onSelectDate={onSelectDateFromHeatmap} />
+      </div>
+
       {/* 正在加载骨架屏 */}
       {loading && meals.length === 0 && (
         <div className="flex flex-col gap-3 pb-4">
@@ -422,7 +425,7 @@ function MealCard({ meal, canDelete: allowed }: { meal: Meal; canDelete: boolean
       meal={meal}
       enableReview={true}
       onDelete={allowed ? () => removeMeal(meal.id) : undefined}
-      footerAction={
+      againAction={
         <button type="button" onClick={again} className={cn(ui.chip, ui.chipSoft)}>
           <ArrowCounterClockwise size={12} weight="bold" />
           再点一次

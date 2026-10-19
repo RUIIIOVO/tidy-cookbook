@@ -8,6 +8,7 @@ import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, formatPersonName, haptic } from "@/lib/utils";
+import { ui } from "@/lib/ui";
 import { Avatar } from "./avatar";
 import { DishThumb } from "./dish-thumb";
 import { MealCardActions } from "./meal-card-actions";
@@ -30,6 +31,7 @@ function formatTime(ts: number) {
 export function MealTicket({
   meal,
   onDelete,
+  againAction,
   footerAction,
   dishFocus,
   enableReview = false,
@@ -39,7 +41,9 @@ export function MealTicket({
   dishFocus?: "ingredients";
   /** 不传则不显示右上角编辑 / 删除图标 */
   onDelete?: () => Promise<boolean>;
-  /** 底部合计行右侧的动作（如「再点一次」） */
+  /** 「再点一次」独立动作，与点评按钮同级并排在右侧 */
+  againAction?: ReactNode;
+  /** 底部合计行右侧的动作（备用） */
   footerAction?: ReactNode;
   /** 是否开启点评功能（通常已吃订单开启） */
   enableReview?: boolean;
@@ -134,45 +138,50 @@ export function MealTicket({
         </button>
       )}
 
-      {/* 点评展示区（若已有点评） */}
+      {/* 点评展示区（若已有点评：美团/大厂评价精致卡片设计） */}
       {meal.review && (
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => {
             haptic(6);
             setReviewOpen(true);
           }}
-          className="mt-2.5 flex w-full flex-col gap-1 rounded-lg border border-line bg-paper/70 p-2.5 text-left transition hover:bg-paper active:opacity-75"
+          className="group relative mt-3 rounded-xl border border-line-2/70 bg-card/60 p-3 text-left transition hover:border-line hover:bg-card active:scale-[0.99] cursor-pointer"
         >
+          {/* 评价头部：星级、评级、评价人与修改提示 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="flex text-caramel">
+              <div className="flex text-caramel">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star
                     key={s}
-                    size={11}
+                    size={12}
                     weight={s <= (meal.review?.rating || 0) ? "fill" : "regular"}
                     className={s <= (meal.review?.rating || 0) ? "text-caramel" : "text-line-2"}
                   />
                 ))}
-              </span>
-              <span className="text-[11px] font-medium text-ink-2">
+              </div>
+              <span className="font-display text-[12.5px] font-medium tracking-wide text-ink">
                 {meal.review.ratingText}
               </span>
             </div>
-            {meal.review.reviewedBy && (
-              <span className="text-[10px] text-ink-3">
-                {formatPersonName(meal.review.reviewedBy)}
-              </span>
-            )}
+
+            <div className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
+              {meal.review.reviewedBy && (
+                <span>{formatPersonName(meal.review.reviewedBy)}</span>
+              )}
+              <span className="text-ink-3/50 group-hover:text-accent transition-colors">修改 ›</span>
+            </div>
           </div>
 
+          {/* 评价标签 */}
           {meal.review.tags && meal.review.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {meal.review.tags.map((t) => (
                 <span
                   key={t}
-                  className="rounded bg-line-2/70 px-1.5 py-0.5 text-[9.5px] text-ink-3"
+                  className="rounded-full bg-paper px-2 py-0.5 text-[10px] text-ink-2 border border-line-2/50"
                 >
                   {t}
                 </span>
@@ -180,33 +189,40 @@ export function MealTicket({
             </div>
           )}
 
+          {/* 评语心得 */}
           {meal.review.comment && (
-            <p className="line-clamp-2 text-[11.5px] text-ink-2">“{meal.review.comment}”</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
+              {meal.review.comment}
+            </p>
           )}
-        </button>
+        </div>
       )}
 
-      {/* 小票合计 */}
+      {/* 小票合计行：遵循 ui.chip 视觉规范与对齐 */}
       <div className="mt-1 flex min-h-11 items-center justify-between border-t border-dashed border-line-2 pt-3">
+        <span className="text-[11px] text-ink-3">
+          合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
+        </span>
+
+        {/* 右侧操作按钮组：点评与再点一次样式严格对齐一致 */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-ink-3">
-            合计 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
-          </span>
-          {enableReview && !meal.review && (
+          {enableReview && (
             <button
               type="button"
               onClick={() => {
                 haptic(6);
                 setReviewOpen(true);
               }}
-              className="flex items-center gap-1 rounded-md border border-line bg-card px-2 py-0.5 text-[11px] text-ink-2 transition hover:bg-paper active:scale-95"
+              className={cn(ui.chip, ui.chipOff)}
             >
               <ChatCircleDots size={12} className="text-ink-3" />
-              <span>点评</span>
+              <span>{meal.review ? "改评" : "点评"}</span>
             </button>
           )}
+
+          {againAction}
+          {footerAction}
         </div>
-        {footerAction}
       </div>
 
       <MealReviewSheet

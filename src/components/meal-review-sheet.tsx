@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Drawer } from "vaul";
-import { Star, X } from "@phosphor-icons/react";
+import { Star } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { authHeaders } from "@/lib/auth-store";
@@ -70,8 +70,23 @@ function MealReviewSheetInner({
   const [comment, setComment] = useState(() => meal.review?.comment || "");
   const [submitting, setSubmitting] = useState(false);
 
+  const starsContainerRef = useRef<HTMLDivElement>(null);
   const currentLevel = RATING_LEVELS.find((l) => l.rating === rating) ?? RATING_LEVELS[0];
   const title = mealTitle(meal.mealDate, meal.slot, today);
+
+  // 滑动选择星星逻辑（支持 touch 与 pointer 连续划选）
+  const handleStarScrub = (clientX: number) => {
+    const container = starsContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const relativeX = clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, relativeX / rect.width));
+    const nextRating = Math.max(1, Math.min(5, Math.ceil(ratio * 5)));
+    if (nextRating !== rating) {
+      haptic(4);
+      setRating(nextRating);
+    }
+  };
 
   const toggleTag = (t: string) => {
     haptic(4);
@@ -129,41 +144,37 @@ function MealReviewSheetInner({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity" />
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-3xl border-t border-line bg-paper outline-none focus:outline-none">
-          {/* 拖动把手 */}
+          {/* 拖动把手，右上角无冗余关闭按钮 */}
           <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-line" />
 
           <div className="max-h-[85dvh] overflow-y-auto px-5 pt-3 pb-8">
-            {/* 顶栏 */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-[18px] tracking-wide text-ink">点评</h2>
-                <p className="mt-0.5 text-[11px] text-ink-3">{title}</p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex size-8 items-center justify-center rounded-full bg-line-2 text-ink-3 transition active:scale-95"
-              >
-                <X size={15} />
-              </button>
+            {/* 顶栏：沉浸式标题 */}
+            <div className="text-center">
+              <h2 className="font-display text-[18px] tracking-wide text-ink">点评</h2>
+              <p className="mt-0.5 text-[11px] text-ink-3">{title}</p>
             </div>
 
-            {/* 整体打分 */}
-            <div className="mt-5 rounded-card border border-line bg-card/60 p-4 text-center">
+            {/* 整体打分：支持连续滑动打分 */}
+            <div className="mt-5 rounded-card border border-line bg-card/70 p-4 text-center">
               <span className="text-[11px] text-ink-3">整体评分</span>
-              {/* 五星交互 */}
-              <div className="mt-2.5 flex items-center justify-center gap-2">
+              {/* 五星交互区：支持点击与拖拽划过 */}
+              <div
+                ref={starsContainerRef}
+                onPointerDown={(e) => {
+                  handleStarScrub(e.clientX);
+                  (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  if (e.buttons > 0) handleStarScrub(e.clientX);
+                }}
+                className="mt-3 flex items-center justify-center gap-2.5 cursor-pointer touch-none select-none py-1"
+              >
                 {[1, 2, 3, 4, 5].map((starVal) => {
                   const filled = starVal <= rating;
                   return (
-                    <button
+                    <div
                       key={starVal}
-                      type="button"
-                      onClick={() => {
-                        haptic(6);
-                        setRating(starVal);
-                      }}
-                      className="p-1 transition active:scale-125 focus:outline-none"
+                      className="p-1 transition active:scale-125 pointer-events-none"
                     >
                       <Star
                         size={32}
@@ -173,23 +184,23 @@ function MealReviewSheetInner({
                           filled ? "text-caramel" : "text-line-2",
                         )}
                       />
-                    </button>
+                    </div>
                   );
                 })}
               </div>
 
               {/* 评级档位轻提示 */}
-              <div className="mt-1.5 flex items-center justify-center gap-1.5">
+              <div className="mt-1 flex items-center justify-center">
                 <span className={cn("text-[13px] font-medium tracking-wide", currentLevel.color)}>
                   {currentLevel.text}
                 </span>
               </div>
             </div>
 
-            {/* 标签选项 */}
+            {/* 标签选项：消除盒模型边框抖动，统一 1px border 保持基线一致 */}
             <div className="mt-4">
               <span className="text-[11px] text-ink-3">评价标签</span>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {PRESET_TAGS.map((t) => {
                   const selected = tags.includes(t);
                   return (
@@ -198,10 +209,10 @@ function MealReviewSheetInner({
                       type="button"
                       onClick={() => toggleTag(t)}
                       className={cn(
-                        "rounded-full px-2.5 py-1 text-[11px] transition active:scale-95",
+                        "rounded-full px-3 py-1 text-[11px] font-medium transition active:scale-95 border",
                         selected
-                          ? "bg-accent text-white"
-                          : "border border-line bg-card text-ink-2 hover:bg-paper",
+                          ? "border-accent bg-accent text-white"
+                          : "border-line bg-card text-ink-2 hover:bg-paper",
                       )}
                     >
                       {t}
@@ -215,7 +226,7 @@ function MealReviewSheetInner({
             {meal.items.length > 0 && (
               <div className="mt-4">
                 <span className="text-[11px] text-ink-3">单菜评分（选填）</span>
-                <ul className="mt-2 divide-y divide-line/60 rounded-card border border-line bg-card/60 px-3">
+                <ul className="mt-2 divide-y divide-line/60 rounded-card border border-line bg-card/70 px-3">
                   {meal.items.map((item) => {
                     const dish = getDish(item.dishId);
                     if (!dish) return null;
@@ -266,7 +277,7 @@ function MealReviewSheetInner({
                 id="review-comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="记录这餐的口味、火候与做菜体验..."
+                placeholder="来点评一下吧～"
                 rows={3}
                 maxLength={200}
                 className="mt-1.5 w-full resize-none rounded-card border border-line bg-card p-3 text-[13px] text-ink placeholder:text-ink-3/60 focus:border-accent focus:outline-none"
@@ -279,7 +290,7 @@ function MealReviewSheetInner({
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex w-full items-center justify-center rounded-xl bg-accent py-3 text-[14px] font-medium tracking-wide text-white transition active:opacity-80 disabled:opacity-50"
+                className="flex h-12 w-full items-center justify-center rounded-full bg-accent text-[15px] font-medium tracking-wide text-white transition active:scale-[0.99] disabled:opacity-40"
               >
                 {submitting ? "正在保存..." : "保存点评"}
               </button>

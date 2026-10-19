@@ -20,8 +20,6 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
   const { weeks, monthLabels, totalCookDays, totalMeals } = useMemo(() => {
     if (!today) return { weeks: [], monthLabels: [], totalCookDays: 0, totalMeals: 0 };
 
-    // 计算 today 所在的星期几 (0: 周日, 1: 周一, ... 6: 周六)
-    // 转换为周一为起始 (0: 周一, 6: 周日)
     const todayDate = new Date(`${today}T00:00:00+08:00`);
     const dayOfWeek = (todayDate.getDay() + 6) % 7; // 周一为 0
 
@@ -61,7 +59,7 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           meals += count;
         }
 
-        // 识别月份起始标签（取每列周三对应的月份）
+        // 取每列周三对应的月份做标记
         if (d === 2) {
           const m = curDateStr.slice(5, 7);
           const monthText = `${parseInt(m, 10)}月`;
@@ -91,14 +89,14 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
   }, [today, data]);
 
   return (
-    <div className="rounded-card border border-line bg-card/80 p-3.5 shadow-2xs">
+    <div className="rounded-card border border-line bg-card p-3.5 shadow-2xs">
       {/* 标题与统计 */}
       <div className="flex items-center justify-between pb-2 text-[11px] text-ink-3">
-        <span className="font-display tracking-wider text-ink">开火历程</span>
-        <div className="flex items-center gap-2">
-          <span>近 90 天开火 <strong className="font-medium text-ink tabular-nums">{totalCookDays}</strong> 天</span>
+        <span className="font-display tracking-wider text-ink">下厨记录</span>
+        <div className="flex items-center gap-1.5 tabular-nums">
+          <span>近 90 天做饭 <strong className="font-medium text-ink">{totalCookDays}</strong> 天</span>
           <span>·</span>
-          <span>共 <strong className="font-medium text-ink tabular-nums">{totalMeals}</strong> 餐</span>
+          <span>共 <strong className="font-medium text-ink">{totalMeals}</strong> 餐</span>
         </div>
       </div>
 
@@ -106,8 +104,8 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
       <div className="overflow-x-auto pt-1 pb-1">
         <div className="min-w-fit">
           {/* 月份表头 */}
-          <div className="relative mb-1 flex h-4 text-[9px] text-ink-3">
-            <div className="w-4 shrink-0" /> {/* 对应星期左侧的留白 */}
+          <div className="relative mb-1 flex h-3.5 text-[9px] text-ink-3">
+            <div className="w-3.5 shrink-0" />
             <div className="relative flex-1">
               {monthLabels.map((m) => (
                 <span
@@ -123,7 +121,7 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
 
           <div className="flex gap-1">
             {/* 左侧星期指示 */}
-            <div className="flex flex-col justify-between py-[1px] pr-1 text-[9px] text-ink-3/70 select-none">
+            <div className="flex flex-col justify-between py-[1px] pr-1 text-[8.5px] text-ink-3/70 select-none">
               <span>一</span>
               <span>三</span>
               <span>五</span>
@@ -131,24 +129,28 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
             </div>
 
             {/* 13 列方块 */}
-            <div className="flex gap-[3.5px]">
+            <div className="flex gap-[3px]">
               {weeks.map((w) => (
-                <div key={w.weekIdx} className="flex flex-col gap-[3.5px]">
+                <div key={w.weekIdx} className="flex flex-col gap-[3px]">
                   {w.days.map((d) => {
                     if (d.inFuture) {
                       return (
                         <div
                           key={d.date}
-                          className="size-[11.5px] rounded-[2px] bg-line/30"
+                          className="size-[11.5px] rounded-[2px] bg-line/20"
                         />
                       );
                     }
 
-                    // 色阶分类：0 餐 / 1 餐 / 2 餐 / >=3 餐
-                    let cellBg = "bg-line-2 hover:bg-line transition-colors";
-                    if (d.count === 1) cellBg = "bg-accent/35 hover:bg-accent/45";
-                    else if (d.count === 2) cellBg = "bg-accent/70 hover:bg-accent/80";
-                    else if (d.count >= 3) cellBg = "bg-accent hover:brightness-110";
+                    // 严选符合纸墨美学的渐进色：
+                    // 0餐：纸基柔和暖灰（不扎眼、与卡片完美融合）
+                    // 1餐：柔和冷杉青（明快清爽）
+                    // 2餐：草木青绿（饱和适中）
+                    // 3餐及以上：正调 accent 冷杉墨绿（温厚扎实）
+                    let cellBg = "bg-[#ebe4d5] hover:bg-line-2 transition-colors";
+                    if (d.count === 1) cellBg = "bg-[#a3c4b2] hover:bg-[#92b8a2]";
+                    else if (d.count === 2) cellBg = "bg-[#5d9476] hover:bg-[#508569]";
+                    else if (d.count >= 3) cellBg = "bg-[#2e6349] hover:bg-[#25523c]";
 
                     return (
                       <button
@@ -165,7 +167,7 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
                         )}
                       >
                         {d.hasReview && (
-                          <span className="absolute -top-[1px] -right-[1px] size-[3px] rounded-full bg-caramel ring-1 ring-card" />
+                          <span className="absolute -top-[1px] -right-[1px] size-[3.5px] rounded-full bg-caramel ring-1 ring-card" />
                         )}
                       </button>
                     );
@@ -176,12 +178,12 @@ export function CookingHeatmap({ onSelectDate }: { onSelectDate: (date: string) 
           </div>
 
           {/* 底部图例 */}
-          <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[9px] text-ink-3">
+          <div className="mt-2.5 flex items-center justify-end gap-1 text-[9px] text-ink-3">
             <span>少</span>
-            <div className="size-[8.5px] rounded-[2px] bg-line-2" />
-            <div className="size-[8.5px] rounded-[2px] bg-accent/35" />
-            <div className="size-[8.5px] rounded-[2px] bg-accent/70" />
-            <div className="size-[8.5px] rounded-[2px] bg-accent" />
+            <div className="size-[8px] rounded-[2px] bg-[#ebe4d5]" />
+            <div className="size-[8px] rounded-[2px] bg-[#a3c4b2]" />
+            <div className="size-[8px] rounded-[2px] bg-[#5d9476]" />
+            <div className="size-[8px] rounded-[2px] bg-[#2e6349]" />
             <span>多</span>
           </div>
         </div>
