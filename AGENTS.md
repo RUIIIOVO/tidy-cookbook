@@ -22,6 +22,7 @@ node scripts/build-pinyin.mjs  # 改过 src/data/raw.ts 后必须重跑
 | `src/lib/` | search · store · ui-store · shopping · theme · icons · utils |
 | `src/components/` | 视图与交互组件 |
 | `src/app/(tabs)/` | 五个 tab：`/` `/menu` `/cart` `/prep` `/history` |
+| `scripts/import-recipe.mjs` | 外部菜谱（下厨房/小红书/抖音）智能解析与一键导入 |
 | `scripts/gen-dish-images.py` | 菜品配图生成（风格锁在 `scripts/style_lock.txt`） |
 
 ## 约定

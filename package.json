@@ -10,7 +10,8 @@
     "lint": "eslint",
     "cf:typecheck": "tsc -p worker/tsconfig.json",
     "preview": "pnpm build && wrangler dev",
-    "deploy": "pnpm build && wrangler deploy"
+    "deploy": "pnpm build && wrangler deploy",
+    "import": "node scripts/import-recipe.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
