@@ -43,7 +43,17 @@ export function SwipeRow({
       <motion.button
         type="button"
         aria-label="删除"
-        style={{ width: BTN, height: BTN, opacity: btnOpacity, scale: btnScale }}
+        // 没展开时按钮只是透明的，但仍盖在行内容右侧，点步进器的「+」会点中它直接删菜；
+        // 只有展开（行已左移让出位置）才响应点击
+        tabIndex={open ? 0 : -1}
+        aria-hidden={!open}
+        style={{
+          width: BTN,
+          height: BTN,
+          opacity: btnOpacity,
+          scale: btnScale,
+          pointerEvents: open ? "auto" : "none",
+        }}
         onClick={onDelete}
         className="absolute right-[10px] top-1/2 -mt-6 grid place-items-center rounded-full border border-line bg-card text-chili shadow-2xs active:brightness-95"
       >

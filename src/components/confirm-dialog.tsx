@@ -21,6 +21,9 @@ export function ConfirmHost() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
           onClick={close}
+          // 抽屉（vaul / Radix 模态）打开时会给 body 加 pointer-events:none，确认框挂在抽屉外面，
+          // 不显式恢复就点不动；编辑订单里「去掉 / 删除 / 放弃修改」都弹在抽屉之上
+          style={{ pointerEvents: "auto" }}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/35 px-10 backdrop-blur-[2px]"
         >
           <motion.div
