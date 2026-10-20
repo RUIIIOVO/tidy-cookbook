@@ -11,8 +11,8 @@ import { catTheme, spicyLabel } from "@/lib/theme";
 import { hasImage, preloadImage } from "@/lib/images";
 import { useCart } from "@/lib/store";
 import { useDishRatings } from "@/lib/dish-rating-store";
-import { useTabs } from "@/lib/tab-store";
 import { useGuard } from "@/lib/use-guard";
+import { useTabs } from "@/lib/tab-store";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
@@ -26,22 +26,17 @@ const FILTERS: { id: Filter; name: string }[] = [
   ...categories.map((c) => ({ id: c.id as Filter, name: c.name })),
 ];
 
-/** seq：入队顺序（单调递增）。所有牌共用一个「当前位置」，牌离当前位置有多远（seq - pos）决定它叠在第几层 */
 type CardItem = { id: string; seq: number; dish: Dish };
 
-/** 每层露出的边（px）和叠牌层数：舞台底部要给后面几层留出 PEEK × 2 的位置 */
 const PEEK = 14;
-/** 拖多远算「完全离开」，后牌的联动进度以此为 1 */
 const FULL_DRAG = 140;
+const HINT_KEY = "tc-swipe-hint";
 
 function pickRandomDishes(pool: Dish[], count: number): Dish[] {
   if (pool.length === 0) return [];
   const shuffled = [...pool].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, Math.min(count, pool.length));
 }
-
-/** 第一次用时让顶牌轻轻晃一下，提示可以左右滑；之后不再出现（记在本机） */
-const HINT_KEY = "tc-swipe-hint";
 
 /** 一张菜品卡的正面：大图 + 名字 / 描述 / 评分 · 点过几次 · 辣度（高屏再多一行主料） */
 function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
@@ -50,7 +45,6 @@ function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
   const main = dish.ingredients.find((g) => g.group === "主料")?.items.slice(0, 4).map((i) => i.name);
   return (
     <>
-      {/* 大图吃掉卡片剩下的高度：窗口高就大一点、矮就小一点 */}
       <div className="relative min-h-[120px] w-full flex-1 overflow-hidden bg-paper-2">
         <DishThumb
           dish={dish}
@@ -72,7 +66,6 @@ function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
         <p className="mt-2 line-clamp-2 min-h-[41px] text-[12.5px] leading-relaxed text-ink-2">
           {dish.desc}
         </p>
-        {/* 窗口够高才显示：选菜时真正有用的信息，同时把卡片撑得更饱满 */}
         {main && main.length > 0 && (
           <p className="mt-2 hidden truncate text-[11.5px] text-ink-3 [@media(min-height:820px)]:block">
             主料 · {main.join("、")}
@@ -105,7 +98,6 @@ function StackedCard({
 }: {
   card: CardItem;
   index: number;
-  /** 全体共用的「当前位置」：顶牌 seq + 拖动进度。牌的层次 = 自己的 seq − pos */
   pos: MotionValue<number>;
   exitDir: number;
   onSwipe: (dir: "left" | "right") => void;
@@ -119,13 +111,13 @@ function StackedCard({
   const dragRotate = useTransform(x, [-240, 240], [-10, 10]);
   const hintRef = useRef<ReturnType<typeof animate> | null>(null);
 
-  // 离顶牌多远：0 = 顶牌，1 = 第二层，2 = 第三层。拖动时后牌的值会连续地减小，所以会跟着手指往前靠
   const depth = useTransform(pos, (v) => Math.max(0, card.seq - v));
   const scale = useTransform(depth, [0, 1, 2, 3], [1, 0.95, 0.9, 0.85]);
   const y = useTransform(depth, [0, 1, 2, 3], [0, PEEK, PEEK * 2, PEEK * 3]);
-  // 后牌略暗一点：盖一层深一档的纸色（偏暖，和纸面协调），越靠后越深；比降透明度干净，不会发白
+
+  // 方案 C：同向阶梯微旋转（规则递增，0° -> 2° -> 4°）
+  const slotRotate = useTransform(depth, [0, 1, 2, 3], [0, 2, 4, 5.5]);
   const tint = useTransform(depth, [0, 1, 2], [0, 0.55, 0.9]);
-  // 第四层及以后淡出：新牌从最后面淡入
   const appear = useTransform(depth, [2, 3], [1, 0]);
 
   useEffect(() => {
@@ -152,7 +144,6 @@ function StackedCard({
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.75}
       onTouchStart={(e) => {
-        // 当触摸发生在卡片上时，阻止边缘手势穿透到浏览器的前进/后退
         e.stopPropagation();
       }}
       onDragStart={() => {
@@ -178,7 +169,6 @@ function StackedCard({
         if (isDraggingRef.current) return;
         onOpen();
       }}
-      // 底部留出 PEEK × 2 给后面几层露边
       className={cn(
         "absolute inset-x-0 top-0 cursor-pointer select-none will-change-transform",
         isTop ? "active:cursor-grabbing" : "pointer-events-none",
@@ -193,9 +183,8 @@ function StackedCard({
         overscrollBehaviorX: "none",
       }}
     >
-      {/* 里层负责「叠」：缩放 / 下移都围绕底边中点，三层严格左右对称、居中对齐；外层负责「拖」 */}
       <motion.div
-        style={{ scale, y, opacity: appear, transformOrigin: "50% 100%" }}
+        style={{ scale, y, rotate: slotRotate, opacity: appear, transformOrigin: "50% 100%" }}
         className={cn(
           "relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card text-left",
           isTop
@@ -229,7 +218,6 @@ export function DrawView() {
     void refreshRatings();
   }, [refreshRatings]);
 
-  // 排行榜（全屏子页面）。首次打开前不挂 Portal，避免服务端预渲染时访问 document
   const setActiveTab = useTabs((s) => s.setActiveTab);
   const [boardOpen, setBoardOpen] = useState(false);
   const [boardMounted, setBoardMounted] = useState(false);
@@ -254,7 +242,6 @@ export function DrawView() {
     [pool],
   );
 
-  // 初始化卡片堆栈：直接就是候选菜，不再有封面
   const [cards, setCards] = useState<CardItem[]>(() => {
     const picked = pickRandomDishes(dishes, 3);
     for (const d of picked) {
@@ -263,14 +250,13 @@ export function DrawView() {
     return picked.map((d, i) => ({ id: `init-${d.id}-${i + 1}`, seq: i, dish: d }));
   });
 
-  // 全体牌共用的「当前位置」= 顶牌 seq + 拖动进度（0~1）。后牌的层次由它连续推出来，拖动时就会跟手前靠
   const nextSeqRef = useRef(3);
   const pos = useMotionValue(0);
   const posAnim = useRef<ReturnType<typeof animate> | null>(null);
   const topSeq = cards[0]?.seq ?? 0;
+
   useEffect(() => {
     posAnim.current?.stop();
-    // 换分类会整堆换牌，位置差很远时直接跳过去，不要从旧位置慢慢滑
     if (Math.abs(pos.get() - topSeq) > 1.5) {
       pos.set(topSeq);
       return;
@@ -278,6 +264,7 @@ export function DrawView() {
     posAnim.current = animate(pos, topSeq, { type: "spring", stiffness: 380, damping: 32, mass: 0.8 });
     return () => posAnim.current?.stop();
   }, [topSeq, pos]);
+
   const onDragProgress = useCallback(
     (p: number) => {
       posAnim.current?.stop();
@@ -285,12 +272,12 @@ export function DrawView() {
     },
     [pos, topSeq],
   );
+
   const onDragCancel = useCallback(() => {
     posAnim.current?.stop();
     posAnim.current = animate(pos, topSeq, { type: "spring", stiffness: 380, damping: 32, mass: 0.8 });
   }, [pos, topSeq]);
 
-  // 分类切换
   const handleFilter = (fId: Filter) => {
     if (filter === fId) return;
     haptic(6);
@@ -335,7 +322,6 @@ export function DrawView() {
 
   const topCard = cards[0];
 
-  // 加入后停在当前这道，不再自动换下一道；想换再点「换一道」
   const onAdd = useGuard(() => {
     if (!topCard) return;
     haptic(25);
@@ -385,11 +371,6 @@ export function DrawView() {
         ))}
       </div>
 
-      {/*
-        舞台：吃掉标题、筛选条、按钮条之外剩下的全部高度（页面高度跟着 dvh，手机地址栏收起 / 出现时会跟着变），
-        叠牌在里面垂直居中；卡片高度跟着舞台伸缩，上限是「大图 1:1 + 文字区」，不会被拉成竖图。
-        --text-h 是卡片文字区高度，窗口够高时多一行主料，所以更高一点。
-      */}
       <div className="flex min-h-[340px] flex-1 flex-col justify-center py-3">
         <div
           className="relative w-full flex-1 [--text-h:141px] [@media(min-height:820px)]:[--text-h:169px]"
@@ -416,8 +397,6 @@ export function DrawView() {
         </div>
       </div>
 
-      {/* 操作底栏 */}
-      {/* 吸底位置要躲开底部导航（3.5rem + 安全区），不然小屏内容溢出时按钮会钻到导航下面 */}
       <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] flex gap-2.5 pb-3">
         <button
           type="button"
@@ -440,7 +419,6 @@ export function DrawView() {
       {boardMounted &&
         createPortal(
           <AnimatePresence
-            // 关闭动画结束、排行榜卸载（它的返回历史记录也退掉了）之后，再切到点菜单
             onExitComplete={() => {
               if (pendingTab.current) {
                 const t = pendingTab.current;
