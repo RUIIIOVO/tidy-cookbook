@@ -39,7 +39,13 @@ export interface Env {
   ASSETS: Fetcher;
   /** Bark 推送地址（wrangler secret），没配就不推 */
   BARK_URL?: string;
+  /** 试用环境（eat.ruiovo.com）设为 "1"：所有人都按 owner 权限，可改 / 删历史订单、清空点菜单 */
+  TRIAL?: string;
 }
+
+/** 试用环境里人人都是 owner；正式环境原样返回 */
+const withTrial = <T extends SessionUser>(env: Env, user: T): T =>
+  env.TRIAL === "1" ? { ...user, role: "owner" } : user;
 
 const json = (data: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(data), {
@@ -118,7 +124,7 @@ export default {
         }
         await clearLoginFail(env.DB, username);
         return json(
-          { user: r.user, token: r.token },
+          { user: withTrial(env, r.user), token: r.token },
           { headers: { "Set-Cookie": sessionCookie(r.token) } },
         );
       }
@@ -131,7 +137,7 @@ export default {
         const r = await register(env.DB, username, password, str(body.displayName) || username);
         if ("error" in r) return json(r, { status: 400 });
         return json(
-          { user: r.user, token: r.token },
+          { user: withTrial(env, r.user), token: r.token },
           { headers: { "Set-Cookie": sessionCookie(r.token) } },
         );
       }
@@ -142,8 +148,9 @@ export default {
       }
 
       // ── 以下都要登录 ──────────────────────────────
-      const user = await resolveSession(env.DB, token);
-      if (!user) return json({ error: "未登录" }, { status: 401 });
+      const session = await resolveSession(env.DB, token);
+      if (!session) return json({ error: "未登录" }, { status: 401 });
+      const user = withTrial(env, session);
 
       if (url.pathname === "/api/me") {
         // 每次打开都顺手续期；cookie 被浏览器清掉时（只靠 localStorage 令牌认出来的），也一并补发

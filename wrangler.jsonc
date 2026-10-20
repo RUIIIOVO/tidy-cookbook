@@ -36,5 +36,28 @@
   // 每天 UTC 20:00 = 北京时间 04:00，清理过期的 op_seen 并广播新快照（今天变了，昨天的订单离开「待吃」），不碰点菜单
   "triggers": { "crons": ["0 20 * * *"] },
 
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+
+  // 试用环境：eat.ruiovo.com。独立 Worker + 独立 D1 + 独立 Durable Object，和自用的 cook 数据完全隔离。
+  // 部署：pnpm build && pnpm exec wrangler deploy --env eat
+  // 不配 BARK_URL（陌生人下单不推送）；TRIAL=1 让所有人都能改 / 删历史订单。
+  "env": {
+    "eat": {
+      "name": "tidy-cookbook-eat",
+      "routes": [{ "pattern": "eat.ruiovo.com", "custom_domain": true }],
+      "vars": { "TRIAL": "1" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tidy-cookbook-eat",
+          "database_id": "1d74e1c5-cd50-4d57-89bc-4d17934aeab4",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "KITCHEN", "class_name": "KitchenDO" }]
+      },
+      "triggers": { "crons": ["0 20 * * *"] }
+    }
+  }
 }
