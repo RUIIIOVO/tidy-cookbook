@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { CookingPot, type Icon } from "@phosphor-icons/react";
 import { motion, useMotionValueEvent, useTransform } from "motion/react";
-import { prepTabIcon } from "@/lib/icons";
+import { catIcon, prepTabIcon } from "@/lib/icons";
 import { dayLabel, shortDate } from "@/lib/meal-time";
 import { deleteMeal } from "@/lib/meal-actions";
 import { usePrepUi, type PrepSeg } from "@/lib/prep-store";
 import type { Meal } from "@/lib/protocol";
 import { useCart } from "@/lib/store";
+import { catTheme } from "@/lib/theme";
 import { useMealsSplit } from "@/lib/use-meals";
 import { useTabs } from "@/lib/tab-store";
 import { ui } from "@/lib/ui";
@@ -226,15 +227,16 @@ function DishGroups({ meals }: { meals: Meal[] }) {
   );
 }
 
+const FishIcon = catIcon.seafood;
+
 function Empty() {
   const setActiveTab = useTabs((s) => s.setActiveTab);
   return (
     <div className="flex flex-col items-center justify-center px-8 text-center">
-      <p className="font-display text-[18px] tracking-wider text-ink">
+      <p className="flex items-center gap-1.5 font-display text-[18px] tracking-wider text-ink">
         大厨摸鱼中
-        <span className="ml-1.5 select-none" role="img" aria-label="鱼">
-          🐟
-        </span>
+        {/* 与菜单页「海鲜」分类同一个图标、同一个墨青色 */}
+        <FishIcon size={20} weight="fill" color={catTheme.seafood.hex} style={{ opacity: 0.7 }} aria-hidden />
       </p>
       <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
         快去下单吧，大厨随时火力全开！
