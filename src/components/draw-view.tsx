@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "motion/react";
-import { ArrowsClockwise, Plus } from "@phosphor-icons/react";
+import { ArrowsClockwise, Plus, Trophy } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { categories, dishes } from "@/data/dishes";
 import type { CategoryId, Dish } from "@/data/types";
@@ -10,10 +11,12 @@ import { catTheme, spicyLabel } from "@/lib/theme";
 import { hasImage, preloadImage } from "@/lib/images";
 import { useCart } from "@/lib/store";
 import { useDishRatings } from "@/lib/dish-rating-store";
+import { useTabs } from "@/lib/tab-store";
 import { useGuard } from "@/lib/use-guard";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
+import { Leaderboard } from "./leaderboard";
 import { RatingBadge } from "./rating-badge";
 
 type Filter = "all" | CategoryId;
@@ -185,6 +188,12 @@ export function DrawView() {
     void refreshRatings();
   }, [refreshRatings]);
 
+  // 排行榜（全屏子页面）。首次打开前不挂 Portal，避免服务端预渲染时访问 document
+  const setActiveTab = useTabs((s) => s.setActiveTab);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [boardMounted, setBoardMounted] = useState(false);
+  const pendingTab = useRef<"cart" | null>(null);
+
   const pool = useMemo(
     () => (filter === "all" ? dishes : dishes.filter((d) => d.category === filter)),
     [filter],
@@ -273,8 +282,20 @@ export function DrawView() {
 
   return (
     <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col px-5 pt-4">
-      <header>
+      <header className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[22px] tracking-wider text-ink">今天吃什么</h1>
+        <button
+          type="button"
+          onClick={() => {
+            haptic(6);
+            setBoardMounted(true);
+            setBoardOpen(true);
+          }}
+          className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card py-1.5 pr-3.5 pl-3 text-[12.5px] text-ink-2 transition active:scale-95"
+        >
+          <Trophy size={15} className="text-caramel" />
+          排行榜
+        </button>
       </header>
 
       <div className="no-scrollbar -mx-5 mt-4 flex gap-2 overflow-x-auto px-5">
@@ -331,6 +352,31 @@ export function DrawView() {
           加入点菜单
         </button>
       </div>
+
+      {boardMounted &&
+        createPortal(
+          <AnimatePresence
+            // 关闭动画结束、排行榜卸载（它的返回历史记录也退掉了）之后，再切到点菜单
+            onExitComplete={() => {
+              if (pendingTab.current) {
+                const t = pendingTab.current;
+                pendingTab.current = null;
+                setTimeout(() => setActiveTab(t), 150);
+              }
+            }}
+          >
+            {boardOpen && (
+              <Leaderboard
+                onClose={() => setBoardOpen(false)}
+                onGoCart={() => {
+                  pendingTab.current = "cart";
+                  setBoardOpen(false);
+                }}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }
