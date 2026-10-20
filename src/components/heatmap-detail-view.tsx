@@ -9,13 +9,13 @@ import { addDays, diffDays } from "@/lib/meal-time";
 import { useCart } from "@/lib/store";
 import { useBackClose } from "@/lib/use-back-close";
 import { cn, haptic } from "@/lib/utils";
-import { HEAT_BG, HeatLegend, HeatmapGrid, heatLevel, mondayOf } from "./heatmap-grid";
+import { HEAT_BG, HEAT_HINT, HeatLegend, HeatmapGrid, heatLevel, mondayOf } from "./heatmap-grid";
 
 const DAYS_OF_WEEK = ["一", "二", "三", "四", "五", "六", "日"];
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * 下厨详情：订单页里的全屏子页面（从右侧推入）。
+ * 下厨日历：订单页里的全屏子页面（从右侧推入）。
  * 和订单页共用登录态与数据；点有订单的某一天 → 关闭本页并在订单列表里定位到那天。
  */
 export function HeatmapDetail({
@@ -87,7 +87,8 @@ export function HeatmapDetail({
     const cooked = days.filter((d) => (d.stat?.mealCount ?? 0) > 0);
     const cookDays = cooked.length;
     const meals = cooked.reduce((n, d) => n + (d.stat?.mealCount ?? 0), 0);
-    return { lead, days, cookDays, meals };
+    const dishes = cooked.reduce((n, d) => n + (d.stat?.dishCount ?? 0), 0);
+    return { lead, days, cookDays, meals, dishes };
   }, [year, month, data, today]);
 
   // ── 年视图 ──
@@ -99,20 +100,25 @@ export function HeatmapDetail({
       const total = new Date(Date.UTC(year, m + 1, 0)).getUTCDate();
       const days = Array.from({ length: total }, (_, i) => {
         const date = addDays(first, i);
-        return { date, n: date <= today ? (data[date]?.mealCount ?? 0) : 0 };
+        const stat = date <= today ? data[date] : undefined;
+        return { date, meals: stat?.mealCount ?? 0, dishes: stat?.dishCount ?? 0 };
       });
-      const cooked = days.filter((d) => d.n > 0);
+      const cooked = days.filter((d) => d.meals > 0);
       return {
         month: m + 1,
         lead: diffDays(mondayOf(first), first),
         days,
+        // 这个月还没到：卡片调淡，右上角不写数
+        future: first > today,
         cookDays: cooked.length,
-        meals: cooked.reduce((n, d) => n + d.n, 0),
+        meals: cooked.reduce((n, d) => n + d.meals, 0),
+        dishes: cooked.reduce((n, d) => n + d.dishes, 0),
       };
     });
     const cookDays = months.reduce((n, m) => n + m.cookDays, 0);
     const meals = months.reduce((n, m) => n + m.meals, 0);
-    return { jan1, weeks, months, cookDays, meals };
+    const dishes = months.reduce((n, m) => n + m.dishes, 0);
+    return { jan1, weeks, months, cookDays, meals, dishes };
   }, [year, data, today]);
 
   // 全年长卷默认滚到当前月附近
@@ -150,7 +156,7 @@ export function HeatmapDetail({
           >
             <ArrowLeft size={19} />
           </button>
-          <h1 className="font-display text-[20px] tracking-wider text-ink">下厨详情</h1>
+          <h1 className="font-display text-[20px] tracking-wider text-ink">下厨日历</h1>
         </div>
 
         {/* 月 / 年：滑块平移，和底部导航一致 */}
@@ -181,15 +187,15 @@ export function HeatmapDetail({
       </header>
 
       <div className="px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-        {/* 时间切换 + 统计 */}
-        <div className="flex items-center justify-between rounded-xl border border-line bg-card px-3 py-2.5 shadow-2xs">
-          <div className="flex items-center gap-1.5">
+        {/* 时间切换 + 三项统计 */}
+        <div className="rounded-xl border border-line bg-card shadow-2xs">
+          <div className="flex items-center justify-between px-3 py-2.5">
             <button type="button" aria-label="上一个" onClick={() => shift(-1)} className="grid size-7 place-items-center rounded-md bg-paper text-ink active:scale-90">
               <CaretLeft size={14} />
             </button>
             {/* 透明的原生选择器铺在文字上，点日期即弹出系统年月选择 */}
-            <label className="relative px-1">
-              <span className="font-display text-[15px] tracking-wide text-ink tabular-nums">
+            <label className="relative px-2">
+              <span className="font-display text-[16px] tracking-wide text-ink tabular-nums">
                 {mode === "month" ? `${year} 年 ${month} 月` : `${year} 年`}
               </span>
               <input
@@ -209,10 +215,20 @@ export function HeatmapDetail({
               <CaretRight size={14} />
             </button>
           </div>
-          <span className="text-[11.5px] text-ink-3 tabular-nums">
-            共下厨 <strong className="font-medium text-ink">{stats.cookDays}</strong> 天 · 共{" "}
-            <strong className="font-medium text-ink">{stats.meals}</strong> 餐
-          </span>
+          <div className="flex divide-x divide-line border-t border-line">
+            {(
+              [
+                ["下厨天数", stats.cookDays],
+                ["做饭餐数", stats.meals],
+                ["菜品数量", stats.dishes],
+              ] as const
+            ).map(([label, n]) => (
+              <div key={label} className="flex-1 py-2.5 text-center tabular-nums">
+                <p className="font-display text-[20px] leading-none text-ink">{n}</p>
+                <p className="mt-1.5 text-[10.5px] text-ink-3">{label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {mode === "month" ? (
@@ -228,38 +244,40 @@ export function HeatmapDetail({
               ))}
               {monthView.days.map(({ date, day, stat }) => {
                 const future = date > today;
-                const n = future ? 0 : (stat?.mealCount ?? 0);
-                const lv = heatLevel(n);
+                const dishes = future ? 0 : (stat?.dishCount ?? 0);
+                const lv = heatLevel(dishes);
                 return (
+                  // 固定三行：日期 / N道 / 星级。「N道」和星级各占固定的一行，有没有评价都不会挤成两行或错位
                   <button
                     key={date}
                     type="button"
                     disabled={future}
                     onClick={() => pickDay(date)}
                     className={cn(
-                      "flex h-14 flex-col justify-between rounded-lg p-1.5 text-left transition active:scale-95",
+                      "flex h-[60px] flex-col rounded-lg p-1.5 text-left whitespace-nowrap transition active:scale-95",
                       future ? "bg-paper-2/40 text-ink-3/40" : HEAT_BG[lv],
-                      lv >= 1 ? "text-white" : !future && "text-ink-2",
+                      // 最浅的绿色上白字对比度只有约 3:1，这一档改深色字
+                      lv === 1 ? "text-ink" : lv >= 2 ? "text-white" : !future && "text-ink-2",
                       date === today && "ring-2 ring-accent ring-offset-1 ring-offset-card",
                     )}
                   >
                     <span className="text-[11px] leading-none font-medium tabular-nums">{day}</span>
-                    {n > 0 && (
-                      <span className="flex items-end justify-between text-[9.5px] leading-none tabular-nums">
-                        <span>{n}餐</span>
-                        {stat?.avgRating != null && (
-                          <span className="flex items-center gap-px">
-                            <Star size={9} weight="fill" />
-                            {stat.avgRating}
-                          </span>
-                        )}
-                      </span>
-                    )}
+                    <span className="mt-auto block h-[11px] text-[9.5px] leading-[11px] tabular-nums">
+                      {dishes > 0 ? `${dishes}道` : ""}
+                    </span>
+                    <span className="flex h-[11px] items-center gap-px text-[9.5px] leading-[11px] tabular-nums">
+                      {!future && stat?.avgRating != null && (
+                        <>
+                          <Star size={9} weight="fill" />
+                          {stat.avgRating}
+                        </>
+                      )}
+                    </span>
                   </button>
                 );
               })}
             </div>
-            <HeatLegend className="mt-3.5 justify-end border-t border-line/50 pt-3" />
+            <HeatLegend hint={HEAT_HINT} className="mt-3.5 border-t border-line/50 pt-3" />
           </div>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
@@ -295,24 +313,29 @@ export function HeatmapDetail({
                     setMonth(m.month);
                     setMode("month");
                   }}
-                  className="flex flex-col justify-start rounded-xl border border-line bg-card p-3 text-left shadow-2xs transition active:scale-[0.98]"
+                  className={cn(
+                    "flex flex-col justify-start rounded-xl border border-line bg-card p-3 text-left shadow-2xs transition active:scale-[0.98]",
+                    m.future && "opacity-55",
+                  )}
                 >
-                  <div className="flex items-center justify-between pb-2 text-[11px]">
+                  <div className="flex items-center justify-between pb-2">
                     <span className="font-display text-[13px] text-ink">{m.month} 月</span>
-                    <span className="text-[10px] text-ink-3 tabular-nums">
-                      {m.cookDays > 0 ? `${m.cookDays} 天` : "没下厨"}
-                    </span>
+                    {!m.future && (
+                      <span className={cn("text-[10px] tabular-nums", m.cookDays > 0 ? "text-ink-3" : "text-ink-3/60")}>
+                        {m.cookDays} 天 · {m.meals} 餐
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-7 gap-[3px]">
                     {Array.from({ length: m.lead }, (_, i) => (
                       <span key={`l-${i}`} />
                     ))}
-                    {m.days.map(({ date, n }) => (
+                    {m.days.map(({ date, dishes }) => (
                       <span
                         key={date}
                         className={cn(
                           "aspect-square rounded-[2px]",
-                          date > today ? "bg-line/25" : HEAT_BG[heatLevel(n)],
+                          date > today ? "bg-line/25" : HEAT_BG[heatLevel(dishes)],
                         )}
                       />
                     ))}

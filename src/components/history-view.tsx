@@ -70,7 +70,7 @@ export function HistoryView() {
     if (finishedIds) void fetchReviews(finishedIds.split(","));
   }, [finishedIds]);
 
-  // 下厨详情（全屏子页面）。首次打开前不挂 Portal，避免服务端预渲染时访问 document
+  // 下厨日历（全屏子页面）。首次打开前不挂 Portal，避免服务端预渲染时访问 document
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailMounted, setDetailMounted] = useState(false);
   const openDetail = () => {

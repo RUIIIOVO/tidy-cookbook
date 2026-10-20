@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { Star, Trash } from "@phosphor-icons/react";
+import { Plus, Star, Trash, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDish } from "@/data/dishes";
 import { mealTitle } from "@/lib/meal-time";
@@ -15,6 +15,10 @@ import { DishThumb } from "./dish-thumb";
 /** 好评在前，下厨复盘在后 */
 const POSITIVE_TAGS = ["全场最佳", "下饭神器", "汤汁拌饭", "火候刚好", "肉炖得烂", "清爽解腻"];
 const REVIEW_TAGS = ["味道偏咸", "过于清淡", "稍微偏辣", "油有点大", "糖放多了"];
+const PRESET_TAGS = [...POSITIVE_TAGS, ...REVIEW_TAGS];
+/** 自定义标签：最多几个、每个最多几个字 */
+const CUSTOM_MAX = 3;
+const CUSTOM_LEN = 6;
 
 /** 按手指在星星区域里的横向位置换算成 1~5 星 */
 function starAt(clientX: number, el: HTMLElement): number {
@@ -123,12 +127,28 @@ function ReviewForm({
   const [dishRatings, setDishRatings] = useState<Record<string, number>>(review?.dishRatings ?? {});
   const [comment, setComment] = useState(review?.comment ?? "");
   const [busy, setBusy] = useState(false);
+  // 自定义标签：点「＋ 自定义」把这一格变成输入框
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const customTags = tags.filter((t) => !PRESET_TAGS.includes(t));
   // 删除走抽屉内的二次确认：抽屉打开时外部的确认弹窗点不到
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const toggleTag = (t: string) => {
     haptic(4);
     setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  };
+
+  const commitCustom = () => {
+    const text = Array.from(draft.trim()).slice(0, CUSTOM_LEN).join("");
+    setAdding(false);
+    setDraft("");
+    if (!text) return;
+    // 和预设重名就当作选中那个预设；已经选了就不重复加
+    if (tags.includes(text)) return;
+    if (!PRESET_TAGS.includes(text) && customTags.length >= CUSTOM_MAX) return;
+    haptic(6);
+    setTags((prev) => [...prev, text]);
   };
 
   const submit = async () => {
@@ -167,7 +187,7 @@ function ReviewForm({
         type="button"
         onClick={() => toggleTag(t)}
         className={cn(
-          "rounded-xl border py-2 text-[12px] font-medium transition active:scale-95",
+          "h-9 rounded-xl border text-[12px] font-medium transition active:scale-95",
           on ? "border-accent bg-accent text-white" : cn("border-line bg-card", muted ? "text-ink-3" : "text-ink-2"),
         )}
       >
@@ -175,6 +195,48 @@ function ReviewForm({
       </button>
     );
   };
+
+  // 复盘组的最后一格：「＋ 自定义」。和前面 11 个预设正好凑成 4 行 × 3 列
+  const customSlot = adding ? (
+    <input
+      key="custom-input"
+      autoFocus
+      value={draft}
+      maxLength={CUSTOM_LEN * 2}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commitCustom}
+      onKeyDown={(e) => {
+        // 中文输入法选字时的回车不算提交
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitCustom();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          setAdding(false);
+          setDraft("");
+        }
+      }}
+      placeholder={`最多 ${CUSTOM_LEN} 个字`}
+      enterKeyHint="done"
+      className="h-9 min-w-0 rounded-xl border border-accent bg-card px-2 text-center text-[12px] text-ink outline-none placeholder:text-ink-3/60"
+    />
+  ) : (
+    <button
+      key="custom-add"
+      type="button"
+      disabled={customTags.length >= CUSTOM_MAX}
+      onClick={() => {
+        haptic(4);
+        setAdding(true);
+      }}
+      className="flex h-9 items-center justify-center gap-1 rounded-xl border border-dashed border-line-2 bg-transparent text-[12px] text-ink-3 transition active:scale-95 disabled:opacity-40"
+    >
+      <Plus size={12} />
+      自定义
+    </button>
+  );
 
   return (
     <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -222,7 +284,27 @@ function ReviewForm({
       <div className="mt-5">
         <p className="text-[12px] font-medium text-ink-3">评价标签</p>
         <div className="mt-2 grid grid-cols-3 gap-2">{POSITIVE_TAGS.map((t) => tagBtn(t, false))}</div>
-        <div className="mt-2 grid grid-cols-3 gap-2">{REVIEW_TAGS.map((t) => tagBtn(t, true))}</div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {REVIEW_TAGS.map((t) => tagBtn(t, true))}
+          {customSlot}
+        </div>
+        {/* 自定义标签加在预设下面，点一下就删掉 */}
+        {customTags.length > 0 && (
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {customTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-label={`移除标签 ${t}`}
+                onClick={() => toggleTag(t)}
+                className="flex h-9 items-center justify-center gap-1 rounded-xl border border-accent bg-accent px-2 text-[12px] font-medium text-white transition active:scale-95"
+              >
+                <span className="truncate">{t}</span>
+                <X size={10} weight="bold" className="shrink-0 opacity-80" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 文字点评 */}

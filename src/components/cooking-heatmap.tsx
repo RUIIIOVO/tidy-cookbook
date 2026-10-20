@@ -31,10 +31,11 @@ export function CookingHeatmap({
     void ensureYear(Number(today.slice(0, 4)));
   }, [start, today, ensureYear]);
 
-  const { cookDays, meals } = useMemo(() => {
+  const { cookDays, meals, dishes } = useMemo(() => {
     let cookDays = 0;
     let meals = 0;
-    if (!start) return { cookDays, meals };
+    let dishes = 0;
+    if (!start) return { cookDays, meals, dishes };
     for (let i = 0; i < WEEKS * 7; i++) {
       const d = addDays(start, i);
       if (d > today) break;
@@ -42,9 +43,10 @@ export function CookingHeatmap({
       if (n > 0) {
         cookDays += 1;
         meals += n;
+        dishes += data[d]?.dishCount ?? 0;
       }
     }
-    return { cookDays, meals };
+    return { cookDays, meals, dishes };
   }, [start, today, data]);
 
   if (!today) return null;
@@ -61,8 +63,9 @@ export function CookingHeatmap({
           下厨记录
         </button>
         <span className="tabular-nums">
-          近 90 天下厨 <strong className="font-medium text-ink">{cookDays}</strong> 天 · 共{" "}
-          <strong className="font-medium text-ink">{meals}</strong> 餐
+          近 90 天下厨 <strong className="font-medium text-ink">{cookDays}</strong> 天 ·{" "}
+          <strong className="font-medium text-ink">{meals}</strong> 餐 ·{" "}
+          <strong className="font-medium text-ink">{dishes}</strong> 道菜
         </span>
       </div>
 
@@ -74,7 +77,7 @@ export function CookingHeatmap({
           onClick={open}
           className="flex items-center gap-0.5 text-[11px] font-medium text-accent"
         >
-          查看年度与月份详情
+          查看日历
           <CaretRight size={10} />
         </button>
         <HeatLegend />

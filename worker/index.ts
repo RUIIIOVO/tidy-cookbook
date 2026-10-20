@@ -208,14 +208,28 @@ export default {
         const body = await readBody(req);
         const mealId = str(body.mealId).trim();
         const rating = Number(body.rating);
-        const ratingText = str(body.ratingText).trim();
-        const comment = str(body.comment).trim();
-        const tags = Array.isArray(body.tags) ? body.tags.filter((t): t is string => typeof t === "string") : [];
-        const dishRatings = body.dishRatings && typeof body.dishRatings === "object" ? body.dishRatings : {};
+        const comment = str(body.comment).trim().slice(0, 200);
+        // 标签：去空白、去重，每个最多 8 个字（客户端限 6），最多 16 个
+        const tags = [
+          ...new Set(
+            (Array.isArray(body.tags) ? body.tags : [])
+              .filter((t): t is string => typeof t === "string")
+              .map((t) => t.trim())
+              .filter((t) => t && [...t].length <= 8),
+          ),
+        ].slice(0, 16);
+        // 单菜星级只收 1~5 的整数
+        const dishRatings: Record<string, number> = {};
+        const rawDish = body.dishRatings && typeof body.dishRatings === "object" ? (body.dishRatings as Record<string, unknown>) : {};
+        for (const [k, v] of Object.entries(rawDish).slice(0, 40)) {
+          if (typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 5) dishRatings[k] = v;
+        }
 
-        if (!mealId || !rating || rating < 1 || rating > 5) {
+        if (!mealId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
           return json({ error: "点评信息不完整或格式有误" }, { status: 400 });
         }
+        // 档位文案以服务端为准，不信客户端传的
+        const ratingText = ["", "拉完了", "NPC", "人上人", "顶级", "夯爆了"][rating];
 
         // 校验 meal 归属
         const meal = await env.DB.prepare(`SELECT id FROM meal WHERE id = ? AND kitchen_id = ?`)

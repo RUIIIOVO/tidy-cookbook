@@ -5,9 +5,12 @@ import type { HeatmapDay } from "@/lib/heatmap-store";
 import { addDays } from "@/lib/meal-time";
 import { cn, haptic } from "@/lib/utils";
 
-/** 色阶：0 餐 / 1 餐 / 2 餐 / 3 餐及以上。订单页、下厨详情、图例共用这一份 */
+/** 色阶：订单页、下厨日历、图例共用这一份 */
 export const HEAT_BG = ["bg-[#e4e2dc]", "bg-[#6b9e7f]", "bg-[#457c5f]", "bg-[#2e6349]"] as const;
-export const heatLevel = (count: number) => Math.min(3, Math.max(0, count));
+
+/** 按当天做的菜品数着色：0 / 1–2 道 / 3–4 道 / 5 道及以上 */
+export const HEAT_HINT = "按当天菜品数：1–2 · 3–4 · 5+ 道";
+export const heatLevel = (dishes: number) => (dishes <= 0 ? 0 : dishes <= 2 ? 1 : dishes <= 4 ? 2 : 3);
 
 /** 'YYYY-MM-DD' 所在周的周一 */
 export function mondayOf(date: string): string {
@@ -17,9 +20,10 @@ export function mondayOf(date: string): string {
 
 const WEEKDAY_LABEL: Record<number, string> = { 0: "一", 2: "三", 4: "五", 6: "日" };
 
-export function HeatLegend({ className }: { className?: string }) {
+export function HeatLegend({ className, hint }: { className?: string; hint?: string }) {
   return (
     <div className={cn("flex items-center gap-1 text-[9.5px] text-ink-3", className)}>
+      {hint && <span className="mr-auto">{hint}</span>}
       <span>少</span>
       {HEAT_BG.map((bg) => (
         <span key={bg} className={cn("size-[9px] rounded-[2px]", bg)} />
@@ -118,10 +122,11 @@ export function HeatmapGrid({
           return <span key={date} style={pos} className={cn(base, "bg-line/25")} />;
         }
         const stat = data[date];
-        const count = stat?.mealCount ?? 0;
-        const title = `${date}：${count > 0 ? `${count} 餐` : "没下厨"}`;
+        const meals = stat?.mealCount ?? 0;
+        const dishes = stat?.dishCount ?? 0;
+        const title = `${date}：${meals > 0 ? `${meals} 餐 · ${dishes} 道菜` : "没下厨"}`;
         if (!onSelectDate) {
-          return <span key={date} title={title} style={pos} className={cn(base, HEAT_BG[heatLevel(count)])} />;
+          return <span key={date} title={title} style={pos} className={cn(base, HEAT_BG[heatLevel(dishes)])} />;
         }
         return (
           <button
@@ -133,7 +138,7 @@ export function HeatmapGrid({
               haptic(6);
               onSelectDate(date);
             }}
-            className={cn(base, HEAT_BG[heatLevel(count)], "transition active:scale-125")}
+            className={cn(base, HEAT_BG[heatLevel(dishes)], "transition active:scale-125")}
           />
         );
       })}
