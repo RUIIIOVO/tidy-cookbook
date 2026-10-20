@@ -123,8 +123,6 @@ function StackedCard({
   const depth = useTransform(pos, (v) => Math.max(0, card.seq - v));
   const scale = useTransform(depth, [0, 1, 2, 3], [1, 0.95, 0.9, 0.85]);
   const y = useTransform(depth, [0, 1, 2, 3], [0, PEEK, PEEK * 2, PEEK * 3]);
-  // 后面两层各歪一点点，像随手叠的一摞纸牌；顶牌是正的
-  const slotRotate = useTransform(depth, [0, 1, 2, 3], [0, -1.2, 1.2, 1.6]);
   // 后牌略暗一点：盖一层深一档的纸色（偏暖，和纸面协调），越靠后越深；比降透明度干净，不会发白
   const tint = useTransform(depth, [0, 1, 2], [0, 0.55, 0.9]);
   // 第四层及以后淡出：新牌从最后面淡入
@@ -195,9 +193,9 @@ function StackedCard({
         overscrollBehaviorX: "none",
       }}
     >
-      {/* 里层负责「叠」：缩放 / 下移 / 微旋转都围绕底边，外层负责「拖」 */}
+      {/* 里层负责「叠」：缩放 / 下移都围绕底边中点，三层严格左右对称、居中对齐；外层负责「拖」 */}
       <motion.div
-        style={{ scale, y, rotate: slotRotate, opacity: appear, transformOrigin: "50% 100%" }}
+        style={{ scale, y, opacity: appear, transformOrigin: "50% 100%" }}
         className={cn(
           "relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card text-left",
           isTop
