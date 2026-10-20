@@ -30,11 +30,16 @@ function BoardPage({
   sort,
   cat,
   padBottom,
+  listRef,
+  width,
 }: {
   rows: Row[];
   sort: Sort;
   cat: Cat;
   padBottom: boolean;
+  listRef: (el: HTMLDivElement | null) => void;
+  /** 每页宽度 = 100% / 分类数（分类数不是固定的，不能写死 1/6） */
+  width: string;
 }) {
   const openSheet = useDishSheet((s) => s.open);
   const empty =
@@ -43,7 +48,7 @@ function BoardPage({
       : { title: "还没点过菜", hint: "下单吃过的菜会在这里排名" };
 
   return (
-    <div className="no-scrollbar h-full w-1/2 shrink-0 overflow-y-auto overscroll-contain">
+    <div ref={listRef} style={{ width }} className="no-scrollbar h-full shrink-0 overflow-y-auto overscroll-contain">
       {rows.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center px-10 pb-24 text-center">
           <p className="font-display text-[17px] tracking-wider text-ink">
@@ -141,18 +146,22 @@ export function Leaderboard({
   const stats = useCart((s) => s.stats);
   const cartKinds = useCart((s) => s.items.length);
 
+  // 排序（评分 / 点菜次数）用顶部胶囊切换；左右横滑切换的是分类
   const [sort, setSort] = useState<Sort>("rating");
   const [cat, setCat] = useState<Cat>("all");
-  const idx = sort === "rating" ? 0 : 1;
+
+  // 分类顺序：全部 + 各大类
+  const cats = useMemo(() => [{ id: "all" as Cat, name: "全部" }, ...categories.map((c) => ({ id: c.id as Cat, name: c.name }))], []);
+  const catIdx = Math.max(0, cats.findIndex((c) => c.id === cat));
 
   useBackClose(true, onClose);
   useEffect(() => {
     void refreshRatings(true);
   }, [refreshRatings]);
 
+  /** 每个分类各自的榜单（按当前排序方式算） */
   const lists = useMemo(() => {
-    const pool = cat === "all" ? dishes : dishes.filter((d) => d.category === cat);
-    const build = (by: Sort): Row[] => {
+    const build = (pool: Dish[], by: Sort): Row[] => {
       const list = pool
         .map((dish) => ({
           dish,
@@ -168,29 +177,51 @@ export function Leaderboard({
           ? (a, b) => b.avg - a.avg || b.n - a.n || b.count - a.count || a.dish.name.localeCompare(b.dish.name)
           : (a, b) => b.count - a.count || b.avg - a.avg || b.n - a.n || a.dish.name.localeCompare(b.dish.name),
       );
-
-      // 名次永远是 1、2、3…：同分的靠上面的第二、第三排序条件分先后。
-      // （原来并列同名次，一多就成了「前五个都是 1、后面都是 6」，不好看）
+      // 名次永远 1、2、3…；同分的靠上面的第二、第三排序条件分先后
       list.forEach((r, i) => {
         r.rank = i + 1;
       });
       return list;
     };
-    return { rating: build("rating"), count: build("count") };
-  }, [ratings, stats, cat]);
 
-  // ── 跟手横滑切换（逻辑与订单页的时间段切换一致）──
+    return cats.map((c) => ({
+      ...c,
+      rows: build(c.id === "all" ? dishes : dishes.filter((d) => d.category === c.id), sort),
+    }));
+  }, [cats, ratings, stats, sort]);
+
+  // 按分类记住滚动位置：切回来还在原处
+  const panes = useRef<(HTMLDivElement | null)[]>([]);
+  const positions = useRef<Record<string, number>>({});
+
+  // ── 跟手横滑切换分类 ──
   const pagerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const touch = useRef<{ x: number; y: number; t: number; w: number; horiz: boolean | null; dx: number } | null>(null);
+  const touch = useRef<{ x: number; y: number; t: number; lastT: number; w: number; horiz: boolean | null; dx: number } | null>(null);
+
+  const goCat = (i: number) => {
+    const next = Math.max(0, Math.min(cats.length - 1, i));
+    if (next === catIdx) return;
+    haptic(8);
+    // 记住离开的这一页滚到哪了
+    positions.current[cat] = panes.current[catIdx]?.scrollTop ?? 0;
+    setCat(cats[next].id);
+  };
+
+  useEffect(() => {
+    // 切到某一页时恢复它自己的滚动位置
+    const el = panes.current[catIdx];
+    if (el) el.scrollTop = positions.current[cat] ?? 0;
+  }, [catIdx, cat]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     const p = e.touches[0];
     touch.current = {
       x: p.clientX,
       y: p.clientY,
-      t: performance.now(),
+      t: e.timeStamp,
+      lastT: e.timeStamp,
       w: pagerRef.current?.offsetWidth || window.innerWidth,
       horiz: null,
       dx: 0,
@@ -208,8 +239,9 @@ export function Leaderboard({
       if (s.horiz) setDragging(true);
     }
     if (!s.horiz) return;
-    // 在两端继续往外拖要有阻力
-    const eff = (idx === 0 && dx > 0) || (idx === 1 && dx < 0) ? dx * 0.25 : dx;
+    s.lastT = e.timeStamp;
+    // 两端继续往外拖给阻力
+    const eff = (catIdx === 0 && dx > 0) || (catIdx === cats.length - 1 && dx < 0) ? dx * 0.25 : dx;
     s.dx = eff;
     setDrag(eff);
   };
@@ -217,14 +249,12 @@ export function Leaderboard({
     const s = touch.current;
     touch.current = null;
     if (commit && s?.horiz) {
-      const v = s.dx / Math.max(1, performance.now() - s.t);
-      let to = idx;
-      if (s.dx < -s.w * 0.2 || (v < -0.3 && s.dx < -20)) to = Math.min(1, idx + 1);
-      else if (s.dx > s.w * 0.2 || (v > 0.3 && s.dx > 20)) to = Math.max(0, idx - 1);
-      if (to !== idx) {
-        haptic(8);
-        setSort(SORTS[to].key);
-      }
+      // 甩动速度用两次触摸事件的间隔算，不在这里读时钟
+      const v = s.dx / Math.max(1, s.lastT - s.t);
+      let to = catIdx;
+      if (s.dx < -s.w * 0.2 || (v < -0.3 && s.dx < -20)) to = catIdx + 1;
+      else if (s.dx > s.w * 0.2 || (v > 0.3 && s.dx > 20)) to = catIdx - 1;
+      goCat(to);
     }
     setDragging(false);
     setDrag(0);
@@ -238,7 +268,7 @@ export function Leaderboard({
       transition={{ type: "spring", stiffness: 380, damping: 40 }}
       className="fixed inset-0 z-50 mx-auto flex max-w-[520px] flex-col overflow-hidden bg-paper select-none"
     >
-      {/* 固定在上面：返回 + 标题 + 排序切换；下面一行分类。滚动只发生在它下面的列表里 */}
+      {/* 固定在上面：返回 + 标题 + 排序切换。滚动只发生在下面的列表里 */}
       <header className="shrink-0 border-b border-line bg-paper pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between px-4 pb-3">
           <div className="flex items-center gap-2">
@@ -256,11 +286,11 @@ export function Leaderboard({
             <h1 className="font-display text-[20px] tracking-wider text-ink">排行榜</h1>
           </div>
 
-          {/* 评分 / 点菜次数：滑块平移，和底部导航、月/年切换一致 */}
+          {/* 评分 / 点菜次数：滑块平移 */}
           <div className="relative flex rounded-full border border-line bg-card p-1">
             <motion.span
               initial={false}
-              animate={{ x: idx * SWITCH_W }}
+              animate={{ x: sort === "rating" ? 0 : SWITCH_W }}
               transition={{ type: "spring", stiffness: 480, damping: 38 }}
               style={{ width: SWITCH_W }}
               className="pointer-events-none absolute inset-y-1 left-1 rounded-full bg-accent"
@@ -285,14 +315,15 @@ export function Leaderboard({
           </div>
         </div>
 
+        {/* 分类：横滑切换的是这一排；点击也生效 */}
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3">
-          {[{ id: "all", name: "全部" }, ...categories].map((c) => (
+          {cats.map((c, i) => (
             <button
               key={c.id}
               type="button"
               onClick={() => {
                 haptic(6);
-                setCat(c.id);
+                goCat(i);
               }}
               className={cn(
                 "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] transition",
@@ -305,7 +336,7 @@ export function Leaderboard({
         </div>
       </header>
 
-      {/* 两个榜并排成一条轨道，横滑时跟手 */}
+      {/* 每个分类一页，并排成一条轨道，横滑时跟手 */}
       <div
         ref={pagerRef}
         onTouchStart={onTouchStart}
@@ -316,17 +347,28 @@ export function Leaderboard({
       >
         <div
           style={{
-            width: "200%",
-            transform: `translate3d(calc(${-idx * 50}% + ${drag}px), 0, 0)`,
+            width: `${cats.length * 100}%`,
+            transform: `translate3d(calc(${-catIdx * (100 / cats.length)}% + ${drag}px), 0, 0)`,
             transition: dragging ? "none" : "transform 320ms cubic-bezier(0.16, 1, 0.3, 1)",
           }}
           className="flex h-full will-change-transform"
         >
-          <BoardPage rows={lists.rating} sort="rating" cat={cat} padBottom={cartKinds > 0} />
-          <BoardPage rows={lists.count} sort="count" cat={cat} padBottom={cartKinds > 0} />
+          {lists.map((c, i) => (
+            <BoardPage
+              key={c.id}
+              rows={c.rows}
+              sort={sort}
+              cat={c.id}
+              padBottom={cartKinds > 0}
+              width={`${100 / cats.length}%`}
+              listRef={(el) => {
+                panes.current[i] = el;
+              }}
+            />
+          ))}
         </div>
 
-        {/* 这个页面是全屏的，盖住了底部导航上的购物车角标，所以自带一条汇总，点了去点菜单 */}
+        {/* 全屏页盖住了底部导航的购物车角标，这里自带一条汇总 */}
         {cartKinds > 0 && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-paper via-paper/95 to-paper/0 px-4 pt-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <button
