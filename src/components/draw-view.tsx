@@ -90,6 +90,7 @@ function StackedCard({
   card,
   index,
   pos,
+  cardH,
   exitDir,
   onSwipe,
   onDragProgress,
@@ -99,6 +100,8 @@ function StackedCard({
   card: CardItem;
   index: number;
   pos: MotionValue<number>;
+  /** 卡片实际高度（px），由舞台实测后传进来，用来算后牌往上露边要补多少 */
+  cardH: MotionValue<number>;
   exitDir: number;
   onSwipe: (dir: "left" | "right") => void;
   onDragProgress: (p: number) => void;
@@ -114,13 +117,12 @@ function StackedCard({
   const depth = useTransform(pos, (v) => Math.max(0, card.seq - v));
   const scale = useTransform(depth, [0, 1, 2, 3], [1, 0.95, 0.9, 0.85]);
   // 方案 A：后两层向上错开，露出的边出现在卡片上方。
-  // 绕底边缩放会让顶边往下缩（缩 5% ≈ 26px），所以上移量里要把这部分补回来，否则后牌依旧藏在后面。
-  const y = useTransform(depth, [0, 1, 2, 3], [
-    "0px",
-    "calc(-12px - 5%)",
-    "calc(-24px - 10%)",
-    "calc(-36px - 15%)",
-  ]);
+  // 绕底边缩放会让顶边往下缩（缩 5% × 卡片高），所以每层要多往上提这一截，否则后牌还藏在后面。
+  // 必须算成数值：原来写成 calc(…%) 字符串，动画库没法和 0 连续插值，第二张变成顶牌的最后一帧会突然跳 38px。
+  const y = useTransform([depth, cardH], ([d, h]: number[]) => {
+    const k = Math.min(d, 3);
+    return -k * (12 + 0.05 * h);
+  });
 
   // 同向阶梯微旋转，绕底边中点：顶边往上甩出来，露在上方的那两条边会带一点倾斜
   const slotRotate = useTransform(depth, [0, 1, 2, 3], [0, 1.2, 2.4, 3.6]);
@@ -185,7 +187,9 @@ function StackedCard({
         x,
         rotate: isTop ? dragRotate : 0,
         transformOrigin: "50% 100%",
-        zIndex: 30 - index * 10,
+        // 层级按入队顺序（seq 越小越靠上），不按数组下标：
+        // 否则飞出中的牌和新顶牌下标都是 0、层级相同，飞出的那张会被下一张盖住、像突然消失
+        zIndex: 100000 - card.seq,
         touchAction: "pan-y",
         overscrollBehaviorX: "none",
       }}
@@ -259,6 +263,18 @@ export function DrawView() {
 
   const nextSeqRef = useRef(3);
   const pos = useMotionValue(0);
+  // 卡片实际高度 = 舞台高度 − 顶部给后牌露边留的位置；窗口变化时跟着更新
+  const cardH = useMotionValue(500);
+  const stageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const update = () => cardH.set(Math.max(0, el.clientHeight - PEEK * 2));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [cardH]);
   const posAnim = useRef<ReturnType<typeof animate> | null>(null);
   const topSeq = cards[0]?.seq ?? 0;
 
@@ -380,6 +396,7 @@ export function DrawView() {
 
       <div className="flex min-h-[340px] flex-1 flex-col justify-center py-3">
         <div
+          ref={stageRef}
           className="relative w-full flex-1 [--text-h:141px] [@media(min-height:820px)]:[--text-h:169px]"
           style={{
             maxHeight: `calc(min(100vw, 520px) - 40px + var(--text-h) + ${PEEK * 2}px)`,
@@ -393,6 +410,7 @@ export function DrawView() {
                 card={c}
                 index={idx}
                 pos={pos}
+                cardH={cardH}
                 exitDir={exitDir}
                 onSwipe={handleSwipe}
                 onDragProgress={onDragProgress}
