@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { glideScroll, windowScroller } from "@/lib/glide-scroll";
+import { useDishRatings } from "@/lib/dish-rating-store";
 import { catIcon } from "@/lib/icons";
 import { categories, dishes, getDish, sections } from "@/data/dishes";
 import type { SubId } from "@/data/types";
@@ -39,6 +40,12 @@ export function MenuView() {
     }
     return m;
   }, [cartItems]);
+
+  // 菜品卡上的平均分：进入菜单页时拉一次
+  const refreshRatings = useDishRatings((s) => s.refresh);
+  useEffect(() => {
+    void refreshRatings();
+  }, [refreshRatings]);
 
   const results = useMemo(() => (searching ? searchDishes(dishes, q) : []), [q, searching]);
 

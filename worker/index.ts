@@ -204,6 +204,11 @@ export default {
         return json({ reviews: meals.map((m) => m.review).filter(Boolean) });
       }
 
+      // 每道菜的单菜评分汇总：只算评价里「单独给这道菜打的星」，没单独打分的不算
+      if (url.pathname === "/api/dish-ratings" && req.method === "GET") {
+        return json({ ratings: await getDishRatings(env.DB, user.kitchenId) });
+      }
+
       if (url.pathname === "/api/reviews" && req.method === "POST") {
         const body = await readBody(req);
         const mealId = str(body.mealId).trim();
@@ -448,4 +453,39 @@ async function getCookingHeatmap(db: D1Database, kitchenId: string, from: string
     };
   }
   return map;
+}
+
+/**
+ * 汇总全厨房的单菜评分 → { 菜品id: { avg 平均星级(一位小数), n 评分次数 } }。
+ * 评价里的 dish_ratings 是 JSON，家用规模（几百条评价）直接在 Worker 里实时汇总，不额外建表。
+ */
+async function getDishRatings(db: D1Database, kitchenId: string) {
+  const res = await db
+    .prepare(
+      `SELECT dish_ratings AS d FROM meal_review
+        WHERE kitchen_id = ? AND dish_ratings IS NOT NULL AND dish_ratings != '{}'`,
+    )
+    .bind(kitchenId)
+    .all<{ d: string }>();
+
+  const acc = new Map<string, { sum: number; n: number }>();
+  for (const row of res.results ?? []) {
+    let obj: unknown;
+    try {
+      obj = JSON.parse(row.d);
+    } catch {
+      continue;
+    }
+    if (!obj || typeof obj !== "object") continue;
+    for (const [dishId, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > 5) continue;
+      const a = acc.get(dishId) ?? { sum: 0, n: 0 };
+      a.sum += v;
+      a.n += 1;
+      acc.set(dishId, a);
+    }
+  }
+  const out: Record<string, { avg: number; n: number }> = {};
+  for (const [id, a] of acc) out[id] = { avg: Math.round((a.sum / a.n) * 10) / 10, n: a.n };
+  return out;
 }

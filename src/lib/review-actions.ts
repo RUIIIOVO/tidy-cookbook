@@ -1,6 +1,7 @@
 "use client";
 
 import { authHeaders } from "./auth-store";
+import { useDishRatings } from "./dish-rating-store";
 import { useHeatmap } from "./heatmap-store";
 import { useHistory } from "./history-store";
 import type { MealReview } from "./protocol";
@@ -51,6 +52,7 @@ export async function saveReview(mealId: string, draft: ReviewDraft): Promise<Me
   })) as { review: MealReview };
   useHistory.getState().updateReview(mealId, json.review);
   void useHeatmap.getState().refresh();
+  void useDishRatings.getState().refresh(true);
   return json.review;
 }
 
@@ -59,6 +61,7 @@ export async function deleteReview(mealId: string): Promise<void> {
   await call("DELETE", { mealId });
   useHistory.getState().updateReview(mealId, null);
   void useHeatmap.getState().refresh();
+  void useDishRatings.getState().refresh(true);
 }
 
 /** 批量补拉点评（今天已吃完的几餐来自实时快照，快照里没有点评） */

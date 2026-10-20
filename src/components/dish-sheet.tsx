@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
-import { Minus, Plus, SlidersHorizontal } from "@phosphor-icons/react";
+import { Minus, Plus, SlidersHorizontal, Star } from "@phosphor-icons/react";
 import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
@@ -10,6 +10,7 @@ import { getDish } from "@/data/dishes";
 import { catTheme, spicyLabel } from "@/lib/theme";
 import { useCustomModal } from "@/lib/custom-modal-store";
 import { useCart } from "@/lib/store";
+import { useDishRatings } from "@/lib/dish-rating-store";
 import { useDishSheet } from "@/lib/ui-store";
 import { haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
@@ -39,6 +40,7 @@ export function DishSheet() {
   const dish = dishId ? getDish(dishId) : undefined;
   const isCustomizable = dishId ? !!CUSTOM_CONFIGS[dishId] : false;
   const orderCount = useCart((s) => (dish ? s.stats[dish.id] || 0 : 0));
+  const rating = useDishRatings((s) => (dish ? s.ratings[dish.id] : undefined));
 
   // 抽屉收起动画期间按钮仍可点，挡住二次加入
   const addToCart = useGuard(() => {
@@ -121,6 +123,19 @@ export function DishSheet() {
                       {orderCount > 0 ? `${orderCount} 次` : <span className="text-ink-3 font-normal">还没做过</span>}
                     </div>
                   </div>
+                  {/* 被单独打过分才有这一栏 */}
+                  {rating && (
+                    <div className="flex-1 px-3 py-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                        <Star size={12} weight="regular" />
+                        评分
+                      </div>
+                      <div className="mt-0.5 text-[13px] font-medium tabular-nums text-accent">
+                        {rating.avg.toFixed(1)}
+                        <span className="ml-0.5 text-[10px] font-normal text-ink-3">· {rating.n}次</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div ref={ingredientsRef}>

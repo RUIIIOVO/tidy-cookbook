@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
 import { ArrowsClockwise, CookingPot, Plus, Sparkle } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -9,10 +9,12 @@ import type { CategoryId, Dish } from "@/data/types";
 import { catTheme, spicyLabel } from "@/lib/theme";
 import { hasImage, preloadImage } from "@/lib/images";
 import { useCart } from "@/lib/store";
+import { useDishRatings } from "@/lib/dish-rating-store";
 import { useGuard } from "@/lib/use-guard";
 import { useDishSheet } from "@/lib/ui-store";
 import { cn, haptic } from "@/lib/utils";
 import { DishThumb } from "./dish-thumb";
+import { RatingBadge } from "./rating-badge";
 
 type Filter = "all" | CategoryId;
 
@@ -189,6 +191,7 @@ function StackedCard({
                   {dish.desc}
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-3">
+                  <RatingBadge dishId={dish.id} />
                   <span>{spicyLabel[dish.spicy]}</span>
                   <span className="ml-auto text-ink-3">查看详情 →</span>
                 </div>
@@ -210,6 +213,11 @@ export function DrawView() {
 
   const add = useCart((s) => s.add);
   const openSheet = useDishSheet((s) => s.open);
+
+  const refreshRatings = useDishRatings((s) => s.refresh);
+  useEffect(() => {
+    void refreshRatings();
+  }, [refreshRatings]);
 
   const pool = useMemo(
     () => (filter === "all" ? dishes : dishes.filter((d) => d.category === filter)),

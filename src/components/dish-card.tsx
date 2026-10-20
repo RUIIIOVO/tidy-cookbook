@@ -8,6 +8,7 @@ import { haptic } from "@/lib/utils";
 import { AddButton } from "./add-button";
 import { DishThumb } from "./dish-thumb";
 import { Meta } from "./meta";
+import { RatingBadge } from "./rating-badge";
 
 export function DishCard({ dish, priority }: { dish: Dish; priority?: boolean }) {
   const open = useDishSheet((s) => s.open);
@@ -35,9 +36,12 @@ export function DishCard({ dish, priority }: { dish: Dish; priority?: boolean })
 
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="min-w-0">
-          <h3 className="truncate font-display text-[16px] leading-tight tracking-wide text-ink">
-            {dish.name}
-          </h3>
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="truncate font-display text-[16px] leading-tight tracking-wide text-ink">
+              {dish.name}
+            </h3>
+            <RatingBadge dishId={dish.id} />
+          </div>
           <p className="mt-1 line-clamp-2 text-[11.5px] leading-[1.55] text-ink-3">
             {dish.desc}
           </p>
