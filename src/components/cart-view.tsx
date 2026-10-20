@@ -48,10 +48,13 @@ export function CartView() {
   const [picked, setPicked] = useState<string[]>([]);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+  const meals = useCart((s) => s.meals);
   const [lastOrder, setLastOrder] = useState<{
     date: string;
     slot: Slot;
     count: number;
+    /** 在实时订单里见过这一单了（之后它没了，才说明被删 / 改走了） */
+    seen?: boolean;
   } | null>(null);
 
   const removeOne = useCart((s) => s.remove);
@@ -84,6 +87,15 @@ export function CartView() {
 
   // 又开始点菜了，上一单的「已下单」提示就不再需要；否则之后手动删空点菜单会误显示它
   if (rows.length > 0 && lastOrder) setLastOrder(null);
+
+  // 这单后来被删了（或被改到别的一餐）：「已下单」就不对了，收起提示。
+  // 下单的回执可能比订单快照先到，所以要先在订单里「见过」它，之后又没了才算被删。
+  // （补录到过去日期的订单不在实时快照里，见不到，就一直保留提示，不会误清）
+  if (lastOrder) {
+    const exists = meals.some((m) => m.mealDate === lastOrder.date && m.slot === lastOrder.slot);
+    if (exists && !lastOrder.seen) setLastOrder({ ...lastOrder, seen: true });
+    else if (!exists && lastOrder.seen) setLastOrder(null);
+  }
 
   if (rows.length === 0) {
     // 空状态与备菜页同一版式：左上角页面标题，内容在剩余区域居中
@@ -122,7 +134,7 @@ export function CartView() {
                   className="flex items-center gap-1.5 rounded-full border border-line-2 bg-card px-5 py-2.5 text-[13px] text-ink transition active:scale-[0.97]"
                 >
                   <BookOpen size={15} weight="regular" />
-                  接着点下一餐
+                  继续点餐
                 </button>
               </div>
             </>
