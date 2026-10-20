@@ -4,9 +4,9 @@ import { ConfirmHost } from "@/components/confirm-dialog";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "今天吃什么",
+  title: "慧厨时光",
   description: "告别“今天吃什么”的日常纠结。极简家常菜谱与协同点餐助手：抽菜灵感决策，配料智能汇总，全端实时同步。",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "今天吃什么" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "慧厨时光" },
 };
 
 export const viewport: Viewport = {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type MotionValue } from "motion/react";
 import { ArrowsClockwise, Plus, Trophy } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -361,7 +362,10 @@ export function DrawView() {
   return (
     <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col px-5 pt-4">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[22px] tracking-wider text-ink">今天吃什么</h1>
+        <h1 className="flex items-center gap-2 font-display text-[22px] tracking-wider text-ink">
+          <Image src="/logo-mark.webp" alt="" width={38} height={29} priority />
+          慧厨时光
+        </h1>
         <button
           type="button"
           onClick={() => {

@@ -731,7 +731,7 @@ export class KitchenDO implements DurableObject {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
-              title: `今天吃什么 · ${title}`,
+              title: `慧厨时光 · ${title}`,
               body,
               group: "tidy-cookbook",
               level: "timeSensitive",

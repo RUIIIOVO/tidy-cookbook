@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { setToken, useAuth, type Me } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -48,8 +49,9 @@ export function LoginCard() {
   return (
     <div className="grid min-h-dvh place-items-center bg-paper px-6">
       <div className="w-full max-w-[320px]">
-        <h1 className="font-display text-[26px] tracking-wide text-ink">
-          今天吃什么
+        <h1 className="flex items-center gap-2 font-display text-[26px] tracking-wide text-ink">
+          <Image src="/logo-mark.webp" alt="" width={42} height={32} priority />
+          慧厨时光
         </h1>
         <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">
           {mode === "login"
