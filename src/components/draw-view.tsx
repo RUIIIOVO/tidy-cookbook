@@ -113,10 +113,17 @@ function StackedCard({
 
   const depth = useTransform(pos, (v) => Math.max(0, card.seq - v));
   const scale = useTransform(depth, [0, 1, 2, 3], [1, 0.95, 0.9, 0.85]);
-  const y = useTransform(depth, [0, 1, 2, 3], [0, PEEK, PEEK * 2, PEEK * 3]);
+  // 方案 A：后两层向上错开，露出的边出现在卡片上方。
+  // 绕底边缩放会让顶边往下缩（缩 5% ≈ 26px），所以上移量里要把这部分补回来，否则后牌依旧藏在后面。
+  const y = useTransform(depth, [0, 1, 2, 3], [
+    "0px",
+    "calc(-12px - 5%)",
+    "calc(-24px - 10%)",
+    "calc(-36px - 15%)",
+  ]);
 
-  // 方案 C：同向阶梯微旋转（规则递增，0° -> 2° -> 4°）
-  const slotRotate = useTransform(depth, [0, 1, 2, 3], [0, 2, 4, 5.5]);
+  // 同向阶梯微旋转，绕底边中点：顶边往上甩出来，露在上方的那两条边会带一点倾斜
+  const slotRotate = useTransform(depth, [0, 1, 2, 3], [0, 1.2, 2.4, 3.6]);
   const tint = useTransform(depth, [0, 1, 2], [0, 0.55, 0.9]);
   const appear = useTransform(depth, [2, 3], [1, 0]);
 
@@ -170,11 +177,11 @@ function StackedCard({
         onOpen();
       }}
       className={cn(
-        "absolute inset-x-0 top-0 cursor-pointer select-none will-change-transform",
+        "absolute inset-x-0 bottom-0 cursor-pointer select-none will-change-transform",
         isTop ? "active:cursor-grabbing" : "pointer-events-none",
       )}
       style={{
-        bottom: PEEK * 2,
+        top: PEEK * 2,
         x,
         rotate: isTop ? dragRotate : 0,
         transformOrigin: "50% 100%",
