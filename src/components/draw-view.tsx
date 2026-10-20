@@ -38,7 +38,7 @@ function pickRandomDishes(pool: Dish[], count: number): Dish[] {
   return shuffled.slice(0, Math.min(count, pool.length));
 }
 
-/** 一张菜品卡的正面：大图 + 名字 / 描述 / 评分 · 销量 · 辣度（高屏再多一行主料） */
+/** 一张菜品卡的正面：大图 + 名字 / 描述 / 评分 · 已售 · 辣度（高屏再多一行主料） */
 function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
   const t = catTheme[dish.category];
   const count = useCart((s) => s.stats[dish.id] || 0);
@@ -75,7 +75,7 @@ function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
           <RatingBadge dishId={dish.id} />
           {count > 0 && (
             <span className="rounded-full bg-caramel-soft px-2 py-0.5 text-[10px] font-medium text-caramel tabular-nums">
-              销量 {count}
+              已售 {count}
             </span>
           )}
           <span>{spicyLabel[dish.spicy]}</span>
