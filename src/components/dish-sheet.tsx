@@ -116,11 +116,11 @@ export function DishSheet() {
                   </div>
                   <div className="flex-1 px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
-                      <span className="text-[10px]">🍽️</span>
-                      做过
+                      <metaIcon.sales size={12} weight="regular" />
+                      销量
                     </div>
                     <div className="mt-0.5 text-[13px] tabular-nums font-medium text-caramel">
-                      {orderCount > 0 ? `${orderCount} 次` : <span className="text-ink-3 font-normal">还没做过</span>}
+                      {orderCount > 0 ? `${orderCount} 份` : <span className="text-ink-3 font-normal">暂无</span>}
                     </div>
                   </div>
                   {/* 被单独打过分才有这一栏 */}

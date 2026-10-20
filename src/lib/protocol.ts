@@ -67,7 +67,7 @@ export type Snapshot = {
   meals: Meal[];
   /** 待吃订单的买菜勾选 */
   bought: BoughtMark[];
-  /** 菜品累计点过的份数 */
+  /** 菜品累计销量（份数） */
   stats: Record<string, number>;
 };
 

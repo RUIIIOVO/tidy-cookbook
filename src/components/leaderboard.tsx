@@ -18,7 +18,7 @@ type Cat = "all" | string;
 
 const SORTS: { key: Sort; label: string }[] = [
   { key: "rating", label: "评分" },
-  { key: "count", label: "点菜次数" },
+  { key: "count", label: "销量" },
 ];
 const SWITCH_W = 72;
 
@@ -45,7 +45,7 @@ function BoardPage({
   const empty =
     sort === "rating"
       ? { title: "还没有评分", hint: "吃完饭给菜打个分，这里就有排名了" }
-      : { title: "还没点过菜", hint: "下单吃过的菜会在这里排名" };
+      : { title: "还没有销量", hint: "下单后，卖得好的菜会在这里排名" };
 
   return (
     <div ref={listRef} style={{ width }} className="no-scrollbar h-full shrink-0 overflow-y-auto overscroll-contain">
@@ -98,11 +98,11 @@ function BoardPage({
                             {avg.toFixed(1)}
                           </span>
                           <span>{n} 次评分</span>
-                          {count > 0 && <span>· 点过 {count} 次</span>}
+                          {count > 0 && <span>· 销量 {count}</span>}
                         </>
                       ) : (
                         <>
-                          <span className="text-[12.5px] font-medium text-caramel">点过 {count} 次</span>
+                          <span className="text-[12.5px] font-medium text-caramel">销量 {count}</span>
                           {n > 0 && (
                             <span className="inline-flex items-center gap-0.5">
                               ·
@@ -127,8 +127,8 @@ function BoardPage({
 
 /**
  * 排行榜：全屏子页面（从右侧推入，和下厨日历同一套做法）。
- * - 评分榜：按单菜平均分，同分依次比评分次数、点菜次数、菜名；只有被单独打过分的菜才上榜
- * - 点菜次数榜：按「点过几次」，同分依次比平均分、评分次数、菜名；没点过的不上榜
+ * - 评分榜：按单菜平均分，同分依次比评分次数、销量、菜名；只有被单独打过分的菜才上榜
+ * - 销量榜：按累计销量，同分依次比平均分、评分次数、菜名；没卖出过的不上榜
  * 两个榜是左右两页，手指可以跟手横滑切换（和订单页的时间段切换一致）；
  * 每页自己在 header 下面滚动，滚动条不会盖到 header。
  * 每行右侧直接是点单按钮，可以一路点下去，底部浮条汇总并跳到点菜单。
@@ -146,7 +146,7 @@ export function Leaderboard({
   const stats = useCart((s) => s.stats);
   const cartKinds = useCart((s) => s.items.length);
 
-  // 排序（评分 / 点菜次数）用顶部胶囊切换；左右横滑切换的是分类
+  // 排序（评分 / 销量）用顶部胶囊切换；左右横滑切换的是分类
   const [sort, setSort] = useState<Sort>("rating");
   const [cat, setCat] = useState<Cat>("all");
 
@@ -286,7 +286,7 @@ export function Leaderboard({
             <h1 className="font-display text-[20px] tracking-wider text-ink">排行榜</h1>
           </div>
 
-          {/* 评分 / 点菜次数：滑块平移 */}
+          {/* 评分 / 销量：滑块平移 */}
           <div className="relative flex rounded-full border border-line bg-card p-1">
             <motion.span
               initial={false}

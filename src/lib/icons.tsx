@@ -75,4 +75,6 @@ export const metaIcon = {
   tags: Tag,
   ingredients: Basket,
   steps: CookingPot,
+  /** 销量：和底部「点菜单」tab 同一个刀叉 */
+  sales: ForkKnife,
 } satisfies Record<string, Icon>;

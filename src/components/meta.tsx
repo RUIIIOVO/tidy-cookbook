@@ -12,7 +12,7 @@ export function Meta({ dish }: { dish: Dish }) {
     <div className="flex items-center gap-1.5">
       {count > 0 && (
         <span className="rounded-full bg-caramel-soft px-2 py-0.5 text-[10px] font-medium text-caramel tabular-nums">
-          点过 {count} 次
+          销量 {count}
         </span>
       )}
       {tags.map((t) => (
