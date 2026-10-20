@@ -140,10 +140,10 @@ export function HeatmapDetail({
       transition={{ type: "spring", stiffness: 380, damping: 40 }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="fixed inset-0 z-50 mx-auto max-w-[520px] overflow-y-auto overscroll-contain bg-paper select-none"
+      className="fixed inset-0 z-50 mx-auto flex max-w-[520px] flex-col overflow-hidden bg-paper select-none"
     >
       {/* 顶栏：吸顶 */}
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-paper/90 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md">
+      <header className="flex shrink-0 items-center justify-between border-b border-line bg-paper px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -186,6 +186,8 @@ export function HeatmapDetail({
         </div>
       </header>
 
+      {/* 滚动只发生在 header 下面，滚动条不会盖到 header */}
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <div className="px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {/* 时间切换 + 三项统计 */}
         <div className="rounded-xl border border-line bg-card shadow-2xs">
@@ -345,6 +347,7 @@ export function HeatmapDetail({
             </div>
           </div>
         )}
+      </div>
       </div>
     </motion.div>
   );
