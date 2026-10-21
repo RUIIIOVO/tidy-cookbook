@@ -29,9 +29,11 @@ Opens in any mobile browser, no install needed. During the beta everyone shares 
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="./docs/media/promo.mp4"><img src="./docs/media/promo-cover.jpg" alt="Demo video" width="420" /></a>
+      <a href="https://www.bilibili.com/video/BV1kAnq6tE59/"><img src="./docs/media/promo-cover.jpg" alt="Demo video" width="420" /></a>
       <br />
-      <a href="./docs/media/promo.mp4"><b>▶ Watch the full demo (45s, Chinese)</b></a>
+      <a href="https://www.bilibili.com/video/BV1kAnq6tE59/"><b>▶ Watch the full demo on Bilibili (45s, Chinese)</b></a>
+      <br />
+      <sub>or <a href="./docs/media/promo.mp4">download the mp4</a></sub>
     </td>
     <td align="center" width="50%">
       <img src="./docs/media/sync-demo.gif" alt="Real-time shared ordering" width="260" />
@@ -51,10 +53,16 @@ Opens in any mobile browser, no install needed. During the beta everyone shares 
 
 ## 📱 Visual Showcase
 
-| 1. Pick Inspiration | 2. Menu Exploration | 3. Recipe Details | 4. Full Cart & Grocery | 5. Order History |
+| 1. Pick Inspiration | 2. Menu | 3. Recipe Details | 4. Shared Order List | 5. Pre-Order a Meal |
 | :---: | :---: | :---: | :---: | :---: |
-| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
-| Indecisive? Swipe cards | 93 curated dishes with pinyin search | High-res image, ingredients & steps | Auto-merged across all dishes | Time range filters & infinite scroll |
+| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-order.png" width="180" /> |
+| Indecisive? Swipe cards | 93 dishes with pinyin search | Ingredients & steps | See who ordered what, in real time | Today to the day after, any meal |
+
+| 6. Prep | 7. Grocery List | 8. Ratings | 9. Leaderboard | 10. Cooking Calendar |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="./docs/screenshots/06-prep.png" width="180" /> | <img src="./docs/screenshots/07-shopping.png" width="180" /> | <img src="./docs/screenshots/08-review.png" width="180" /> | <img src="./docs/screenshots/09-rank.png" width="180" /> | <img src="./docs/screenshots/10-calendar.png" width="180" /> |
+| Grouped by meal, tap for steps | Merged across dishes, synced checks | Five-step swipe rating | Ranked by rating & orders | Month / year heatmap |
+
 
 ---
 

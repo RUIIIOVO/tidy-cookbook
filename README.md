@@ -29,9 +29,11 @@
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="./docs/media/promo.mp4"><img src="./docs/media/promo-cover.jpg" alt="慧厨时光宣传片" width="420" /></a>
+      <a href="https://www.bilibili.com/video/BV1kAnq6tE59/"><img src="./docs/media/promo-cover.jpg" alt="慧厨时光宣传片" width="420" /></a>
       <br />
-      <a href="./docs/media/promo.mp4"><b>▶ 点击观看完整宣传片（45 秒）</b></a>
+      <a href="https://www.bilibili.com/video/BV1kAnq6tE59/"><b>▶ 在 B 站观看完整宣传片（45 秒）</b></a>
+      <br />
+      <sub>也可以 <a href="./docs/media/promo.mp4">下载 mp4</a></sub>
     </td>
     <td align="center" width="50%">
       <img src="./docs/media/sync-demo.gif" alt="多人实时点菜演示" width="260" />
@@ -51,10 +53,16 @@
 
 ## 📱 视觉预览 (Screenshots)
 
-| 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 丰盛点菜单 | 5. 历史归档 |
+| 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 多人点菜单 | 5. 预订时段 |
 | :---: | :---: | :---: | :---: | :---: |
-| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-history.png" width="180" /> |
-| 纠结吃啥？滑卡随心抽 | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 跨菜品同名食材智能合并 | 时间段筛选与下滑懒加载 |
+| <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-order.png" width="180" /> |
+| 纠结吃啥？滑卡随心抽 | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 谁点的菜一目了然，实时同步 | 今天到后天，早中晚宵夜任选 |
+
+| 6. 备菜 | 7. 买菜清单 | 8. 锐评 | 9. 排行榜 | 10. 下厨日历 |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="./docs/screenshots/06-prep.png" width="180" /> | <img src="./docs/screenshots/07-shopping.png" width="180" /> | <img src="./docs/screenshots/08-review.png" width="180" /> | <img src="./docs/screenshots/09-rank.png" width="180" /> | <img src="./docs/screenshots/10-calendar.png" width="180" /> |
+| 按餐归组，点开即看做法 | 跨菜品同名食材合并，勾选同步 | 从「拉完了」到「夯爆了」 | 按评分与点单次数排名 | 月 / 年热力图记录每一餐 |
+
 
 ---
 
