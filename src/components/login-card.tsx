@@ -53,11 +53,9 @@ export function LoginCard() {
           <Image src="/logo-mark.webp" alt="" width={42} height={32} priority />
           慧厨时光
         </h1>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">
-          {mode === "login"
-            ? "登录后点菜单会在所有设备同步"
-            : "注册的账号可以点菜，但不能清空点菜单，也不能改以前的订单"}
-        </p>
+        {mode === "login" && (
+          <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">登录后点菜单会在所有设备同步</p>
+        )}
 
         <form onSubmit={submit} className="mt-7 flex flex-col gap-2.5">
           <Field
