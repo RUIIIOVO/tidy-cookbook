@@ -26,6 +26,7 @@ pnpm import --clip             # 直接从系统剪贴板读取分享文案/链�
 | `src/app/(tabs)/` | 五个 tab：`/` `/menu` `/cart` `/prep` `/history` |
 | `scripts/import-recipe.mjs` | 外部菜谱（下厨房/小红书/抖音）智能解析与一键导入 |
 | `scripts/gen-dish-images.py` | 菜品配图生成（风格锁在 `scripts/style_lock.txt`） |
+| `brand/` | 「慧厨时光」logo 源文件，图标从这里导出（见 `brand/README.md`） |
 
 ## 约定
 
