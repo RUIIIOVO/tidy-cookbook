@@ -1,8 +1,12 @@
 <div align="center">
 
-# 🍳 今天吃什么 (Tidy Cookbook)
+<img src="./brand/logo-full.png" alt="慧厨时光" width="180" />
 
-**告别“今天吃什么”的日常纠结。极简家常菜谱 · 抽菜灵感决策 · 双人协同点餐 · 配料智能合并**
+# 慧厨时光 (Tidy Cookbook)
+
+**简单好用的多人实时点菜软件**
+
+抽菜灵感决策 · 多人实时点菜 · 多时段预订 · 买菜清单自动合并 · 锐评与下厨日历
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)
@@ -12,16 +16,36 @@
 
 [English](./README_EN.md) | **简体中文**
 
-<br />
+### 🌐 公测体验：[eat.ruiovo.com](https://eat.ruiovo.com)
 
-<!-- 抽卡物理飞卡动效演示 -->
+手机浏览器打开即用，无需下载。公测期间所有人共用一份点菜单和历史记录，请勿填写真实个人信息，数据之后可能清空。
+
+</div>
+
+---
+
+## 🎬 宣传片 (Demo Video)
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./docs/media/promo.mp4"><img src="./docs/media/promo-cover.jpg" alt="慧厨时光宣传片" width="420" /></a>
+      <br />
+      <a href="./docs/media/promo.mp4"><b>▶ 点击观看完整宣传片（45 秒）</b></a>
+    </td>
+    <td align="center" width="50%">
+      <img src="./docs/media/sync-demo.gif" alt="多人实时点菜演示" width="260" />
+      <br />
+      <em>🔄 她在菜单里加菜，他的点菜单里马上出现</em>
+    </td>
+  </tr>
+</table>
+
 <p align="center">
-  <img src="./docs/screenshots/draw-demo.gif" alt="抽菜卡片手势动效" width="280" style="border-radius: 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.12);" />
+  <img src="./docs/screenshots/draw-demo.gif" alt="抽菜卡片手势动效" width="240" />
   <br />
   <em>🎲 实体触感卡片翻动 · 不合心意左右滑换一道 · 抽中直接加单</em>
 </p>
-
-</div>
 
 ---
 
@@ -38,12 +62,13 @@
 
 市面上的主流美食与菜谱类 App 充斥着卖课买课、电商带货、冗长短视频与商业广告。做饭本来是一件纯粹、治愈的日常琐事，不应被算法和推荐流绑架。
 
-**Tidy Cookbook** 只专注解决每天做饭决策的四个核心步骤：
+**慧厨时光**最早是为了解决我和女朋友每天「晚上吃什么、做什么菜」的纠结，只专注每天做饭决策的几个核心步骤：
 
 1. **今天吃什么？** —— 拿不定主意时，按荤/素/海鲜/轻食等分类随心抽一道，不合心意左右滑换一道，抽中直接加入点菜单。
 2. **快速挑菜** —— 收录精选家常菜，支持**菜名 / 全拼 / 首字母 / 食材**极速拼音搜索（如输入 `xcr` 秒出小炒肉）。
-3. **点这一餐** —— 全家人或情侣可以通过各自手机协同点菜，增减份数、左滑删除、锁单确认，全端状态毫秒级实时同步。
-4. **智能买菜清单** —— 自动将整餐所有菜品的食材提取并按同名食材智能合并累加，按份数倍乘（如：`五花肉 300g`、`姜 4片`），买菜时打勾状态全员实时同步，还可一键复制文本发送到微信。
+3. **点这一餐** —— 全家人或情侣可以通过各自手机协同点菜，增减份数、左滑删除，全端状态毫秒级实时同步；下单时可以选今天、明天、后天的早餐 / 午餐 / 晚餐 / 宵夜，提前预订。
+4. **智能买菜清单** —— 自动将整餐所有菜品的食材提取并按同名食材智能合并累加，按份数倍乘（如：`五花肉 300g`、`姜 4片`），买菜时打勾状态全员实时同步，还可一键复制文本发送到微信。备菜时点开任意一道菜即可查看完整做法。
+5. **吃完记一笔** —— 从「拉完了」到「夯爆了」滑动打分、贴标签，单菜评分汇总成排行榜；下厨日历按月 / 年热力图记录每一餐。
 
 ---
 
@@ -55,6 +80,9 @@
 - 🔄 **全端实时协同（Real-time Sync）**：基于 Cloudflare Durable Objects 与 WebSocket，支持点菜单与买菜清单勾选状态的全员实时双向广播。
 - 📦 **离线优先设计（Offline-First）**：无网状态下依然可加菜、勾选清单；网络恢复后自动进行 Outbox 队列回放与快照对齐。
 - 🛒 **智能食材合并**：独创跨菜品食材解析合并引擎，同名同单位食材自动数值倍乘累加，支持调料一键折叠展开。
+- 🗓️ **多时段预订**：下单时选择就餐日期（今天 / 明天 / 后天）与餐别（早餐 / 午餐 / 晚餐 / 宵夜），同一餐重复下单自动合并。
+- ⭐ **锐评与排行榜**：五档评级「拉完了 / NPC / 人上人 / 顶级 / 夯爆了」滑动选择，支持单菜评分与评价标签；首页排行榜按评分和点单次数排序，可直接加单。
+- 🔥 **下厨日历**：订单页内置热力图，月视图记录每天做了几道菜、平均几分，年视图一屏看完全年下厨记录。
 - 📋 **小票账单式历史**：支持按 `全部`、`近 7 天`、`近 1 个月`、`近 3 个月` 筛选；向下滚动自动流式分页懒加载；支持每日凌晨 4:00 自动定时归档并重置点菜单。
 - 🎨 **纸墨极简设计系统**：严格遵守自定义调色板（`paper`、`ink`、`chili`、`brine`、`leaf`、`caramel`），移动端安全区深度适配，内嵌物理震动触感（Haptic Feedback）。
 
@@ -204,6 +232,16 @@ pnpm exec wrangler secret put BARK_URL
 ```bash
 pnpm build
 pnpm deploy
+```
+
+### 可选：独立的试用环境
+
+`wrangler.jsonc` 里预置了 `eat` 环境（独立 Worker、D1、Durable Object，数据与正式环境完全隔离），设置了 `TRIAL=1` 后所有注册用户按 owner 权限处理，适合公开给别人体验：
+
+```bash
+pnpm exec wrangler d1 create tidy-cookbook-eat          # 把 database_id 填进 env.eat
+pnpm exec wrangler d1 execute tidy-cookbook-eat --remote --env eat --file=./schema.sql
+pnpm build && pnpm exec wrangler deploy --env eat
 ```
 
 > **关于大陆访问优化**：Cloudflare 默认的 `*.workers.dev` 域名在部分地区可能存在 SNI 阻断。建议在 Cloudflare 仪表盘绑定自己的自定义域名（如 `cook.yourdomain.com`），享受国内高速直连。

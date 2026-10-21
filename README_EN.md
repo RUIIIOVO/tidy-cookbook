@@ -1,8 +1,12 @@
 <div align="center">
 
-# 🍳 Tidy Cookbook
+<img src="./brand/logo-full.png" alt="Huichu Shiguang" width="180" />
 
-**A distraction-free, collaborative home cooking app. Tactile dish picking, real-time shared ordering, and auto-merged grocery lists.**
+# 慧厨时光 · Tidy Cookbook
+
+**A simple, real-time meal ordering app for the whole household.**
+
+Tactile dish picking · Real-time shared ordering · Meal pre-ordering · Auto-merged grocery lists · Ratings & cooking calendar
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react)](https://react.dev/)
@@ -12,16 +16,36 @@
 
 **English** | [简体中文](./README.md)
 
-<br />
+### 🌐 Public beta: [eat.ruiovo.com](https://eat.ruiovo.com)
 
-<!-- Card Swipe Gesture Demo GIF -->
+Opens in any mobile browser, no install needed. During the beta everyone shares one order list and history, so please don't enter personal information; beta data may be reset.
+
+</div>
+
+---
+
+## 🎬 Demo Video
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./docs/media/promo.mp4"><img src="./docs/media/promo-cover.jpg" alt="Demo video" width="420" /></a>
+      <br />
+      <a href="./docs/media/promo.mp4"><b>▶ Watch the full demo (45s, Chinese)</b></a>
+    </td>
+    <td align="center" width="50%">
+      <img src="./docs/media/sync-demo.gif" alt="Real-time shared ordering" width="260" />
+      <br />
+      <em>🔄 She adds a dish, it shows up on his order list instantly</em>
+    </td>
+  </tr>
+</table>
+
 <p align="center">
-  <img src="./docs/screenshots/draw-demo.gif" alt="Tactile Card Drawing Gesture Demo" width="280" style="border-radius: 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.12);" />
+  <img src="./docs/screenshots/draw-demo.gif" alt="Tactile Card Drawing Gesture Demo" width="240" />
   <br />
   <em>🎲 Tactile physical card swiping · Swipe left or right if you change your mind · Add directly to meal</em>
 </p>
-
-</div>
 
 ---
 
@@ -42,7 +66,7 @@ Most commercial recipe apps are cluttered with paid courses, e-commerce ads, alg
 
 1. **What to eat today?** — When you can't decide, roll through cards filtered by category (Meat, Seafood, Vegetables, Diet, Staples). Swipe left or right to switch, and add directly to your meal order.
 2. **Effortless Discovery** — Browse curated homestyle recipes with ultra-fast search supporting Chinese names, full Pinyin, initials (e.g. `xcr` for Stir-fried Pork), and ingredients.
-3. **Collaborative Ordering** — Couples or family members can order together from their own phones with real-time sync, portion controls, swipe-to-delete gestures, and order locking.
+3. **Collaborative Ordering** — Couples or family members can order together from their own phones with real-time sync, portion controls, and swipe-to-delete gestures. When placing an order, pick a day (today / tomorrow / the day after) and a meal (breakfast / lunch / dinner / late-night) to plan ahead.
 4. **Smart Grocery Merging** — Ingredients across all ordered dishes are automatically parsed, multiplied by portions, and combined by name/unit (e.g., `Pork Belly 300g`, `Ginger 4 slices`). Checklist progress syncs across devices in real time and can be copied to clipboard in one tap.
 
 ---
@@ -55,6 +79,9 @@ Most commercial recipe apps are cluttered with paid courses, e-commerce ads, alg
 - 🔄 **Real-Time Multi-Device Sync**: Powered by Cloudflare Durable Objects and WebSockets for real-time order broadcast and collaborative checklist toggling.
 - 📦 **Offline-First Resilience**: Full offline interaction support with local Outbox queuing and automatic state alignment upon network recovery.
 - 🧺 **Intelligent Ingredient Aggregation**: Proprietary merging algorithm combines duplicate ingredients across dishes and multiplies quantities by servings.
+- 🗓️ **Meal Pre-Ordering**: Choose the date and meal slot when ordering; repeated orders for the same meal merge automatically.
+- ⭐ **Ratings & Leaderboard**: Swipe to rate a meal on a five-step scale, rate individual dishes and add tags. The home leaderboard ranks dishes by rating and order count, with one-tap add.
+- 🔥 **Cooking Calendar**: A heatmap of every meal you've cooked, with month and year views.
 - 📋 **Receipt-Style History Log**: Filter orders by `All`, `Last 7 Days`, `Last Month`, or `Last 3 Months`, backed by seamless infinite-scroll pagination and daily automated archiving (04:00 AM CST).
 - 🎨 **Minimalist Ink-and-Paper Aesthetic**: Custom Tailwind palette (`paper`, `ink`, `chili`, `brine`, `leaf`, `caramel`), mobile safe-area insets, and physical haptic feedback.
 
