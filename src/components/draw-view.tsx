@@ -87,6 +87,15 @@ function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
   );
 }
 
+const EXIT_VARIANTS = {
+  exit: (dir: number) => ({
+    x: dir * 360,
+    rotate: dir * 14,
+    opacity: 0,
+    transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] as const },
+  }),
+};
+
 function StackedCard({
   card,
   index,
@@ -144,12 +153,11 @@ function StackedCard({
 
   return (
     <motion.div
-      exit={{
-        x: exitDir * 360,
-        rotate: exitDir * 14,
-        opacity: 0,
-        transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] },
-      }}
+      // 离场方向走 variants + custom：被移除的卡片不会再渲染，直接写 exit={{ x: exitDir }} 会用到上一次的方向（左滑却从右边飞走）。
+      // AnimatePresence 的 custom 会把最新方向交给正在离场的卡片。
+      custom={exitDir}
+      variants={EXIT_VARIANTS}
+      exit="exit"
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.75}
@@ -407,7 +415,7 @@ export function DrawView() {
             overscrollBehaviorX: "none",
           }}
         >
-          <AnimatePresence initial={false}>
+          <AnimatePresence initial={false} custom={exitDir}>
             {cards.slice(0, 3).map((c, idx) => (
               <StackedCard
                 key={c.id}
