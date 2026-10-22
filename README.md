@@ -38,7 +38,7 @@
     <td align="center" width="50%">
       <img src="./docs/media/sync-demo.gif" alt="多人实时点菜演示" width="260" />
       <br />
-      <em>🔄 她在菜单里加菜，他的点菜单里马上出现</em>
+      <em>🔄 多人同步点菜 · 情侣点菜、亲朋好友来做客都好用</em>
     </td>
   </tr>
 </table>
@@ -46,7 +46,7 @@
 <p align="center">
   <img src="./docs/screenshots/draw-demo.gif" alt="抽菜卡片手势动效" width="240" />
   <br />
-  <em>🎲 实体触感卡片翻动 · 不合心意左右滑换一道 · 抽中直接加单</em>
+  <em>🎲 选择困难症了？又犯愁吃啥？来试试抽菜！</em>
 </p>
 
 ---
@@ -56,12 +56,12 @@
 | 1. 抽菜灵感 | 2. 菜谱浏览 | 3. 做法详情 | 4. 多人点菜单 | 5. 预订时段 |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-order.png" width="180" /> |
-| 纠结吃啥？滑卡随心抽 | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 谁点的菜一目了然，实时同步 | 今天到后天，早中晚宵夜任选 |
+| 选择困难症了？来试试抽菜！ | 93 道家常菜，拼音速搜 | 大图、分级食材与关键步骤 | 情侣点菜、亲朋好友来做客都好用 | 24 小时守护你的胃 |
 
 | 6. 备菜 | 7. 买菜清单 | 8. 锐评 | 9. 排行榜 | 10. 下厨日历 |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/06-prep.png" width="180" /> | <img src="./docs/screenshots/07-shopping.png" width="180" /> | <img src="./docs/screenshots/08-review.png" width="180" /> | <img src="./docs/screenshots/09-rank.png" width="180" /> | <img src="./docs/screenshots/10-calendar.png" width="180" /> |
-| 按餐归组，点开即看做法 | 跨菜品同名食材合并，勾选同步 | 从「拉完了」到「夯爆了」 | 按评分与点单次数排名 | 月 / 年热力图记录每一餐 |
+| 一键查看食材和做法，省心又省力 | 要买什么，一张清单全列好 | 哪道菜夯爆了？哪道菜拉完了？ | 老板来份招牌菜！ | 记录你的每一餐，成就感拉满！ |
 
 
 ---

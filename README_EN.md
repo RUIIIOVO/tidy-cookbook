@@ -38,7 +38,7 @@ Opens in any mobile browser, no install needed. During the beta everyone shares 
     <td align="center" width="50%">
       <img src="./docs/media/sync-demo.gif" alt="Real-time shared ordering" width="260" />
       <br />
-      <em>🔄 She adds a dish, it shows up on his order list instantly</em>
+      <em>🔄 Order together in real time · For couples, family, and friends coming over</em>
     </td>
   </tr>
 </table>
@@ -46,7 +46,7 @@ Opens in any mobile browser, no install needed. During the beta everyone shares 
 <p align="center">
   <img src="./docs/screenshots/draw-demo.gif" alt="Tactile Card Drawing Gesture Demo" width="240" />
   <br />
-  <em>🎲 Tactile physical card swiping · Swipe left or right if you change your mind · Add directly to meal</em>
+  <em>🎲 Can't decide what to eat? Let the cards pick for you!</em>
 </p>
 
 ---
@@ -56,12 +56,12 @@ Opens in any mobile browser, no install needed. During the beta everyone shares 
 | 1. Pick Inspiration | 2. Menu | 3. Recipe Details | 4. Shared Order List | 5. Pre-Order a Meal |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/01-draw.png" width="180" /> | <img src="./docs/screenshots/02-menu.png" width="180" /> | <img src="./docs/screenshots/03-detail.png" width="180" /> | <img src="./docs/screenshots/04-cart.png" width="180" /> | <img src="./docs/screenshots/05-order.png" width="180" /> |
-| Indecisive? Swipe cards | 93 dishes with pinyin search | Ingredients & steps | See who ordered what, in real time | Today to the day after, any meal |
+| Can't decide? Draw a dish! | 93 dishes with pinyin search | Ingredients & steps | For couples, family, and friends | Your stomach, covered 24/7 |
 
 | 6. Prep | 7. Grocery List | 8. Ratings | 9. Leaderboard | 10. Cooking Calendar |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="./docs/screenshots/06-prep.png" width="180" /> | <img src="./docs/screenshots/07-shopping.png" width="180" /> | <img src="./docs/screenshots/08-review.png" width="180" /> | <img src="./docs/screenshots/09-rank.png" width="180" /> | <img src="./docs/screenshots/10-calendar.png" width="180" /> |
-| Grouped by meal, tap for steps | Merged across dishes, synced checks | Five-step swipe rating | Ranked by rating & orders | Month / year heatmap |
+| Ingredients and steps in one tap | Everything to buy on one list | Which dish slaps, which one flops? | "Chef, the house special!" | Every meal recorded — so satisfying! |
 
 
 ---
