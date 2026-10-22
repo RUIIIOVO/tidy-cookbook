@@ -7,9 +7,12 @@ import {
   BowlFood,
   BowlSteam,
   Cake,
+  Coffee,
   Cookie,
   CookingPot,
+  Couch,
   Cow,
+  Drop,
   Egg,
   Fish,
   FishSimple,
@@ -17,12 +20,17 @@ import {
   Tag,
   ForkKnife,
   Grains,
+  Hamburger,
   Heartbeat,
   Knife,
+  OrangeSlice,
+  PintGlass,
   Plant,
   Receipt,
   Sparkle,
   Shrimp,
+  Storefront,
+  SunHorizon,
   type Icon,
 } from "@phosphor-icons/react";
 import type { CategoryId, SubId } from "@/data/types";
@@ -35,6 +43,9 @@ export const catIcon: Record<CategoryId, Icon> = {
   staple: BowlFood,
   dessert: Cake,
   diet: Heartbeat,
+  breakfast: SunHorizon,
+  drink: PintGlass,
+  lazy: Couch,
 };
 
 export const subIcon: Record<SubId, Icon> = {
@@ -54,6 +65,12 @@ export const subIcon: Record<SubId, Icon> = {
   sweet: Cake,
   snack: Cookie,
   light: Heartbeat,
+  bf_cn: BowlSteam,
+  bf_west: Hamburger,
+  syrup: Drop,
+  juice: OrangeSlice,
+  eatout: Storefront,
+  teashop: Coffee,
 };
 
 export const tabIcon = {

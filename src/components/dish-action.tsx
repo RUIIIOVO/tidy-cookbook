@@ -6,7 +6,7 @@ import { useCustomModal } from "@/lib/custom-modal-store";
 import { AddButton } from "./add-button";
 
 /**
- * 菜品行右侧的点单按钮：能选规格的菜是「选规格」，其余是「+」（点过就变数量加减）。
+ * 菜品行右侧的点单按钮：能选规格的菜是「选规格」（偷个懒叫「点单」），其余是「+」（点过就变数量加减）。
  * 菜单卡片和排行榜共用，两处行为一致。
  */
 export function DishAction({ dish }: { dish: Dish }) {
@@ -21,9 +21,14 @@ export function DishAction({ dish }: { dish: Dish }) {
         }}
         className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs transition active:scale-95"
       >
-        选规格
+        {customLabel(dish)}
       </button>
     );
   }
   return <AddButton dish={dish} />;
+}
+
+/** 偷个懒的选项是挑爱吃的，不算规格 */
+export function customLabel(dish: Dish) {
+  return dish.category === "lazy" ? "点单" : "选规格";
 }

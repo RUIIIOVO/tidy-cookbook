@@ -8,7 +8,7 @@ import { ArrowsClockwise, Plus, Trophy } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { categories, dishes } from "@/data/dishes";
 import type { CategoryId, Dish } from "@/data/types";
-import { catTheme, spicyLabel } from "@/lib/theme";
+import { catTheme, NON_MEAL, spicyLabel } from "@/lib/theme";
 import { hasImage, preloadImage } from "@/lib/images";
 import { useCart } from "@/lib/store";
 import { useDishRatings } from "@/lib/dish-rating-store";
@@ -32,6 +32,13 @@ type CardItem = { id: string; seq: number; dish: Dish };
 const PEEK = 14;
 const FULL_DRAG = 140;
 const HINT_KEY = "tc-swipe-hint";
+
+/** 「全部」只抽正餐：早餐、饮品、偷个懒要单独筛选才出现 */
+const MEAL_DISHES = dishes.filter((d) => !NON_MEAL.has(d.category));
+
+function poolOf(f: Filter): Dish[] {
+  return f === "all" ? MEAL_DISHES : dishes.filter((d) => d.category === f);
+}
 
 function pickRandomDishes(pool: Dish[], count: number): Dish[] {
   if (pool.length === 0) return [];
@@ -79,7 +86,7 @@ function DishFace({ dish, priority }: { dish: Dish; priority: boolean }) {
               已售 {count}
             </span>
           )}
-          <span>{spicyLabel[dish.spicy]}</span>
+          {!NON_MEAL.has(dish.category) && <span>{spicyLabel[dish.spicy]}</span>}
           <span className="ml-auto">查看详情 →</span>
         </div>
       </div>
@@ -244,7 +251,7 @@ export function DrawView() {
   const pendingTab = useRef<"cart" | null>(null);
 
   const pool = useMemo(
-    () => (filter === "all" ? dishes : dishes.filter((d) => d.category === filter)),
+    () => poolOf(filter),
     [filter],
   );
 
@@ -263,7 +270,7 @@ export function DrawView() {
   );
 
   const [cards, setCards] = useState<CardItem[]>(() => {
-    const picked = pickRandomDishes(dishes, 3);
+    const picked = pickRandomDishes(MEAL_DISHES, 3);
     for (const d of picked) {
       if (hasImage(d.id)) void preloadImage(d.image);
     }
@@ -315,7 +322,7 @@ export function DrawView() {
     haptic(6);
     setFilter(fId);
 
-    const newPool = fId === "all" ? dishes : dishes.filter((d) => d.category === fId);
+    const newPool = poolOf(fId);
     historyRef.current = [];
 
     const picked = pickRandomDishes(newPool, 3);

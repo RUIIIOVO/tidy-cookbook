@@ -370,5 +370,125 @@
   "93": {
     "pinyin": "fengweiqiezi",
     "initials": "fwqz"
+  },
+  "94": {
+    "pinyin": "lajiaochaodan",
+    "initials": "ljcd"
+  },
+  "95": {
+    "pinyin": "shenggunzhuganroupianzhou",
+    "initials": "sgzgrpz"
+  },
+  "96": {
+    "pinyin": "laomianheizhuroubaozi",
+    "initials": "lmhzrbz"
+  },
+  "97": {
+    "pinyin": "xiangguqingcaibao",
+    "initials": "xgqcb"
+  },
+  "98": {
+    "pinyin": "naihuangbao",
+    "initials": "nhb"
+  },
+  "99": {
+    "pinyin": "doushabao",
+    "initials": "dsb"
+  },
+  "100": {
+    "pinyin": "huntun",
+    "initials": "ht"
+  },
+  "101": {
+    "pinyin": "youtiao",
+    "initials": "yt"
+  },
+  "102": {
+    "pinyin": "maidanglaozaocantaocan",
+    "initials": "mdlzctc"
+  },
+  "103": {
+    "pinyin": "kendejizaocantaocan",
+    "initials": "kdjzctc"
+  },
+  "104": {
+    "pinyin": "bingtangxuelitang",
+    "initials": "btxlt"
+  },
+  "105": {
+    "pinyin": "lüdoutang",
+    "initials": "ldt"
+  },
+  "106": {
+    "pinyin": "hongdoutang",
+    "initials": "hdt"
+  },
+  "107": {
+    "pinyin": "xiangjiaoniunai",
+    "initials": "xjnn"
+  },
+  "108": {
+    "pinyin": "qingtiniunai",
+    "initials": "qtnn"
+  },
+  "109": {
+    "pinyin": "huangguazhi",
+    "initials": "hgz"
+  },
+  "110": {
+    "pinyin": "haidilao",
+    "initials": "hdl"
+  },
+  "111": {
+    "pinyin": "waxiaoxia",
+    "initials": "wxx"
+  },
+  "112": {
+    "pinyin": "xiaolongxia",
+    "initials": "xlx"
+  },
+  "113": {
+    "pinyin": "shaokao",
+    "initials": "sk"
+  },
+  "114": {
+    "pinyin": "yabo",
+    "initials": "yb"
+  },
+  "115": {
+    "pinyin": "kendeji",
+    "initials": "kdj"
+  },
+  "116": {
+    "pinyin": "tasiting",
+    "initials": "tst"
+  },
+  "117": {
+    "pinyin": "linyuzhajitui",
+    "initials": "lyzjt"
+  },
+  "118": {
+    "pinyin": "luosifen",
+    "initials": "lsf"
+  },
+  "119": {
+    "pinyin": "xiangjianyumijiao",
+    "initials": "xjymj"
+  },
+  "120": {
+    "pinyin": "mixuebingcheng",
+    "initials": "mxbc"
+  },
+  "121": {
+    "pinyin": "xicha",
+    "initials": "xc"
+  },
+  "122": {
+    "pinyin": "chabaidao",
+    "initials": "cbd"
+  },
+  "123": {
+    "pinyin": "haolilai",
+    "initials": "hll"
   }
 }

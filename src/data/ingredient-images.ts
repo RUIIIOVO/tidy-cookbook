@@ -1,4 +1,4 @@
-// 定制菜自选项 → 配图路径；图片由 scripts/gen-ingredient-images.py 生成，新增时两边一起改
+// 定制菜自选项 → 配图路径；图片由 scripts/gen-ingredient-images.py 生成，新增时两边一起改（偷个懒的门店图除外）
 export const INGREDIENT_IMAGES: Record<string, string> = {
   // 糖水小料
   "手作厚芋泥": "/images/ingredients/shou-zuo-hou-yu-ni.webp",
@@ -33,4 +33,25 @@ export const INGREDIENT_IMAGES: Record<string, string> = {
   "秘制蒜香生抽捞汁": "/images/ingredients/mi-zhi-suan-xiang-sheng-chou-lao-zhi.webp",
   "焙煎芝麻沙拉汁": "/images/ingredients/bei-jian-zhi-ma-sha-la-zhi.webp",
   "原味海盐黑胡椒": "/images/ingredients/yuan-wei-hai-yan-hei-hu-jiao.webp",
+
+  // 偷个懒：门店爱点的菜（网上找的门店实拍 / 官方图，不走生图）
+  "牛肉": "/images/ingredients/lao-pai-hua-niu-rou.webp",
+  "嫩豆皮": "/images/ingredients/nen-dou-pi.webp",
+  "海带苗": "/images/ingredients/hai-dai-miao.webp",
+  "贡菜": "/images/ingredients/gong-cai.webp",
+  "蟹柳": "/images/ingredients/xie-liu.webp",
+  "毛肚": "/images/ingredients/mao-du.webp",
+  "绝味鸭脖": "/images/ingredients/juewei.webp",
+  "周黑鸭": "/images/ingredients/zhouheiya.webp",
+  "香辣鸡翅": "/images/ingredients/kfc-xiang-la-ji-chi.webp",
+  "圣代": "/images/ingredients/kfc-sheng-dai.webp",
+  "炸鸡腿": "/images/ingredients/linyu-ji-tui.webp",
+  "炸鸡翅": "/images/ingredients/linyu-ji-chi.webp",
+  "柠檬水": "/images/ingredients/mixue-ning-meng-shui.webp",
+  "蜜桃四季春": "/images/ingredients/mixue-mi-tao-si-ji-chun.webp",
+  "芝士奶盖四季春": "/images/ingredients/mixue-zhi-shi-nai-gai-si-ji-chun.webp",
+  "黑糖奶茶": "/images/ingredients/heytea-hei-tang-nai-cha.webp",
+  "咸酪碎银子": "/images/ingredients/heytea-xian-lao-sui-yin-zi.webp",
+  "豆乳玉麒麟": "/images/ingredients/chabaidao-dou-ru-yu-qi-lin.webp",
+  "草莓蛋糕": "/images/ingredients/holiland-cao-mei-dan-gao.webp",
 };

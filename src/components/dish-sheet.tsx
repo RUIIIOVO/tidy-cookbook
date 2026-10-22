@@ -7,13 +7,14 @@ import { metaIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { CUSTOM_CONFIGS } from "@/data/custom-options";
 import { getDish } from "@/data/dishes";
-import { catTheme, spicyLabel } from "@/lib/theme";
+import { catTheme, NON_MEAL, spicyLabel } from "@/lib/theme";
 import { useCustomModal } from "@/lib/custom-modal-store";
 import { useCart } from "@/lib/store";
 import { useDishRatings } from "@/lib/dish-rating-store";
 import { useDishSheet } from "@/lib/ui-store";
 import { haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
+import { customLabel } from "./dish-action";
 import { DishThumb } from "./dish-thumb";
 
 export function DishSheet() {
@@ -51,6 +52,8 @@ export function DishSheet() {
     close();
   }, 800);
   const t = dish ? catTheme[dish.category] : null;
+  // 买现成 / 出去吃的条目没有食材，做法只有一句话，不按步骤编号排
+  const noCooking = !!dish && dish.ingredients.length === 0;
 
   return (
     <Drawer.Root
@@ -98,13 +101,15 @@ export function DishSheet() {
                 </div>
 
                 <div className="mt-4 flex divide-x divide-line rounded-card border border-line bg-card">
-                  <div className="flex-1 px-3 py-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
-                      <metaIcon.spicy size={12} weight="regular" />
-                      辣度
+                  {!NON_MEAL.has(dish.category) && (
+                    <div className="flex-1 px-3 py-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
+                        <metaIcon.spicy size={12} weight="regular" />
+                        辣度
+                      </div>
+                      <div className="mt-0.5 text-[13px] text-ink">{spicyLabel[dish.spicy]}</div>
                     </div>
-                    <div className="mt-0.5 text-[13px] text-ink">{spicyLabel[dish.spicy]}</div>
-                  </div>
+                  )}
                   <div className="flex-1 px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1 text-[10px] text-ink-3">
                       <metaIcon.tags size={12} weight="regular" />
@@ -138,46 +143,56 @@ export function DishSheet() {
                   )}
                 </div>
 
-                <div ref={ingredientsRef}>
-                  <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>
-                </div>
-                <div className="space-y-3">
-                  {dish.ingredients.map((g) => (
-                    <div key={g.group}>
-                      <div className="mb-1.5 text-[10.5px] tracking-[0.2em] text-ink-3">
-                        {g.group}
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        {g.items.map((it) => (
-                          <div
-                            key={it.name}
-                            className="flex items-baseline justify-between gap-2 border-b border-dashed border-line pb-1"
-                          >
-                            <span className="text-[12.5px] text-ink">{it.name}</span>
-                            <span className="shrink-0 text-[11px] text-ink-3 tabular-nums">
-                              {it.amount}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                {noCooking ? (
+                  <p
+                    className={`mt-6 rounded-card border px-4 py-3.5 text-center text-[13.5px] leading-relaxed text-ink ${t.bg} ${t.border}`}
+                  >
+                    {dish.steps.join("，")}
+                  </p>
+                ) : (
+                  <>
+                    <div ref={ingredientsRef}>
+                      <SectionTitle icon={metaIcon.ingredients}>食材</SectionTitle>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-3">
+                      {dish.ingredients.map((g) => (
+                        <div key={g.group}>
+                          <div className="mb-1.5 text-[10.5px] tracking-[0.2em] text-ink-3">
+                            {g.group}
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            {g.items.map((it) => (
+                              <div
+                                key={it.name}
+                                className="flex items-baseline justify-between gap-2 border-b border-dashed border-line pb-1"
+                              >
+                                <span className="text-[12.5px] text-ink">{it.name}</span>
+                                <span className="shrink-0 text-[11px] text-ink-3 tabular-nums">
+                                  {it.amount}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-                <SectionTitle icon={metaIcon.steps}>做法</SectionTitle>
-                <ol className="space-y-3">
-                  {dish.steps.map((s, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span
-                        className="mt-[3px] shrink-0 font-display text-[13px] leading-none tabular-nums"
-                        style={{ color: t.hex }}
-                      >
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <p className="text-[13px] leading-[1.7] text-ink">{s}</p>
-                    </li>
-                  ))}
-                </ol>
+                    <SectionTitle icon={metaIcon.steps}>做法</SectionTitle>
+                    <ol className="space-y-3">
+                      {dish.steps.map((s, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span
+                            className="mt-[3px] shrink-0 font-display text-[13px] leading-none tabular-nums"
+                            style={{ color: t.hex }}
+                          >
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <p className="text-[13px] leading-[1.7] text-ink">{s}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                )}
               </div>
 
               <div
@@ -220,7 +235,7 @@ export function DishSheet() {
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent py-3 text-[14px] font-medium tracking-wide text-white transition active:scale-[0.98]"
                     >
                       <SlidersHorizontal size={16} weight="bold" />
-                      <span>选规格</span>
+                      <span>{customLabel(dish)}</span>
                     </button>
                   ) : (
                     <button

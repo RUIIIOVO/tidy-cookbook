@@ -404,7 +404,7 @@ function PickerBody({
                     <button
                       type="button"
                       onClick={() => c.subs[0] && jump(c.subs[0].id)}
-                      className="flex w-full items-center justify-center gap-1 px-2 pt-3 pb-1.5 active:opacity-60"
+                      className="flex w-full items-center justify-center gap-1 px-1 pt-3 pb-1.5 whitespace-nowrap active:opacity-60"
                     >
                       <Icon size={11} weight="fill" color={t.hex} style={{ opacity: 0.6 }} />
                       <span className="text-[9.5px] tracking-[0.15em] text-ink-3">{c.name}</span>

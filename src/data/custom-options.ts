@@ -13,6 +13,28 @@ export type CustomConfig = {
   defaultValues: Record<string, string | string[]>;
 };
 
+type Group = CustomConfig["groups"][number];
+
+function pick(
+  id: string,
+  name: string,
+  options: string[],
+  type: Group["type"] = "multiple",
+): Group {
+  return { id, name, type, options };
+}
+
+/** 偷个懒条目：选项全部非必选、不默认勾选 */
+function lazy(dishId: string, name: string, subtitle: string, groups: Group[]): CustomConfig {
+  return { dishId, title: name, subtitle, groups, defaultValues: {} };
+}
+
+/** 奶茶店通用的甜度和冰量，平时喝全糖少冰，排在第一个 */
+const TEA_GROUPS: Group[] = [
+  pick("sugar", "甜度", ["全糖", "七分糖", "五分糖", "三分糖", "不另外加糖"], "single"),
+  pick("ice", "冰量", ["少冰", "正常冰", "去冰", "常温", "热"], "single"),
+];
+
 export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   // 粤式手作糖水
   "79": {
@@ -323,6 +345,47 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
       sauce: "焙煎芝麻沙拉汁",
     },
   },
+
+  // ───────── 偷个懒：爱点的菜，打开再勾，都不默认选 ─────────
+  "110": lazy("110", "海底捞", "今天涮点什么", [
+    pick("dishes", "爱点的菜", ["牛肉", "嫩豆皮", "海带苗", "贡菜", "蟹柳", "毛肚"]),
+  ]),
+  "113": lazy("113", "烧烤", "今晚撸点什么", [
+    pick("dishes", "爱点的串", [
+      "烤鸡翅",
+      "五花肉",
+      "小黄鱼",
+      "牛肉串",
+      "鸡脆骨",
+      "烤韭菜",
+      "烤茄子",
+      "蒜蓉花甲",
+    ]),
+  ]),
+  "114": lazy("114", "鸭脖", "今天啃哪家", [
+    pick("shop", "哪家", ["绝味鸭脖", "周黑鸭"], "single"),
+  ]),
+  "115": lazy("115", "肯德基", "今天吃点什么", [
+    pick("dishes", "爱点的", ["香辣鸡翅", "圣代"]),
+  ]),
+  "117": lazy("117", "临榆炸鸡腿", "甘梅味", [
+    pick("dishes", "爱点的", ["炸鸡腿", "炸鸡翅"]),
+  ]),
+  "120": lazy("120", "蜜雪冰城", "全糖少冰", [
+    pick("drinks", "爱喝的", ["柠檬水", "蜜桃四季春", "芝士奶盖四季春"]),
+    ...TEA_GROUPS,
+  ]),
+  "121": lazy("121", "喜茶", "全糖少冰", [
+    pick("drinks", "爱喝的", ["黑糖奶茶", "咸酪碎银子"]),
+    ...TEA_GROUPS,
+  ]),
+  "122": lazy("122", "茶百道", "全糖少冰", [
+    pick("drinks", "爱喝的", ["豆乳玉麒麟"]),
+    ...TEA_GROUPS,
+  ]),
+  "123": lazy("123", "好利来", "今天来块小蛋糕", [
+    pick("cakes", "爱吃的", ["草莓蛋糕"]),
+  ]),
 };
 
 export function formatCustomSummary(
