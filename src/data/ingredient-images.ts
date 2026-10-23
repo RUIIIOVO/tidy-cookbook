@@ -35,12 +35,6 @@ export const INGREDIENT_IMAGES: Record<string, string> = {
   "原味海盐黑胡椒": "/images/ingredients/yuan-wei-hai-yan-hei-hu-jiao.webp",
 
   // 偷个懒：门店商品图，来自官网 / 官方点餐站 / 外卖平台截图，不走生图
-  "牛肉": "/images/ingredients/lao-pai-hua-niu-rou.webp",
-  "嫩豆皮": "/images/ingredients/nen-dou-pi.webp",
-  "海带苗": "/images/ingredients/hai-dai-miao.webp",
-  "贡菜": "/images/ingredients/gong-cai.webp",
-  "蟹柳": "/images/ingredients/xie-liu.webp",
-  "毛肚": "/images/ingredients/mao-du.webp",
   "绝味鸭脖": "/images/ingredients/juewei.webp",
   "周黑鸭": "/images/ingredients/zhouheiya.webp",
   "香辣鸡翅": "/images/ingredients/kfc-xiang-la-ji-chi.webp",
