@@ -24,7 +24,7 @@ function pick(
   return { id, name, type, options };
 }
 
-/** 偷个懒条目：选项全部非必选、不默认勾选 */
+/** 偷个懒条目：选项全部非必选、不默认勾选；分组名用门店菜单的叫法 */
 function lazy(dishId: string, name: string, subtitle: string, groups: Group[]): CustomConfig {
   return { dishId, title: name, subtitle, groups, defaultValues: {} };
 }
@@ -347,11 +347,11 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
   },
 
   // ───────── 偷个懒：爱点的菜，打开再勾，都不默认选 ─────────
-  "110": lazy("110", "海底捞", "今天涮点什么", [
-    pick("dishes", "爱点的菜", ["牛肉", "嫩豆皮", "海带苗", "贡菜", "蟹柳", "毛肚"]),
+  "110": lazy("110", "海底捞", "涮菜任选", [
+    pick("dishes", "涮菜", ["牛肉", "嫩豆皮", "海带苗", "贡菜", "蟹柳", "毛肚"]),
   ]),
-  "113": lazy("113", "烧烤", "今晚撸点什么", [
-    pick("dishes", "爱点的串", [
+  "113": lazy("113", "烧烤", "烤串任选", [
+    pick("dishes", "烤串", [
       "烤鸡翅",
       "五花肉",
       "小黄鱼",
@@ -362,29 +362,29 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
       "蒜蓉花甲",
     ]),
   ]),
-  "114": lazy("114", "鸭脖", "今天啃哪家", [
-    pick("shop", "哪家", ["绝味鸭脖", "周黑鸭"], "single"),
+  "114": lazy("114", "鸭脖", "绝味 / 周黑鸭", [
+    pick("shop", "门店", ["绝味鸭脖", "周黑鸭"], "single"),
   ]),
-  "115": lazy("115", "肯德基", "今天吃点什么", [
-    pick("dishes", "爱点的", ["香辣鸡翅", "圣代"]),
+  "115": lazy("115", "肯德基", "单品任选", [
+    pick("dishes", "单品", ["香辣鸡翅", "圣代"]),
   ]),
   "117": lazy("117", "临榆炸鸡腿", "甘梅味", [
-    pick("dishes", "爱点的", ["炸鸡腿", "炸鸡翅"]),
+    pick("dishes", "单品", ["炸鸡腿", "炸鸡翅"]),
   ]),
   "120": lazy("120", "蜜雪冰城", "全糖少冰", [
-    pick("drinks", "爱喝的", ["柠檬水", "蜜桃四季春", "芝士奶盖四季春"]),
+    pick("drinks", "饮品", ["柠檬水", "蜜桃四季春", "芝士奶盖四季春"]),
     ...TEA_GROUPS,
   ]),
   "121": lazy("121", "喜茶", "全糖少冰", [
-    pick("drinks", "爱喝的", ["黑糖奶茶", "咸酪碎银子"]),
+    pick("drinks", "饮品", ["黑糖奶茶", "咸酪碎银子"]),
     ...TEA_GROUPS,
   ]),
   "122": lazy("122", "茶百道", "全糖少冰", [
-    pick("drinks", "爱喝的", ["豆乳玉麒麟"]),
+    pick("drinks", "饮品", ["豆乳玉麒麟"]),
     ...TEA_GROUPS,
   ]),
-  "123": lazy("123", "好利来", "今天来块小蛋糕", [
-    pick("cakes", "爱吃的", ["草莓蛋糕"]),
+  "123": lazy("123", "好利来", "蛋糕任选", [
+    pick("cakes", "蛋糕", ["草莓蛋糕"]),
   ]),
 };
 
