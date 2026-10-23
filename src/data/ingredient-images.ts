@@ -34,7 +34,7 @@ export const INGREDIENT_IMAGES: Record<string, string> = {
   "焙煎芝麻沙拉汁": "/images/ingredients/bei-jian-zhi-ma-sha-la-zhi.webp",
   "原味海盐黑胡椒": "/images/ingredients/yuan-wei-hai-yan-hei-hu-jiao.webp",
 
-  // 偷个懒：门店爱点的菜（网上找的门店实拍 / 官方图，不走生图）
+  // 偷个懒：门店商品图，来自官网 / 官方点餐站 / 外卖平台截图，不走生图
   "牛肉": "/images/ingredients/lao-pai-hua-niu-rou.webp",
   "嫩豆皮": "/images/ingredients/nen-dou-pi.webp",
   "海带苗": "/images/ingredients/hai-dai-miao.webp",
@@ -45,8 +45,8 @@ export const INGREDIENT_IMAGES: Record<string, string> = {
   "周黑鸭": "/images/ingredients/zhouheiya.webp",
   "香辣鸡翅": "/images/ingredients/kfc-xiang-la-ji-chi.webp",
   "圣代": "/images/ingredients/kfc-sheng-dai.webp",
-  "炸鸡腿": "/images/ingredients/linyu-ji-tui.webp",
-  "炸鸡翅": "/images/ingredients/linyu-ji-chi.webp",
+  "香酥琵琶腿": "/images/ingredients/linyu-pi-pa-tui.webp",
+  "经典鸡叉骨": "/images/ingredients/linyu-ji-cha-gu.webp",
   "柠檬水": "/images/ingredients/mixue-ning-meng-shui.webp",
   "蜜桃四季春": "/images/ingredients/mixue-mi-tao-si-ji-chun.webp",
   "芝士奶盖四季春": "/images/ingredients/mixue-zhi-shi-nai-gai-si-ji-chun.webp",

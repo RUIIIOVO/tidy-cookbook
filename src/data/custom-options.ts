@@ -369,7 +369,7 @@ export const CUSTOM_CONFIGS: Record<string, CustomConfig> = {
     pick("dishes", "单品", ["香辣鸡翅", "圣代"]),
   ]),
   "117": lazy("117", "临榆炸鸡腿", "甘梅味", [
-    pick("dishes", "单品", ["炸鸡腿", "炸鸡翅"]),
+    pick("dishes", "单品", ["香酥琵琶腿", "经典鸡叉骨"]),
   ]),
   "120": lazy("120", "蜜雪冰城", "全糖少冰", [
     pick("drinks", "饮品", ["柠檬水", "蜜桃四季春", "芝士奶盖四季春"]),
