@@ -72,7 +72,7 @@ export function PrepView() {
   }
 
   const dishCount = shown.reduce((n, m) => n + m.items.length, 0);
-  const label = (d: string) => dayLabel(d, today) ?? shortDate(d);
+  const label = (d: string) => dayLabel(d, today) ?? shortDate(d, today);
 
   const pick = (i: number) => {
     if (i === index) return;

@@ -179,7 +179,7 @@ function EditContent({
   const target = moved ? mergeTarget.get(mealKey(draft.date, draft.slot)) : undefined;
 
   // 合并提示：「明天晚餐已经有一单，保存后会合并」
-  const mergeHint = `${dayLabel(draft.date, today) ?? shortDate(draft.date)}${slotName(draft.slot)}已经有一单，保存后会合并`;
+  const mergeHint = `${dayLabel(draft.date, today) ?? shortDate(draft.date, today)}${slotName(draft.slot)}已经有一单，保存后会合并`;
 
   const title = mealTitle(draft.date, draft.slot, today);
   const originTitle = mealTitle(base.date, base.slot, today);

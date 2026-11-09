@@ -29,8 +29,11 @@ export function mealDayOf(ts: number): string {
   return new Date(ts + TZ_OFFSET_MS - DAY_START_MS).toISOString().slice(0, 10);
 }
 
-export const isMealDate = (s: unknown): s is string =>
-  typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+export function isMealDate(s: unknown): s is string {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s) || s < "0001-01-01") return false;
+  const timestamp = Date.parse(`${s}T00:00:00Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === s;
+}
 
 /** 日期加减天数 */
 export function addDays(date: string, n: number): string {
@@ -48,10 +51,11 @@ const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
 /** 0 = 周日 … 6 = 周六 */
 export const weekdayOf = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay();
 
-/** '5/17 周六' */
-export function shortDate(date: string): string {
-  const [, m, d] = date.split("-").map(Number);
-  return `${m}/${d} 周${WEEK[weekdayOf(date)]}`;
+/** '5/17 周六'；跨年时补上年份 */
+export function shortDate(date: string, today?: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const year = today && date.slice(0, 4) !== today.slice(0, 4) ? `${y}/` : "";
+  return `${year}${m}/${d} 周${WEEK[weekdayOf(date)]}`;
 }
 
 /** 相对 today 的叫法；超出 昨天~后天 返回 null */
@@ -62,16 +66,13 @@ export function dayLabel(date: string, today: string): string | null {
 
 /** 订单标题：'今天 · 晚餐'、'5/12 周一 · 午餐' */
 export function mealTitle(date: string, slot: number, today: string): string {
-  return `${dayLabel(date, today) ?? shortDate(date)} · ${slotName(slot)}`;
+  return `${dayLabel(date, today) ?? shortDate(date, today)} · ${slotName(slot)}`;
 }
 
-/** 下单面板里可选的日期：今天 / 明天 / 后天 */
+/** 下单面板里的快捷日期：今天 / 明天 / 后天 */
 export function pickableDays(today: string): string[] {
   return [0, 1, 2].map((n) => addDays(today, n));
 }
-
-/** 修改订单时日期最远能改到几天以后 */
-export const EDIT_MAX_AHEAD_DAYS = 30;
 
 /**
  * 每餐「算过了」的北京时间钟点（相对当天 0 点，小时）。宵夜到次日凌晨 4 点。

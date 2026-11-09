@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { Drawer } from "vaul";
 import { CaretDown } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -17,58 +17,37 @@ import {
 } from "@/lib/meal-time";
 import { newReqId, placeOrder } from "@/lib/meal-actions";
 import { useCart } from "@/lib/store";
+import { useAuth } from "@/lib/auth-store";
 import { useSyncStatus } from "@/lib/sync";
+import { ui } from "@/lib/ui";
 import { haptic } from "@/lib/utils";
 import { useGuard } from "@/lib/use-guard";
 import { MealPicker, type MealPick } from "./meal-picker";
 
 export type OrderConfirmSheetProps = {
   open: boolean;
+  /** 打开面板时选定的菜品；父组件每次打开使用新 key，重新生成快照和请求编号 */
+  dishIds: string[];
   onOpenChange: (open: boolean) => void;
   onPlaced: (order: { date: string; slot: Slot; count: number }) => void;
 };
 
 export function OrderConfirmSheet({
   open,
-  onOpenChange,
-  onPlaced,
-}: OrderConfirmSheetProps) {
-  const reqSeed = useId();
-  const [seq, setSeq] = useState(0);
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && !open) {
-      setSeq((s) => s + 1);
-    }
-    onOpenChange(nextOpen);
-  };
-
-  if (!open && seq === 0) return null;
-
-  return (
-    <OrderConfirmSheetContent
-      key={`${reqSeed}-${seq}`}
-      open={open}
-      onOpenChange={handleOpenChange}
-      onPlaced={onPlaced}
-    />
-  );
-}
-
-function OrderConfirmSheetContent({
-  open,
+  dishIds,
   onOpenChange,
   onPlaced,
 }: OrderConfirmSheetProps) {
   const today = useCart((s) => s.today);
+  const isOwner = useAuth((s) => s.me?.role === "owner");
   const meals = useCart((s) => s.meals);
   const syncStatus = useSyncStatus();
 
-  // 快照：面板打开时刻的点菜单 items，不受外界修改影响
+  // 快照：只取本次选中的菜品和份数，不受外界修改影响
   const [snapshot] = useState(() => {
     const rawItems = useCart.getState().items;
     return rawItems
-      .filter((i) => i.qty > 0)
+      .filter((i) => i.qty > 0 && dishIds.includes(i.dishId))
       .map((i) => ({
         dishId: i.dishId,
         qty: i.qty,
@@ -99,7 +78,7 @@ function OrderConfirmSheetContent({
   const summary = snapshot.map((i) => i.name).join("、");
 
   // 按钮上的选择结果：「明天午餐」
-  const pickText = `${dayLabel(pick.date, today) ?? shortDate(pick.date)}${slotName(pick.slot)}`;
+  const pickText = `${dayLabel(pick.date, today) ?? shortDate(pick.date, today)}${slotName(pick.slot)}`;
 
   const isOnline = syncStatus === "online";
 
@@ -169,7 +148,17 @@ function OrderConfirmSheetContent({
 
           {/* 内容区 */}
           <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
-            <MealPicker today={today} value={pick} onChange={setPick} taken={taken} />
+            <MealPicker
+              today={today}
+              value={pick}
+              onChange={setPick}
+              taken={taken}
+              minDate={isOwner ? undefined : today}
+              disabled={loading}
+            />
+            <p className="mt-4 text-[11px] text-ink-3">
+              本次下单 <span className="tabular-nums text-ink-2">{totalLines}</span> 道菜
+            </p>
 
             {/* 菜品摘要：一行，点开看完整清单 */}
             <button
@@ -249,7 +238,7 @@ function OrderConfirmSheetContent({
               type="button"
               disabled={!isOnline || loading || totalLines === 0}
               onClick={handleConfirm}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[15px] font-medium tracking-wide text-white transition active:scale-[0.99] disabled:opacity-40"
+              className={ui.primary}
             >
               {!isOnline ? "离线中" : loading ? "正在下单…" : `下单 · ${pickText}`}
             </button>

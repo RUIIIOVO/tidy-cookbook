@@ -20,13 +20,10 @@ import { RAW } from "../src/data/raw";
 import { normalizeName } from "./auth";
 import { assembleMeals, ITEM_COLS, MEAL_COLS, type ItemRow, type MealRow as DbMealRow } from "./meals";
 import {
-  addDays,
-  EDIT_MAX_AHEAD_DAYS,
   isMealDate,
   isSlot,
   mealDayOf,
   mealTitle,
-  pickableDays,
 } from "../src/lib/meal-time";
 import {
   PROTOCOL_VERSION,
@@ -477,8 +474,10 @@ export class KitchenDO implements DurableObject {
     const items = normItems(op.items);
     if (!items || !items.length) return { ok: false, code: "invalid", reason: "没有可下单的菜" };
     if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不正确" };
-    if (!isMealDate(op.date) || !pickableDays(snap.today).includes(op.date))
-      return { ok: false, code: "invalid", reason: "该日期无法下单，请刷新" };
+    if (!isMealDate(op.date))
+      return { ok: false, code: "invalid", reason: "用餐日期不正确" };
+    if (op.date < snap.today && who.role !== "owner")
+      return { ok: false, code: "forbidden", reason: "已过去的日期只有 rui 和 hui 能补录" };
 
     const K = this.kitchenId;
     const db = this.env.DB;
@@ -546,9 +545,8 @@ export class KitchenDO implements DurableObject {
     if (!items.length) return this.removeMeal(op.reqId, orig, who, today);
 
     if (!isSlot(op.slot)) return { ok: false, code: "invalid", reason: "用餐时间不正确" };
-    // 修改订单可以改到任意日期（久远的订单也能改），往后最多 EDIT_MAX_AHEAD_DAYS 天
-    if (!isMealDate(op.date) || op.date > addDays(today, EDIT_MAX_AHEAD_DAYS))
-      return { ok: false, code: "invalid", reason: "该日期不可选，请刷新" };
+    if (!isMealDate(op.date))
+      return { ok: false, code: "invalid", reason: "用餐日期不正确" };
     if (op.date < today && !owner)
       return { ok: false, code: "forbidden", reason: "已过去的日期只有 rui 和 hui 能改" };
 

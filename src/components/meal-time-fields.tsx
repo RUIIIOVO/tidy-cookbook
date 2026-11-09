@@ -2,7 +2,6 @@
 
 import { CaretRight } from "@phosphor-icons/react";
 import {
-  addDays,
   dayLabel,
   isMealDate,
   mealKey,
@@ -17,15 +16,11 @@ export type MealTime = { date: string; slot: Slot };
 
 const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
 
-/** owner 补录的最早日期（只是给原生选择器一个下限） */
-const OWNER_MIN = "2020-01-01";
-/** 最远能订到今天之后多少天，服务端规则一致 */
-export const MAX_AHEAD_DAYS = 30;
-
 /** '10月17日 周六'；是昨天 / 今天 / 明天 / 后天时前面加叫法：'明天 · 10月17日 周六' */
 export function fullDate(date: string, today: string): string {
-  const [, m, d] = date.split("-").map(Number);
-  const base = `${m}月${d}日 周${WEEK[weekdayOf(date)]}`;
+  const [y, m, d] = date.split("-").map(Number);
+  const year = date.slice(0, 4) !== today.slice(0, 4) ? `${y}年` : "";
+  const base = `${year}${m}月${d}日 周${WEEK[weekdayOf(date)]}`;
   const label = dayLabel(date, today);
   return label ? `${label} · ${base}` : base;
 }
@@ -68,8 +63,7 @@ export function MealTimeFields({
   onChange: (v: MealTime) => void;
   disabled?: boolean;
 }) {
-  const min = isOwner ? OWNER_MIN : today;
-  const max = addDays(today, MAX_AHEAD_DAYS);
+  const min = isOwner ? undefined : today;
 
   return (
     <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-card">
@@ -85,12 +79,12 @@ export function MealTimeFields({
           aria-label="日期"
           value={value.date}
           min={min}
-          max={max}
+          max="9999-12-31"
           disabled={disabled}
           onChange={(e) => {
             const v = e.target.value;
             // 清空或超出范围（桌面浏览器可以手输）一律忽略
-            if (!isMealDate(v) || v < min || v > max || v === value.date) return;
+            if (!isMealDate(v) || (min && v < min) || v === value.date) return;
             haptic(6);
             onChange({ ...value, date: v });
           }}

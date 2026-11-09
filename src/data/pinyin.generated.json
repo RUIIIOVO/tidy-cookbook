@@ -490,5 +490,25 @@
   "123": {
     "pinyin": "haolilai",
     "initials": "hll"
+  },
+  "124": {
+    "pinyin": "nongjiayiwanxiang",
+    "initials": "njywx"
+  },
+  "125": {
+    "pinyin": "doujiaochaorou",
+    "initials": "djcr"
+  },
+  "126": {
+    "pinyin": "qingzhengniuleitiao",
+    "initials": "qznlt"
+  },
+  "127": {
+    "pinyin": "xiangyuzhengpaigu",
+    "initials": "xyzpg"
+  },
+  "128": {
+    "pinyin": "congyouji",
+    "initials": "cyj"
   }
 }

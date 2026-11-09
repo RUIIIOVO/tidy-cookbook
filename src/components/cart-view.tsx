@@ -45,9 +45,10 @@ export function CartView() {
   const me = useAuth((s) => s.me);
 
   const [selecting, setSelecting] = useState(false);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [selectedIds, setPicked] = useState<string[]>([]);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+  const [orderSelection, setOrderSelection] = useState({ dishIds: [] as string[], seq: 0 });
   const meals = useCart((s) => s.meals);
   const [lastOrder, setLastOrder] = useState<{
     date: string;
@@ -63,6 +64,8 @@ export function CartView() {
   const rows = items
     .map((i) => ({ item: i, dish: getDish(i.dishId)! }))
     .filter((r) => r.dish);
+
+  const picked = selectedIds.filter((id) => rows.some((r) => r.dish.id === id));
 
   const byCat = categories
     .map((c) => ({
@@ -81,7 +84,11 @@ export function CartView() {
   const staleDateText = earliestDay ? earliestDay.slice(5).replace("-", "/") : "";
 
   const openOrderConfirm = useGuard(() => {
+    const dishIds = selecting ? picked : rows.map((r) => r.dish.id);
+    if (dishIds.length === 0) return;
     haptic(10);
+    setSwipedId(null);
+    setOrderSelection((s) => ({ dishIds, seq: s.seq + 1 }));
     setOrderSheetOpen(true);
   }, 400);
 
@@ -183,6 +190,7 @@ export function CartView() {
           <div>
             <h1 className="font-display text-[22px] tracking-wider text-ink">点菜单</h1>
             <p className="mt-1 text-[11px] text-ink-3">
+              {selecting && <>已选 <span className="tabular-nums text-accent">{picked.length}</span> / </>}
               共 <span className="tabular-nums text-ink-2">{rows.length}</span> 道
             </p>
           </div>
@@ -275,6 +283,15 @@ export function CartView() {
                     }}
                   >
                     <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label={dish.name}
+                      aria-pressed={selecting ? on : undefined}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                        e.preventDefault();
+                        e.currentTarget.click();
+                      }}
                       onClick={() => {
                         if (selecting) {
                           haptic(6);
@@ -356,7 +373,7 @@ export function CartView() {
               onClick={() =>
                 setPicked(picked.length === rows.length ? [] : rows.map((r) => r.dish.id))
               }
-              className="rounded-full border border-line bg-card px-4 py-2.5 text-[13px] text-ink-2"
+              className="flex h-12 shrink-0 items-center justify-center rounded-full border border-line bg-card px-4 text-[13px] text-ink-2 transition active:scale-[0.97]"
             >
               {picked.length === rows.length ? "取消全选" : "全选"}
             </button>
@@ -381,17 +398,25 @@ export function CartView() {
                   },
                 });
               }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-chili py-2.5 text-[13px] text-white disabled:opacity-40"
+              className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-chili/25 bg-card text-[13px] text-chili transition active:scale-[0.97] disabled:opacity-40"
             >
               <Trash size={14} weight="regular" />
               删除 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
+            </button>
+            <button
+              type="button"
+              disabled={picked.length === 0}
+              onClick={openOrderConfirm}
+              className="flex h-12 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-accent text-[13px] text-white transition active:scale-[0.97] disabled:opacity-40"
+            >
+              下单所选 {picked.length > 0 && <span className="tabular-nums">{picked.length}</span>}
             </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={openOrderConfirm}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] tracking-wide text-white transition active:scale-[0.99]"
+            className={ui.primary}
           >
             <CookingPot size={17} weight="regular" />
             下单
@@ -401,9 +426,13 @@ export function CartView() {
 
       {/* 下单确认抽屉 */}
       <OrderConfirmSheet
+        key={orderSelection.seq}
+        dishIds={orderSelection.dishIds}
         open={orderSheetOpen}
         onOpenChange={setOrderSheetOpen}
         onPlaced={(order) => {
+          setPicked([]);
+          setSelecting(false);
           setLastOrder(order);
         }}
       />

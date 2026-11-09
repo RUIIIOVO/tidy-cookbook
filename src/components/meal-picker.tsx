@@ -3,6 +3,7 @@
 import { Check } from "@phosphor-icons/react";
 import {
   dayLabel,
+  isMealDate,
   mealKey,
   pickableDays,
   shortDate,
@@ -26,17 +27,23 @@ export function MealPicker({
   onChange,
   days,
   taken,
+  minDate,
+  disabled,
   className,
 }: {
   today: string;
   value: MealPick;
   onChange: (v: MealPick) => void;
-  /** 可选日期，默认 今天~后天（pickableDays） */
+  /** 快捷日期，默认 今天~后天；其他日期通过原生日期选择器选择 */
   days?: string[];
   taken?: Map<string, number>;
+  /** 普通用户不早于今天，管理员可补录过去的日期 */
+  minDate?: string;
+  disabled?: boolean;
   className?: string;
 }) {
   const dayList = days ?? pickableDays(today);
+  const custom = !dayList.includes(value.date);
 
   return (
     <div
@@ -59,6 +66,7 @@ export function MealPicker({
               type="button"
               role="radio"
               aria-checked={on}
+              disabled={disabled}
               onClick={() => {
                 if (on) return;
                 haptic(6);
@@ -90,6 +98,47 @@ export function MealPicker({
             </button>
           );
         })}
+        <label
+          className={cn(
+            "relative flex min-h-14 w-full flex-col justify-center px-4 text-left transition-colors focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent",
+            custom ? "bg-card" : "active:bg-line/60",
+          )}
+        >
+          {custom && (
+            <span
+              aria-hidden
+              className="absolute top-1/2 left-0 h-[18px] w-[3px] -translate-y-1/2 rounded-r-full bg-accent"
+            />
+          )}
+          <span className={cn("text-[15px] leading-tight", custom ? "font-medium text-ink" : "text-ink-2")}>
+            自定义
+          </span>
+          <span className="mt-0.5 text-[10.5px] leading-tight text-ink-3">
+            {custom ? value.date.replaceAll("-", "/") : "选择日期"}
+          </span>
+          <input
+            type="date"
+            aria-label="自定义日期"
+            value={value.date}
+            min={minDate}
+            max="9999-12-31"
+            disabled={disabled}
+            onChange={(e) => {
+              const date = e.target.value;
+              if (!isMealDate(date) || (minDate && date < minDate) || date === value.date) return;
+              haptic(6);
+              onChange({ ...value, date });
+            }}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker?.();
+              } catch {
+                /* iOS 等环境由原生点击打开 */
+              }
+            }}
+            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-default"
+          />
+        </label>
       </div>
 
       {/* 时段列 */}
@@ -103,6 +152,7 @@ export function MealPicker({
               type="button"
               role="radio"
               aria-checked={on}
+              disabled={disabled}
               onClick={() => {
                 if (on) return;
                 haptic(6);
